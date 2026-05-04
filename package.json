@@ -1,0 +1,23 @@
+{
+  "name": "linkedin-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lynx Media LinkedIn growth system. Python WAT framework + Trigger.dev for scheduled work.",
+  "type": "module",
+  "scripts": {
+    "trigger:dev": "trigger.dev dev",
+    "trigger:deploy": "trigger.dev deploy",
+    "trigger:login": "trigger.dev login"
+  },
+  "dependencies": {
+    "@trigger.dev/sdk": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "trigger.dev": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

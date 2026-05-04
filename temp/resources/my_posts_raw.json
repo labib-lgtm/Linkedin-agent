@@ -1,0 +1,1993 @@
+{
+  "identifier": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+  "count": 45,
+  "posts": [
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7454621149725978624",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonadvertising-acos-amazonfba-activity-7454621149725978624-xZ2Q?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "6d",
+      "comment_counter": 3,
+      "impressions_counter": 235,
+      "reaction_counter": 4,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Last Tuesday a seller DM'd me:\n\n\"I just realized my best campaign and worst campaign are the same campaign.\"\n\nOne Sponsored Products campaign. $28K/month in sales. 34% ACoS.\n\nNot bad \u2014 until you look inside.\n\nI asked them to pull their Search Term Report and sort by orders descending.\n\nTop 10 search terms: 16% ACoS. Driving 65% of orders.\n\nThe other 280+ terms: 58% ACoS. Driving 35% of orders but consuming 61% of the budget.\n\nOne campaign was running a printing press and a furnace in the same room.\n\nThe fix took an afternoon.\n\nWe extracted the 10 winners into a Manual Exact campaign with aggressive bids. Put remaining discovery terms on a tight leash \u2014 low bids, weekly negatives, zero tolerance for bleeders.\n\n3 weeks later: revenue held at $28K. ACoS dropped from 34% to 22%.\n\nNo new budget. No new keywords. No new strategy.\n\nThe money was always there. It was just being routed to 280 terms that were never going to convert.\n\nMost Amazon sellers optimise campaigns. The ones saving real money optimise search terms.\n\n#AmazonAdvertising #ACOS #AmazonFBA #RetailMedia #ProfitEliminator",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7454621149725978624",
+      "is_repost": false,
+      "parsed_datetime": "2026-04-27T20:03:02.258Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7450889519219826688",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_2300-per-day-in-ad-spend-same-bids-at-activity-7450889519219826688-imG5?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "2w",
+      "comment_counter": 78,
+      "impressions_counter": 1630,
+      "reaction_counter": 28,
+      "repost_counter": 1,
+      "user_reacted": "LIKE",
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "$2,300 per day in ad spend. \nSame bids at 2am and 2pm.\nConversion rate at 2am: 1.1%. \nConversion rate at 2pm: 6.4%.\n\nEvery click cost the same. One hour returned profit. The other burned it.\n\nAt $2,300 a day, that gap isn't a rounding error. Run the math across a 30-day window and the dead hours alone account for $8,000\u2013$12,000 in spend that converted at a fraction of the rate the account average suggested. Budget wasn't the problem. Distribution was.\n\nAmazon doesn't adjust your bids by hour. The platform treats midnight and midday as identical. Most sellers spending $50,000+ per month never question that, because Campaign Manager doesn't surface hourly conversion data in any default view. You have to pull it manually.\n\nOnce you do, the pattern is immediate.\n\nConversion rate is not flat across 24 hours. For most products, a small cluster of hours carries a disproportionate share of profitable orders. The remaining hours still consume budget \u2014 same CPC, lower CVR, weaker return.\n\nDay parting fixes the mismatch by adjusting bids to match the conversion curve.\n\n\u2192 Hours where CVR runs 30%+ above your daily average: increase bids. Concentrate budget where the return is strongest.\n\u2192 Hours where CVR drops 50%+ below average: reduce bids aggressively. At $2,300/day, every wasted hour costs real margin.\n\u2192 Hours sitting near average: hold. Review weekly \u2014 patterns shift with seasonality and competition.\n\nPull a 30-day hourly report from Campaign Manager. Calculate CVR per hour. Compare each hour to the daily average. Flag the zones. Adjust bids accordingly.\n\nThe whole process takes under 20 minutes with the right tracker.\n\nI built one \u2014 an Excel sheet that does the CVR comparison, flags BOOST / REDUCE / HOLD zones automatically, and tells you exactly which hours to adjust. No formulas to write. Paste your data, read the output.\n\nComment \"DAYPART\" and I'll send it over.",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQECHNr1lkd1tg",
+          "sticker": false,
+          "size": {
+            "height": 389,
+            "width": 480
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQECHNr1lkd1tg/feedshare-shrink_480/B4DZ2bgiRTJQAk-/0/1776430490959?e=1779321600&v=beta&t=LssifGcDvpUJIUuzVKyX5RZg0b4B5CtAGOv9yAcdcRQ"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7450889519219826688",
+      "is_repost": false,
+      "parsed_datetime": "2026-04-17T12:54:52.215Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7449361325383692288",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_we-doubled-the-budget-sales-barely-moved-activity-7449361325383692288-mBgr?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "2w",
+      "comment_counter": 79,
+      "impressions_counter": 1663,
+      "reaction_counter": 23,
+      "repost_counter": 0,
+      "user_reacted": "LIKE",
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "We doubled the budget. Sales barely moved.\n\nThat was the first call. The founder had been running ads for four months, increasing spend every time results disappointed.\n\nThe account was spending \u00a39,000 a month. Revenue was \u00a314,000. The maths didn't work and nobody could explain why.\n\nWe went through the account layer by layer.\n\nThe campaigns were structured reasonably. Match types were sensible. The bids weren't the issue.\n\n\nThe listing was converting at 4.8%.\n\nEvery \u00a39,000 of ad spend was sending buyers to a page that lost 95 of every 100 people who landed on it. The main image was undersized.\n\nThe bullets listed specifications \u2014 no objection answered, no benefit led. Competitor listings were one click away from every product page because there was no A+ comparison chart keeping shoppers in place.\n\nWe paused all bid changes. Fixed the page instead.\n\nSix weeks later: CVR at 10.2%. Same budget. Revenue at \u00a327,000.\n\nThe spend hadn't changed. The page it was pointing at had.\n\nAfter three years and \u20ac29M in managed ad spend, the pattern is consistent. Sellers increase budget when ads underperform. The budget finds a listing that can't convert. The problem compounds silently until the numbers become impossible to ignore.\n\n\nThe fix is always the same: audit the listing before you touch the bids.\n\n\nWe built a 32-point checklist that covers every layer \u2014 listing conversion, images and A+ content, campaign structure, keyword logic, and the weekly routine that keeps it working. Five parts, one document.\n\n\u2192 Part 1: Listing Conversion Audit\n\u2192 Part 2: Image & A+ Content Review\n\u2192 Part 3: Campaign Structure Blueprint\n\u2192 Part 4: Keyword & Bid Optimisation\n\u2192 Part 5: Weekly Monitoring Routine\n\nThe rule at the bottom of every audit we run:\n\nIf your conversion rate is below 8%, your ad problem is actually a listing problem. Fix the page before you fix the bids.\n\nComment CHECKLIST below and I'll send it to you directly.\n\nThat's the framework. The next one builds on it \u2014 follow along.",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQEorovsIYIKwA",
+          "sticker": false,
+          "size": {
+            "height": 491,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQEorovsIYIKwA/feedshare-shrink_800/B4DZ2FyppeI4Ag-/0/1776066141032?e=1779321600&v=beta&t=XJcPBXld8WhzRf5s3GeVMoePk62uafxQ16zOUoto7wg"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7449361325383692288",
+      "is_repost": false,
+      "parsed_datetime": "2026-04-13T07:42:22.412Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:ugcPost:7446780988640088064",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazon-cannibilization-activity-7446780990250778624-gf_G?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "3w",
+      "comment_counter": 57,
+      "impressions_counter": 1194,
+      "reaction_counter": 22,
+      "repost_counter": 1,
+      "user_reacted": "LIKE",
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "A seller came to us last month. Spending $14K/mo on ads. ACOS looked fine. Keywords were solid.\n\nBut something didn't add up.\n\nHis CPC on top exact-match terms was 40-60% higher than the category average. No new competitors had entered. His bids hadn't changed. Nothing in the market explained it.\n\nSo we pulled his Search Term Report and sorted it across campaigns.\nThat's when we found it.\n\n4 of his own campaigns were targeting the same keywords. In the same auctions. Bidding against each other. \n\nAmazon was treating his own ads like they were 4 different competitors \u2014 and charging him accordingly.\n\nHe'd been paying premium CPC against himself for months.\n\nThis is called internal cannibalization. It comes in 3 forms:\n\nExact overlap \u2014 same keyword in multiple campaigns. Both enter the auction. CPC rises on both.\n\nMatch type bleed \u2014 \"running shoes\" as broad in one campaign, exact in another. The broad match picks up the exact term. Now both compete for the same query with different bids.\n\nASIN-level \u2014 two of your own products target the same keyword. Amazon puts both in. One steals the other's clicks. Neither gets enough data to optimize.\n\nMost sellers have no idea this is happening because Seller Central doesn't flag it.\n\nChecking manually means downloading your STR, sorting it, and cross-referencing every keyword across every campaign. On big accounts, that's hours.\n\nSo we built a tool that does it in 2 minutes. Upload your report \u2014 Sponsored Products or Sponsored Brands \u2014 and it maps every conflict.\n\nWhich campaigns compete. Which terms overlap. Where to consolidate.\n\nDrop \"STOP\" in the comments and I'll send you the link.",
+      "mentions": [],
+      "attachments": [
+        {
+          "type": "file",
+          "id": "D4D1FAQGXpghF9y0vOg",
+          "file_name": "Amazon Cannibilization ",
+          "file_size": 0,
+          "mimetype": "application/pdf",
+          "unavailable": false,
+          "url": "https://media.licdn.com/dms/document/media/v2/D4D1FAQGXpghF9y0vOg/feedshare-document-chunked-pdf/B4DZ1hGoY0IkBk-/0/1775450623101?e=1778457600&v=beta&t=83D_QXgMR2K52IP4CvKRIlosUZdurz-8pc91vPtWWFU",
+          "url_expires_at": 1778457600000
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7446780990250778624",
+      "is_repost": false,
+      "parsed_datetime": "2026-04-06T04:49:02.576Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:ugcPost:7446283750755172352",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonppc-amazonseller-ppcoptimization-activity-7446283752160403456-gxaY?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "4w",
+      "comment_counter": 0,
+      "impressions_counter": 492,
+      "reaction_counter": 1,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Quick gut check for Amazon sellers:\n\nHow many of your Sponsored Products campaigns share keywords with each other?\n\nI ask because in the last 50 accounts I've reviewed, the average seller has 30-60 search terms that appear in multiple campaigns simultaneously.\n\nThat means for every one of those terms, you're in an auction against yourself. \n\nAmazon doesn't give you a discount for competing with your own ads \u2014 it just charges both campaigns market rate (or higher).\n\nMost sellers don't check for this because Seller Central doesn't surface it anywhere.\n\nYou'd have to manually cross-reference your Search Term Reports across campaigns to find overlaps.\n\n#AmazonPPC #AmazonSeller #PPCOptimization #EcommerceGrowth #AmazonAds",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7446283752160403456",
+      "is_repost": false,
+      "parsed_datetime": "2026-04-04T19:53:11.777Z",
+      "poll": {
+        "id": "7446283748951748608",
+        "total_votes_count": 6,
+        "question": "How often do you check for keyword overlap between campaigns?",
+        "is_open": false,
+        "options": [
+          {
+            "id": "7446283749136183296",
+            "text": "Every Month",
+            "win": true,
+            "votes_count": 5
+          },
+          {
+            "id": "7446283749136351232",
+            "text": "Once or twice ever",
+            "win": false,
+            "votes_count": 1
+          },
+          {
+            "id": "7446283749132124160",
+            "text": "Every quarter",
+            "win": false,
+            "votes_count": 0
+          }
+        ]
+      }
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:ugcPost:7445650838208794624",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_guide-to-finding-and-fixing-cannibalization-activity-7445650839165308928-_Lh4?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 0,
+      "impressions_counter": 307,
+      "reaction_counter": 3,
+      "repost_counter": 1,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "",
+      "mentions": [],
+      "attachments": [
+        {
+          "type": "file",
+          "id": "D4D1FAQHrFVkTstCeag",
+          "file_name": "Guide to finding and fixing cannibalization",
+          "file_size": 0,
+          "mimetype": "application/pdf",
+          "unavailable": false,
+          "url": "https://media.licdn.com/dms/document/media/v2/D4D1FAQHrFVkTstCeag/feedshare-document-chunked-pdf/B4DZ1RD8TrJQBk-/0/1775181483310?e=1778457600&v=beta&t=dm7LamOIfsjDB1PH7D6VpW0OhEesJPnmX_YIUrWspBI",
+          "url_expires_at": 1778457600000
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7445650839165308928",
+      "is_repost": false,
+      "parsed_datetime": "2026-04-03T01:58:13.560Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7445426747979894784",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonppc-ppcstrategy-amazonseller-activity-7445426747979894784-SBCD?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 1,
+      "impressions_counter": 511,
+      "reaction_counter": 11,
+      "repost_counter": 1,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Your Amazon ads are bidding against each other right now.\n\nNot your competitors' ads. YOUR ads.\n\nIt's called internal cannibalization \u2014 and it happens when two or more of your campaigns target the same keyword in the same auction.\n\nHere's why it matters:\n\nAmazon doesn't care that both campaigns belong to you. It treats them as separate advertisers. So you end up competing against yourself, and the CPC goes up for both.\n\nThe worst part? Seller Central doesn't flag it. There's no alert. No warning. You'll never see \"hey, these 3 campaigns are fighting each other for the same search term.\"\n\nYou only notice it when your ACOS creeps up for no obvious reason \u2014 or when your CPC on a keyword jumps even though no new competitor entered the auction.\n\nThe tell: Pull your Search Term Report. If the same search term appears across multiple campaigns with different bids, you're in a bidding war with yourself.\n\nMost accounts I audit have 30-60 overlapping terms. Some have 200+.\n\nThe fix isn't complicated \u2014 consolidate, negate, restructure. \n\nBut the diagnosis is the hard part because you have to cross-reference every campaign manually.\n\nFollow if you want more breakdowns like this.\n\n#AmazonPPC #PPCStrategy #AmazonSeller #AmazonAds #LynxMediaPPC",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7445426747979894784",
+      "is_repost": false,
+      "parsed_datetime": "2026-04-02T11:07:46.058Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:ugcPost:7444916355432177664",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_spending-8000month-on-ads-revenue-399-activity-7444916356308938752-zuDk?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 1,
+      "impressions_counter": 333,
+      "reaction_counter": 5,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "#AmazonAdvertising\u00a0#ACOS\u00a0#AmazonFBA\u00a0#RetailMedia\u00a0#ProfitEliminator",
+      "mentions": [],
+      "attachments": [
+        {
+          "type": "file",
+          "id": "D4D1FAQESh-RnHL1c0g",
+          "file_name": "Spending \u20ac8,000/month on ads. Revenue? \u20ac399.",
+          "file_size": 0,
+          "mimetype": "application/pdf",
+          "unavailable": false,
+          "url": "https://media.licdn.com/dms/document/media/v2/D4D1FAQESh-RnHL1c0g/feedshare-document-chunked-pdf/B4DZ1GntLwHIBo-/0/1775006309122?e=1778457600&v=beta&t=oYCDZqAysG8mjdsUGdvX2yG6zBEYVULK_knArIloK6k",
+          "url_expires_at": 1778457600000
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7444916356308938752",
+      "is_repost": false,
+      "parsed_datetime": "2026-04-01T01:19:39.201Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7444581346636726272",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_your-amazon-ppc-agency-is-optimizing-the-activity-7444581346636726272-OjWz?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 0,
+      "impressions_counter": 206,
+      "reaction_counter": 3,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Your Amazon PPC agency is optimizing the wrong thing.\n\n\nI've audited 200+ accounts managed by other agencies this year. \n\nThe pattern is always the same: they optimize bids. Up, down, up, down. \n\nEvery week. That's not strategy. \n\nThat's a reflex. \n\nHere's what none of them are doing: analyzing which PARENT ASINs drive the most efficient search term conversions \u2014 not at the keyword level, but at the ASIN-keyword intersection. \n\nA keyword that converts at 18% on your 12oz variant might convert at 4% on your 16oz. \n\nSame keyword. \n\nWildly different economics.\n\nBut if both variants live in the same campaign, the blended data hides this completely. When we split campaigns by parent ASIN, one client's \"bad\" keywords suddenly had 3 winners hidden inside them.\n\nTheir ACOS dropped 11 points in 2 weeks \u2014 not from bid changes, but from structural clarity.\n\nThe next time your agency sends you a \"bid optimization report,\" ask them: \"Did you analyze this at the ASIN-keyword level?\" Watch the silence.",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7444581346636726272",
+      "is_repost": false,
+      "parsed_datetime": "2026-03-31T03:08:26.671Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7444191995801141249",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonppc-ppcstrategy-amazonseller-activity-7444191995801141249-iIaJ?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 0,
+      "impressions_counter": 237,
+      "reaction_counter": 3,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "There's a column in your Search Term Report that's costing you thousands \u2014 and you've probably never filtered by it.\n\n\nMost sellers look at clicks, spend, ACOS. \n\nBut there's a column called \"7-Day Total Orders\" that hides the real story. \n\nFilter your STR by search terms with 15+ clicks and 0 orders.\n\nThese are terms Amazon is actively spending your money on that have NEVER converted.\n\nIn every account I audit, this filter reveals $2,000-$8,000/month in pure waste. \n\nOne client had a single search term \u2014 \"gift set for men\" on a women's skincare product \u2014 that had burned through $4,200 over 5 months. 347 clicks. Zero orders.\n\nThe dashboard ACOS looked fine because profitable terms were subsidizing it. \n\nThe fix takes 4 minutes: filter, sort, negate. But most sellers have never done it once.\n\nFollow for breakdowns like this every week.\n\n#AmazonPPC\u00a0#PPCStrategy\u00a0#AmazonSeller\u00a0#EcommerceGrowth\u00a0#LynxMediaPPC",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7444191995801141249",
+      "is_repost": false,
+      "parsed_datetime": "2026-03-30T01:21:18.198Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:ugcPost:7443110465536278528",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonppc-amazonseller-ecommercegrowth-activity-7443113013651484672-F1bX?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 24,
+      "impressions_counter": 797,
+      "reaction_counter": 13,
+      "repost_counter": 0,
+      "user_reacted": "LIKE",
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "I was reviewing an Amazon seller's account last month.\n\n$47,000 in ad spend. Strong ROAS. Everything looked fine on the surface.\n\nThen I dug into their search term report.\n\n$11,000 had gone to keywords that never converted. Not once.\n\nThey had been running the same campaigns for 8 months.\n\nNo one had caught it. Not them. Not their previous agency.\n\nThe worst part? It wasn't laziness. It was volume.\n\nWhen you're managing hundreds of ASINs, thousands of search terms, and multiple campaigns \u2014 the waste hides in plain sight.\n\nYou can't manually audit every line of a search term report and run a business at the same time.\n\nSo we built something to do it for you.\n\nThe Profit Eliminator analyzes your Amazon search term reports and surfaces:\n\n\u2192 Exactly where your ad budget is being wasted\n\u2192 Which keywords are quietly draining spend with zero returns\n\u2192 Which terms are performing and deserve more budget\n\u2192 Actionable steps to fix it immediately\n\nUpload your report. Get your analysis in seconds.\n\nNo more guessing. No more wasted spend hiding in a spreadsheet.\n\nIf you're running Amazon PPC and want to see where your money is actually going \u2014\n\nComment \"AUDIT\" below and I'll send you access directly. \ud83d\udc47\n\n#AmazonPPC #AmazonSeller #EcommerceGrowth #AmazonAds #ProfitEliminator",
+      "mentions": [],
+      "attachments": [
+        {
+          "type": "video",
+          "gif": false,
+          "id": "D4E05AQGls4OxrywqNA",
+          "size": {
+            "height": 720,
+            "width": 1276
+          },
+          "unavailable": false,
+          "url": "https://dms.licdn.com/playlist/vid/v2/D4E05AQGls4OxrywqNA/mp4-720p-30fp-crf28/B4EZ0s_uDbJ0CE-/0/1774576412804?e=1778457600&v=beta&t=SP2xN-9UMZCr3buVaahy4qY0Y0lp2s_5dCbafoGLjx8"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7443113013651484672",
+      "is_repost": false,
+      "parsed_datetime": "2026-03-27T01:53:48.807Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:ugcPost:7441943225965293568",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_most-amazon-sellers-download-their-search-activity-7441943226837790720-22d4?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 375,
+      "impressions_counter": 8048,
+      "reaction_counter": 92,
+      "repost_counter": 1,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Most Amazon sellers download their search term report once.\n\nThen never open it again.\n\nI get it. It is a wall of data. Thousands of rows. No structure. No way to tell what is working from what is bleeding money.\n\nSo we built something to fix that.\n\nThe Search Term Audit Tool \u2014 a free Google Sheet that turns your raw search term data into a full strategic breakdown in minutes.\n\nHere is what it does:\n\n\u2192 Upload your search term report \u2014 one click\n\u2192 Instant Performance Overview \u2014 impressions, clicks, CTR, spend, sales, ACoS, all in one dashboard\n\u2192 Wasted Term Identification \u2014 every search term eating budget with zero conversions, flagged automatically\n\u2192 Winner Term Extraction \u2014 the terms actually driving profitable sales, ranked and ready\n\u2192 Match Type Performance \u2014 see exactly how Broad, Phrase, and Exact are performing side by side\n\u2192 ASIN-Level Breakdown \u2014 performance split by product so you know which ASINs carry the account\n\u2192 Targeting Type Analysis \u2014 keyword vs ASIN targeting compared head to head\n\u2192 Search Term to Keyword Mapping \u2014 which search terms triggered which keywords, and where the gaps are\n\u2192 Conversion Funnel Table \u2014 impressions to clicks to orders, visualised at every stage\n\u2192 AI-Generated Strategic Action Plan \u2014 a full campaign audit with prioritised recommendations\n\nNo formulas to build. No pivot tables to wrestle with. Upload the report. Get the analysis.\n\nThis is the same audit framework we use internally at Lynx Media before touching a single bid.\n\nComment \"AUDIT\" below and I will send you the link.\n\nFollow for weekly Amazon PPC breakdowns \u2014 no fluff, just frameworks.",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D5622AQFYbBw0LOnYQg",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D5622AQFYbBw0LOnYQg/feedshare-shrink_800/B56Z0cX6sTKcAc-/0/1774297525342?e=1779321600&v=beta&t=APN8jM8NdK5J2Uh4A0H_fAu90NRS56uB-LtPDs2R7zE"
+        },
+        {
+          "id": "D5622AQF0mxGsfiEn5Q",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D5622AQF0mxGsfiEn5Q/feedshare-shrink_800/B56Z0cX52PKMAg-/0/1774297521880?e=1779321600&v=beta&t=LSMHCnimPK0ynnfZYp310kQn6gYJ0ajKOsQhLuZVLeY"
+        },
+        {
+          "id": "D5622AQEOfiZkJLfZPQ",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D5622AQEOfiZkJLfZPQ/feedshare-shrink_800/B56Z0cX6oYGgAc-/0/1774297525187?e=1779321600&v=beta&t=a0H3u3-b_J-mWPV__2ZwlN3HGtjr7PGvCcspYalDXGo"
+        },
+        {
+          "id": "D5622AQGAcvIrFETPPQ",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D5622AQGAcvIrFETPPQ/feedshare-shrink_800/B56Z0cX6wuIMAc-/0/1774297525678?e=1779321600&v=beta&t=1Yk7hHQ3WNK6Jeao6b_yzGiVHS73C3G3bQBSaIBgwRo"
+        },
+        {
+          "id": "D5622AQFcSNNPCZ-qbw",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D5622AQFcSNNPCZ-qbw/feedshare-shrink_800/B56Z0cX7WTKcAc-/0/1774297528040?e=1779321600&v=beta&t=6jOx3QfGaO9p1pY6s3hSyuseoU-1CyjJzmrDoZmEcA8"
+        },
+        {
+          "id": "D5622AQFzu3rjqbv6DA",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D5622AQFzu3rjqbv6DA/feedshare-shrink_800/B56Z0cX6BVJsAc-/0/1774297522636?e=1779321600&v=beta&t=gjHfLc3pNLOJVdv4bbJFpdFPBsAnWcVINDzOlNRP4-o"
+        },
+        {
+          "id": "D5622AQFkPQD2ifh7uw",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D5622AQFkPQD2ifh7uw/feedshare-shrink_800/B56Z0cX6CUHIAc-/0/1774297522734?e=1779321600&v=beta&t=sIzHi7njDnKElXVxcfGaZz__RGfbu3YA9zkvmg33Ud0"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7441943226837790720",
+      "is_repost": false,
+      "parsed_datetime": "2026-03-23T20:25:29.897Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7440966671818874880",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_most-sellers-look-at-their-competitors-once-activity-7440966671818874880-sPNt?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 0,
+      "impressions_counter": 178,
+      "reaction_counter": 0,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Most sellers look at their competitors once \u2014 when they launch.\n\nThey check the main image, note the price, read a few reviews. Then they move on.\n\nThat is not a competitive analysis. That is a glance.\n\nA real competitor map covers four dimensions. Run it before any major decision: a price change, a listing update, a new variation, or a category entry.\n\n\nTHE COMPETITIVE ANALYSIS FRAMEWORK\n\nStep 1 \u2014 Keyword Footprint\n\nUse a tool like Helium 10 or Data Dive to pull the organic keyword rankings for your top 3 competitors.\n\u2192 Which keywords are they ranking for that you are not?\n\u2192 Which keywords are they ranking in positions 1\u20135 that you are outside the top 20?\n\u2192 That gap is your opportunity map \u2014 and your vulnerability if a competitor already owns it\n\nStep 2 \u2014 Review Profile Breakdown\n\nDo not just note their star rating. Go deeper.\n\n\u2192 Read their 1-star and 2-star reviews \u2014 these are a free product roadmap\n\n\u2192 What complaints repeat? That is a gap you can build your differentiation around \n\u2192 What are they praised for? That is the minimum standard buyers expect in this category\n\nStep 3 \u2014 Pricing and Offer Structure\n\nCheck their current price, historical price trend, and any active promotions.\n\u2192 Are they running coupons, bundles, or strike-through pricing permanently? \n\u2192 A competitor with a consistent coupon is not really priced where the listing shows\n\u2192 Understanding true effective price tells you where the conversion floor actually sits\n\nStep 4 \u2014 Listing Execution Quality\n\nScore their listing against a simple rubric: main image, image suite, title structure, bullet point depth, and A+ content quality.\n\u2192 Is the A+ content converting or just decorating?\n\u2192 Are bullet points feature-led or benefit-led?\n\u2192 This tells you whether they are winning on product or on marketing \u2014 and which one you need to beat\n\nBuild this map before you make any significant decision about your own product.\n\nMost Amazon mistakes happen because sellers are reacting to their own data without knowing where they actually stand in the category.\n\nThe competitor map tells you that.\n\nFollow for weekly Amazon PPC breakdowns \u2014 no fluff, just frameworks.",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4E22AQFCE0G3O-2V6Q",
+          "sticker": false,
+          "size": {
+            "height": 446,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4E22AQFCE0G3O-2V6Q/feedshare-shrink_800/B4EZ0JTSuRHUAc-/0/1773977546153?e=1779321600&v=beta&t=ynVNmkqwl_943WApB_FN4Sfa9YohmdphW3Pz50Y5ECg"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7440966671818874880",
+      "is_repost": false,
+      "parsed_datetime": "2026-03-21T03:45:01.037Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7440596537774063616",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_an-amazon-seller-came-to-us-convinced-their-activity-7440596537774063616-6wVC?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 0,
+      "impressions_counter": 137,
+      "reaction_counter": 1,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "An Amazon seller came to us convinced their ads were performing fine.\n\nAnd honestly? On the surface, they were.\n\nDecent ROAS. Sales coming in. Nothing alarming.\n\nBut when we ran their search term report through the Profit Eliminator, the real picture came out.\n\nHere's what we found:\n\n\ud83d\udd34 One term \u2014 294 clicks, $658 spent, ACOS of 183%.\nThey were spending $1.83 to make back $1.00. On repeat. Every single day.\n\n\ud83d\udd34 Another term \u2014 high impressions, solid CTR, zero profitable orders.\nJust burning budget and moving on.\n\n\ud83d\udd34 Broad match keywords taking up 36% of total spend \u2014 at nearly 51% ACOS.\nWhile their exact match terms were sitting at 32% ACOS, underloved and underfunded.\n\nNone of this was visible from the dashboard.\nBecause everything gets blended into one number \u2014 and one number lies.\n\nThe frustrating part?\n\nThis seller was putting in the work. Checking in regularly. Adjusting bids here and there. Doing what most sellers do.\n\nBut without seeing the data at the search term level \u2014 broken down by match type, by campaign, by conversion rate \u2014 every decision was based on an average. And averages hide the truth.\n\nSo we got to work.\n\nWe paused the bleeding terms.\nShifted budget toward what was actually working.\nRestructured match type distribution.\nMoved spend away from broad match and toward the exact match terms that were quietly converting.\n\nWithin the first week, their account looked completely different.\n\nNot because we did anything complicated.\nBut because we finally looked at the right data, at the right level of detail.\n\nAnd here's the thing \u2014 the winning terms were already there.\nThey didn't need new campaigns or a bigger budget.\nThey just needed the losing terms out of the way.\n\nThat's what the Profit Eliminator was built for.\n\nYou upload your Sponsored Product or Sponsored Brand search term report.\nThe tool breaks it down \u2014 by campaign, by search term, by match type.\nIt surfaces your wasted terms, your efficient winners, your match type gaps.\nAnd gives you a prioritized action plan based on your actual numbers.\n\nNo guessing. No generalized advice. Just your data, made readable.\n\nMost sellers who go through this audit walk away with a clear list of changes they can make that same day. Not next quarter. Not after a strategy call. That day.\n\nIf you're running Amazon ads and haven't done a proper search term audit recently \u2014 it's worth doing.\n\nComment (Search Term) and I'll send you the link.",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4E22AQFLZ0InYrAmpQ",
+          "sticker": false,
+          "size": {
+            "height": 446,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4E22AQFLZ0InYrAmpQ/feedshare-shrink_800/B4EZ0JPHslJUAc-/0/1773976452311?e=1779321600&v=beta&t=3OU0MIhCuJB068qZoSHP2Lmy3WZ8_a3rIaBRgBN4Plo"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7440596537774063616",
+      "is_repost": false,
+      "parsed_datetime": "2026-03-20T03:14:14.204Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7439415206621118465",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_heres-how-to-audit-amazon-ppc-like-a-1m-activity-7439415206621118465-e4-2?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 0,
+      "impressions_counter": 177,
+      "reaction_counter": 6,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Here's how to audit Amazon PPC like a $1M/year seller.\n\n\nMost sellers see chaos in their Search Term Report: hundreds of rows, random metrics, no pattern.\n\n\nHere's what pros look for:\n\n\n\ud83c\udfaf 1. MATCH TYPE DISTRIBUTION\n\nWhat it reveals: Budget split across Exact, Phrase, Broad\nWhy it matters:\n Exact = precision. Phrase = discovery. Broad = waste risk.\nRed flag: 70%+ budget in Broad with ACOS >50%\nMost sellers let Amazon spend wherever.\n\n\n\ud83d\udcb0 2. ACOS DISTRIBUTION\n\nWhat it reveals: Spend by profitability bracket\nWhy it matters:\n Total ACOS 40% is meaningless if:\n \u2192 60% of spend at 80%+ ACOS (losing money)\n \u2192 20% of spend at 15% ACOS (printing money)\nFix: Shift budget from losers \u2192 winners\n\n\ud83d\udd0d 3. SEARCH TERM MAPPING\n\nWhat it reveals: Which keywords triggered which terms\nWhy it matters:\n Catches Amazon misbehaving.\nExample:\n \u2192 You bid \"phone case iPhone 14\"\n \u2192 Amazon shows \"cheap phone accessories bulk\"\n \u2192 47 clicks, 0 orders, $93 wasted\nFix: Add negatives\n\n\ud83d\udeab 4. WASTED TERMS\n\nWhat it reveals: \u226520 clicks, 0 orders\nWhy it matters:\n Silent killers draining budget.\nExample:\n \u2192 \"bluetooth keyboard\" \u2192 47 clicks, $93, 0 orders\n \u2192 \"laptop stand\" \u2192 294 clicks, $658, 0 orders\nFix: Pause immediately\n\n\u2705 5. EFFICIENT WINNERS\n\nWhat it reveals: \u22655 orders AND ACOS \u226425%\nWhy it matters:\n Profit engines\u2014converting well but under-leveraged.\nOpportunity:\n \u2192 Increase bids 20-30%\n \u2192 Add exact match\n \u2192 Build dedicated ad groups\n3x ROAS terms hiding in 1.5x campaigns.\n\n\ud83e\udde0 6. N-GRAM PATTERNS\n\nWhat it reveals: Frequent word phrases\nWhy it matters:\n Surface patterns in 500+ terms:\n\u2192 \"wireless\" appears 87x (opportunity)\n \u2192 \"cheap\" appears 29x (block)\nInsight: Optimize 10 patterns, not 500 terms\n\n\ud83e\udd16 7. AI ACTION PLAN\n\nWhat it reveals: Prioritized fixes\nWhy it matters:\n AI ranks by urgency:\n \u2192 Critical: Fix this week\n \u2192 High: Fix this month\n \u2192 Medium: Optimize 4-6 weeks\nOutput: Week-by-week roadmap\n\nUpload your Search Term Report\n\u2192 Get instant insights\n\u2192 Start saving. 8,432 sellers have already found their profit leaks. \n\nYour turn.",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQFoMNCUDPKKkg",
+          "sticker": false,
+          "size": {
+            "height": 446,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQFoMNCUDPKKkg/feedshare-shrink_800/B4DZzykioEGYAg-/0/1773596191687?e=1779321600&v=beta&t=Gi2GJ7Po97ZOMBDMPLY0S9Im0v-g6vxG0YWihydaEZg"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7439415206621118465",
+      "is_repost": false,
+      "parsed_datetime": "2026-03-16T21:00:02.909Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7438972102512242688",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_your-amazon-ads-are-bleeding-money-you-just-activity-7438972102512242688-LEc6?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 0,
+      "impressions_counter": 177,
+      "reaction_counter": 4,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Your Amazon ads are bleeding money. You just can't see where.\n\n\nMost sellers think they're \"doing fine\" with their PPC because sales are coming in. But here's what they don't see:\n\n\u274c Search terms with 20+ clicks and ZERO orders\n \u274c High ACOS terms quietly draining 40% of your budget\n \u274c Broad match keywords spending on irrelevant traffic\n \u274c Exact match opportunities you're not even bidding on\n\n\nThe average seller is losing $3,247/month in wasted ad spend.\n\nNot because they're bad at ads. Because Amazon's reporting makes it nearly impossible to see the full picture.\n\nYou're looking at 14 different metrics across 3 match types, filtering through hundreds of search terms, trying to calculate ACOS by hand, and hoping you're making the right decisions.\n\nYou need X-ray vision. You need to see exactly where every dollar is going.\n\nThat's why we built the Profit Eliminator.\n\nOver the next week, I'm breaking down how this tool has found $27M+ in wasted spend for 8,432 sellers\u2014and how it can find yours in under 3 minutes.\n\nMore coming soon.",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQGk8F1lRho7rg",
+          "sticker": false,
+          "size": {
+            "height": 554,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQGk8F1lRho7rg/feedshare-shrink_800/B4DZzyJtRyKIAc-/0/1773589157829?e=1779321600&v=beta&t=Ykc8u_AS3lSDamIr4WVXsPWgQ_Z4RVuDOilZ-udivzY"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7438972102512242688",
+      "is_repost": false,
+      "parsed_datetime": "2026-03-15T15:39:18.657Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7437135205485756416",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazon-sellers-are-leaving-their-best-keyword-activity-7437135205485756416-J-dF?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 0,
+      "impressions_counter": 169,
+      "reaction_counter": 4,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Amazon sellers are leaving their best keyword data on the table.\n\nNot because it's hard to find. Not because it requires expensive tools.\n\n\nBecause most sellers turn off the one campaign that generates it \u2014 right when it starts working.\n\nMost sellers treat Auto campaigns as a beginner move. Something you graduate from once you \"know what you're doing.\"\n\nThat's exactly backwards.\n\nAn Auto campaign is not an advertising tool. It is a data collection tool \u2014 and it happens to run ads while collecting that data.\n\nAmazon's algorithm reads your listing and matches it against real search queries from real buyers. Not estimated search volume from a third-party tool. Not historical data.\n\nActual live searches from buyers actively looking for products in your category \u2014 right now.\n\nNo keyword research software in the world has access to that data. Amazon does. And the Auto campaign is your direct connection to it.\n\nWhy sellers get this wrong.\n\nAuto campaigns look messy in the early weeks. You pull the Search Term Report and see dozens of irrelevant matches. Weird long-tail phrases. Searches that make no sense for your listing.\n\nMost sellers conclude the campaign isn't working and pause it \u2014 or ignore the report entirely.\n\nWhat they're missing is buried inside that noise:\n\n\u2192 Long-tail terms with low competition and high purchase intent no tool would suggest\n\u2192 Seasonal trends that emerge weeks before keyword tools pick them up\n\u2192 Competitor brand terms your buyers use as category navigation\n\u2192 Exact buyer phrasing \u2014 often different from how you'd describe your own product\n\nThe right way to run it.\n\nStep 1 \u2014 Set conservative bids and let it run Optimise for data, not profit. Run for at least 2 weeks before drawing conclusions.\n\nStep 2 \u2014 Pull the Search Term Report weekly Two filters: converting terms (sales at acceptable ACoS) and non-converting terms (10+ clicks, zero sales).\n\nStep 3 \u2014 Graduate the winners Move converting terms into a Manual Exact campaign. Not guessing \u2014 scaling what's already proven.\n\nStep 4 \u2014 Negate the losers Add non-converters as Negative Exact keywords. Permanently stop Amazon spending your budget on searches that don't buy.\n\nAuto = the wide fishing net. Manual Exact = the spear.\n\nYou don't throw the spear until you know exactly where the fish are.\n\nThe sellers with the lowest wasted spend aren't the ones with the best tools.\n\nThey're the ones reading what Amazon is already telling them \u2014 through a campaign most sellers underestimate, misuse, or turn off too early.\n\nYour Auto campaign is one of the most valuable assets in your ad account.\n\nRun it correctly and it tells you exactly where to put your money.\n\nFollow for weekly Amazon PPC breakdowns \u2014 no fluff, just frameworks.",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQGHt7-7i2qR6Q",
+          "sticker": false,
+          "size": {
+            "height": 446,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQGHt7-7i2qR6Q/feedshare-shrink_800/B4DZzS09HzGwAc-/0/1773063623695?e=1779321600&v=beta&t=qOvDU82NHYbT2cXZRezsSVZbqFmr-4ZRC1F_GN4ZSlc"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7437135205485756416",
+      "is_repost": false,
+      "parsed_datetime": "2026-03-10T14:00:08.278Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7436758994678964224",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_most-amazon-sellers-think-more-ad-spend-means-activity-7436758994678964224-dk4L?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 0,
+      "impressions_counter": 123,
+      "reaction_counter": 0,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Most Amazon sellers think more ad spend means more sales.\n\n\nIt doesn't.\n\nI've seen sellers double their daily budget and watch their ACOS get worse.\n\nI've seen sellers cut their budget by 40% and increase their revenue.\n\nHere's why more spend without the right foundation is losing money faster \u2014 and what actually drives profitable growth on Amazon PPC.\n\nThe real relationship between ad spend and performance.\nAmazon's algorithm doesn't reward the highest spender.\n\nIt rewards the strongest buying signals \u2014 clicks that convert, sessions that purchase, listings that satisfy intent.\n\nMore budget on a weak campaign doesn't bring more sales. It brings more impressions on the same underperforming keywords.\n\nMore spend on a broken campaign = faster drain, same poor results.\nThe metric sellers misread most.\n\nDaily budget is not your growth lever. It's your ceiling.\n\nYour real growth lever is your bid efficiency \u2014 how much you're paying per click relative to the value of each conversion.\n\n\nTwo sellers. Same $100/day budget:\n\nSeller A \u2014 Broad match campaigns, unstructured keywords, no negatives.\nAverage CPC: $1.20 | CVR: 8% | Cost per sale: $15.00\n\nSeller B \u2014 Structured campaigns, exact match targeting, regular negative keyword reviews.\nAverage CPC: $0.80 | CVR: 14% | Cost per sale: $5.71\n\nSeller A is spending the same money and getting one sale for every $15 spent.\n\nSeller B is getting one sale for every $5.71 spent.\nSame budget. Seller B generates 2.6x more sales.\n\nThe difference has nothing to do with how much they're spending. It has everything to do with how they're spending it.\n\nWhat actually moves the needle.\n\nBefore increasing budget on any Amazon campaign, audit these three things first:\n\nYour Click-Through Rate (CTR)\n\nIf your CTR is below 0.3%, buyers are seeing your ad and choosing not to click. More budget just means more people ignoring your listing. The fix is your main image and title \u2014 not your spend.\n\nYour Conversion Rate (CVR)\n\nIf CVR is below 10%, traffic is landing on your listing and leaving without buying. More budget sends more people to a listing that doesn't convert. The fix is your bullet points, A+ content, pricing, and reviews \u2014 not your spend.\n\nYour Search Term Relevance\n\nPull your Search Term Report. If more than 20% of your spend is going to irrelevant or non-converting terms, increasing budget multiplies that waste. The fix is negative keywords and tighter match types \u2014 not more spend.\n\nOnly when CTR is healthy, CVR is above 10%, and your search terms are relevant \u2014 should you increase your daily budget.\n\nAt that point, scaling spend is simply pouring fuel on a fire that's already burning cleanly.\n\nThe principle.\n\nSpend efficiency compounds.\n\nA campaign with strong bid efficiency, clean targeting, and a converting listing will generate better results at $50/day than a poorly structured campaign at $200/day.\n\nFix the structure first.\n\nFix the listing second.\n\nScale the spend third.\n\nIn that order. Never the reverse.",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQEYE15o08Yzzg",
+          "sticker": false,
+          "size": {
+            "height": 446,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQEYE15o08Yzzg/feedshare-shrink_800/B4DZzSs5l2HIAg-/0/1773061512077?e=1779321600&v=beta&t=-ZJHSU4lxBBN5ev373W4xhJ53WZF4wMgkCaAsjEpdso"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7436758994678964224",
+      "is_repost": false,
+      "parsed_datetime": "2026-03-09T13:05:12.632Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7436316028349054976",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_99-of-amazon-sellers-running-ads-have-the-activity-7436316028349054976-yZ_B?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 1,
+      "impressions_counter": 187,
+      "reaction_counter": 1,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "99% of Amazon sellers running ads have the wrong campaign structure.\n\n\nNot the wrong keywords. Not the wrong bids.\n\nThe wrong foundation \u2014 and it's costing them thousands in wasted spend every month.\n\nHere's the 3-campaign structure every Amazon brand needs \ud83d\udc47\n\nMost sellers open Seller Central, create one Sponsored Products campaign, dump 50 keywords in, set a $50/day budget and wonder why nothing works.\n\nThe problem isn't the keywords. It's that one campaign can't do three different jobs at the same time.\n\nDiscovery, control, and defence are three separate functions. They need three separate campaigns.\n\nCampaign 1: The Discovery Campaign (Auto)\n\nThis is your research engine.\n\nAn Auto campaign lets Amazon match your listing to search terms algorithmically. You're not in control \u2014 and that's the point.\n\nAuto campaigns surface terms you'd never think to target manually. Some will be irrelevant. Some will be goldmines.\n\nHow to run it properly: \n\n\u2192 Start with conservative bids for your category \n\u2192 Run for at least 2 weeks before drawing conclusions \n\u2192 Pull your Search Term Report weekly\n\u2192 Identifying converting terms \u2014 those graduate to your Manual campaign\n\nThe Auto campaign is not where you make money. It's where you find the terms that will.\n\nCampaign 2: The Control Campaign (Manual Exact)\n\nThis is your profit engine.\n\nMove winning search terms from Auto into a Manual Exact campaign. Now you control exactly what triggers your ad \u2014 no algorithm guesswork.\n\nWhy Exact match?\n\u2192 Precise data \u2014 you know exactly which term is converting\n\u2192 Precise bidding \u2014 raise or lower bids based on actual performance\n\u2192 No bleed \u2014 irrelevant keyword variations won't drain your budget\n\nRule of thumb: 10+ clicks with no sale \u2192 add as Negative in both campaigns. \n\nGenerates a sale \u2192 graduate to Manual Exact.\n\nCampaign 3: The Defence Campaign (Competitor ASIN Targeting)\n\nThis is your moat.\n\nTargeting competitor ASINs via Sponsored Products or Sponsored Display puts your listing directly on their product pages \u2014 intercepting buyers already in purchase mode.\n\n\u2192 Your competitor is paying to rank \u2014 you're harvesting that traffic\n\u2192 It's the highest-intent audience on the platform outside branded search\n\nStart with the top 5\u201310 ASINs in your niche. If your listing doesn't convert against competitor traffic, the problem is your listing \u2014 not the campaign.\n\nAuto feeds Manual. Manual generates data. Competitor targeting compounds it.\nEach campaign has one job. One budget. One optimisation goal.\n\nMetrics to track:\n\n\u2192 Auto: Search Term Report, keyword discovery rate\n\u2192 Manual Exact: ACOS, CVR, Impression Share\n\u2192 Competitor ASIN: CTR, CVR, ACOS vs. category average\n\nStructure is clarity. Clarity is control. Control is profit.\n\nFollow for weekly Amazon PPC breakdowns \u2014 no fluff, just frameworks.",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQGjaEOkb_m__w",
+          "sticker": false,
+          "size": {
+            "height": 446,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQGjaEOkb_m__w/feedshare-shrink_800/B4DZzJclH.JUAg-/0/1772906238921?e=1779321600&v=beta&t=ts6egSS-pEB7FP_1ruHUnipiYBiDW-xZPz9jrwdYW-E"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7436316028349054976",
+      "is_repost": false,
+      "parsed_datetime": "2026-03-08T07:45:01.229Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7436100079444451328",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_most-amazon-sellers-are-waiting-for-reviews-activity-7436100079444451328-Y85z?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1mo",
+      "comment_counter": 0,
+      "impressions_counter": 279,
+      "reaction_counter": 7,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Most Amazon sellers are waiting for reviews before they advertise.\n\n\n\nHere's why that logic is costing them their ranking window.\n\nThe misconception:\n\nReviews build rankings.\n\nThe reality:\n\nRankings build reviews.\nAmazon's algorithm doesn't rank products because they have reviews. It ranks products that demonstrate buying signals \u2014 clicks, conversions, and session velocity. Reviews are simply a byproduct of that process.\n\nHere's how the algorithm actually works on a new listing:\n\nWhen Amazon indexes a new ASIN, there's a short window \u2014 typically the first 2 weeks \u2014 where the algorithm is actively collecting data to decide where to rank you.\n\nDuring this window, it's watching for 3 signals:\n\n-- Click-Through Rate\nAre people clicking your listing when they see it in search results? If your main image isn't compelling enough to earn the click, no amount of ad spend will save you.\n\n-- Conversion Rate\n\nOf the people who land on your listing, how many are buying? Amazon considers 10%+ a healthy baseline. Below that, the algorithm treats your listing as a mismatch for the keyword.\n\n-- Session Velocity\n\nHow many unique visitors is your listing getting \u2014 and how consistently? Sporadic traffic sends weak signals. Steady, daily traffic tells the algorithm your listing is relevant.\n\nWhat most sellers get wrong:\n\nThey wait 30\u201360 days building reviews through Vine or follow-up emails before running any ads.\n\nBy then, the indexing window has closed. The algorithm has already deprioritised the listing. They're now fighting uphill against competitors who moved faster.\n\nWhat actually works:\n\nBefore running ads, the listing needs to be conversion-ready \u2014 not just keyword-rich. That means:\n\n\u2192 Main image optimised for CTR over aesthetics\n\u2192 Bullet points written around objections, not features\n\u2192 A+ content that builds enough trust to convert cold traffic\n\nOnce the listing converts, then you send targeted traffic \u2014 not broad keywords, but competitor ASINs where buyers already have high purchase intent.\n\nThe goal is to generate clean buying signals during that indexing window.\nReviews follow naturally once the listing is ranking and getting organic traffic.\n\nThe takeaway:\n\nA new Amazon listing doesn't need reviews to rank.\nIt needs signals \u2014 and signals come from a listing that converts, not one that waits.\n\nThis is part of an ongoing series on Amazon growth strategy.\n\nFollow for more breakdowns every week.",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQGcSaOoVKmpKg",
+          "sticker": false,
+          "size": {
+            "height": 450,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQGcSaOoVKmpKg/feedshare-shrink_800/B4DZzJVneFGkAc-/0/1772904413590?e=1779321600&v=beta&t=NAAKZtZn2Oof_AejlXskkPZzLJGH-ptnj31hhyO36DU"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7436100079444451328",
+      "is_repost": false,
+      "parsed_datetime": "2026-03-07T17:26:54.998Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7375064282259976192",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_a-client-came-to-us-with-a-clear-target-activity-7375064282259976192-gSQj?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "7mo",
+      "comment_counter": 1,
+      "impressions_counter": 518,
+      "reaction_counter": 11,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "A client came to us with a clear target:\n\ud83d\udc49 Achieve 30% YoY growth\n\ud83d\udc49 Achieve 30% MoM growth\n\ud83d\udc49 TACoS at 6\u20139%\n\nAnd they wanted to hit all of this\u2026 by only working on PPC.\n\nHere\u2019s the problem: PPC doesn\u2019t make your listing convert.\nIt just brings qualified traffic. If the listing can\u2019t close, PPC becomes expensive window shopping.\n\nThe factors that actually decide whether traffic turns into sales:\n\nCreatives \u2192 Do images/videos instantly explain what the product is and why it\u2019s better?\n\nListing content \u2192 Are benefits, features, and objections clearly covered so buyers feel confident?\n\nPricing & value \u2192 Does the price make sense compared to competitors, with a clear reason to choose you?\n\nOffer readiness \u2192 Stock, shipping, reviews, social proof.\n\nPPC = attention.\nCreatives, content, pricing = conversion.\n\nIf you only push ads but never fix what customers see once they click, you can\u2019t sustain 30% growth and 6\u20139% TACoS.\n\nBefore scaling ad spend, build the offer that actually converts. Then PPC becomes the fuel, not the crutch.",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7375064282259976192",
+      "is_repost": false,
+      "parsed_datetime": "2025-09-20T07:12:26.959Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7374135694018949122",
+      "share_url": "https://www.linkedin.com/posts/sean-stone_the-pair-process-other-factors-that-influences-activity-7374135694018949122-nbr-?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "7mo",
+      "comment_counter": 1,
+      "impressions_counter": 0,
+      "reaction_counter": 17,
+      "repost_counter": 1,
+      "user_reacted": "EMPATHY",
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "New podcast episode I\u2019m featured in is out now!\n\nPPC by itself burns cash.... but add promotions, inventory continuity, and rankability that converts\u2014that\u2019s when Amazon growth clicks. Had a blast breaking down the PAIR process and how it really drives results!\n\nCheck out the full episode here: https://lnkd.in/gNC8duWf\n\nBig thanks for having me on Labib Javed",
+      "mentions": [
+        {
+          "url": "https://www.linkedin.com/in/ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+          "length": 11,
+          "start": 349
+        }
+      ],
+      "attachments": [],
+      "author": {
+        "public_identifier": "sean-stone",
+        "id": "ACoAAAUWvDUBSWgQH9EFKg6sCJKiYnFcslxwjlU",
+        "name": "Sean Stone",
+        "is_company": false,
+        "headline": "Helping Amazon-First Brands Escape the Amazon Trap with a Profitable Shopify Channel | Founder of Spillover Commerce",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/C4D03AQGHzQvN_R3mgQ/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1517227732727?e=1779321600&v=beta&t=NdbPXxrtNVcWjJCKsSYxkLs6zs6ae8xaED8k6799GN8"
+      },
+      "id": "7374135694018949122",
+      "is_repost": true,
+      "repost_id": "7374343159436345344",
+      "parsed_datetime": "2025-09-17T17:42:34.270Z",
+      "reposted_by": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false
+      }
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:ugcPost:7373691146168000512",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonppc-amazonadvertising-retailmedia-activity-7373691147648401408-Ixcp?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "7mo",
+      "comment_counter": 8,
+      "impressions_counter": 693,
+      "reaction_counter": 16,
+      "repost_counter": 1,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "From $14k \u2192 $53k in 30 days: the exact sequence\n\n\n\nA new seller came in doing ~$14k/month. Campaigns were almost all Auto, budgets were scattered, and branded queries weren\u2019t protected. Inventory was tight and demand was uneven.\n\nThe ask: reach $100k/month as inventory lands in FBA.\n\nWhat we changed (no fluff, just sequence):\n\nRetail readiness audit \u2014 confirmed Buy Box stability, pricing, and listings to avoid wasting PPC spend.\nRebuilt structure \u2014 split into Exact / Phrase / Broad (with modifiers) for clean intent layers.\nBrand defense \u2014 captured branded keywords and added ASIN shielding to prevent leakage.\nSearch-term mining + negatives \u2014 harvested winners; blocked low-intent terms to cut bleed.\nPerformance tiers (A/B/C) \u2014 bids and budgets aligned to CVR and contribution; capped CPC on marginal queries.\nPlacement + dayparting \u2014 adjusted Top-of-Search multipliers and scheduled around conversion windows.\nWeekly reallocation \u2014 moved budget toward proven targets; tracked TACoS/ACOS and CPC trend, not vanity metrics.\nResult: $53k in 30 days (+279% MoM).\n Next milestone: $100k as FBA stock arrives and exact-match winners scale.\n\nWhy it worked:\n\nStructure > tactics. Clean match-type lanes made attribution clear.\nDefense first. Owning branded terms reduced blended acquisition cost (TACoS).\nNegatives every week. Spend concentrated on queries that converted.\nBudget follows proof. We funded what worked and cut what didn\u2019t\u2014quickly.\nInventory and ads moved together. Client shipped to FBA to sustain the curve.\n\nIf you manage Amazon PPC and growth stalls, use this checklist:\n\nProtect brand terms before chasing category terms.\nSeparate Exact / Phrase / Broad to control intent and bids.\nMine search terms twice per week; add negatives the same day.\nTier campaigns by performance; cap CPCs where CVR is volatile.\nTune placement multipliers and dayparting to match conversion hours.\nTrack TACoS weekly; reallocate budget, don\u2019t \u201cset and forget.\u201d\n\nGoal: a durable path to $100k/month without gimmicks\u2014just disciplined Amazon Advertising (Sponsored Products, Sponsored Brands, Sponsored Display), clean measurement, and inventory alignment.\n\n\n #AmazonPPC #AmazonAdvertising #RetailMedia #EcommerceGrowth #PPCStrategy #ACOS #TACoS #NegativeKeywords #BrandDefense #Dayparting #FBA #PaidSearch",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQHw6cidZ8ut_A",
+          "sticker": false,
+          "size": {
+            "height": 480,
+            "width": 480
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQHw6cidZ8ut_A/feedshare-shrink_480/B4DZlSdA9aIgAY-/0/1758024963305?e=1779321600&v=beta&t=b6gp5Px2Xd61vRiacGumZhxiykZZwA2FxVDfRQ2_jXk"
+        },
+        {
+          "id": "D4D22AQEtY85ue868fw",
+          "sticker": false,
+          "size": {
+            "height": 480,
+            "width": 480
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQEtY85ue868fw/feedshare-shrink_480/B4DZlSdA9fGQAY-/0/1758024963989?e=1779321600&v=beta&t=0oi0DYBiCWoEDT6ZDtUmGls-YF3lfrTty-c2wLoaxog"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7373691147648401408",
+      "is_repost": false,
+      "parsed_datetime": "2025-09-16T12:16:06.156Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7356348408279789569",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_will-be-joining-reality-cheque-launch-event-activity-7356348408279789569-a5bS?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "9mo",
+      "comment_counter": 1,
+      "impressions_counter": 453,
+      "reaction_counter": 4,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "will be joining Reality Cheque Launch Event as a VIP member.e\n\nThis is an event for freelancers, agency owners or anyone trying to learn a digital skill. Expected 2000+ attendees\n\nCheck the details on their website by scanning the QR or going to the link mentioned.\n\nLook forward to seeing you there!\n\nLink: https://lnkd.in/d65sDNcW",
+      "mentions": [
+        {
+          "url": "https://www.linkedin.com/company/realitychequepk/",
+          "length": 14,
+          "start": 16
+        }
+      ],
+      "attachments": [
+        {
+          "id": "D4D22AQGQoFE0saNlTA",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQGQoFE0saNlTA/feedshare-shrink_800/B4DZhb_4xGG8Ag-/0/1753890133489?e=1779321600&v=beta&t=gDSXeL_tLyPLiH_fbtUO7Nc7RM7UYqp1C0r0qx-Q2yA"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7356348408279789569",
+      "is_repost": false,
+      "parsed_datetime": "2025-07-30T15:42:14.878Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7313956607971745792",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonfba-ecommerce-abtesting-activity-7313956607971745792-tFGv?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1yr",
+      "comment_counter": 1,
+      "impressions_counter": 677,
+      "reaction_counter": 8,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "\ud83d\udea8 Amazon Sellers, Learn From This Costly Mistake! \ud83d\udea8\n\n\nScaling a product on Amazon requires constant A/B testing\u2014especially with titles and pricing to optimize ranking and conversions. But even small oversights can lead to big losses!\n\n\ud83d\udcc9 What happened?\n\n\u00a0We were running an A/B test on our product title in the German marketplace \ud83c\udde9\ud83c\uddea to rank for a specific keyword. The test title, however, was mistakenly scheduled in English instead of German.\n\n\u26a0\ufe0f The result?\n\u00a0\u274c \u20ac1,500 lost in revenue\n\u00a0\u274c \u20ac500 lost in profits\n\u00a0\u274c Drop in rankings & conversions\n\nWhy did this happen?\n\nAmazon\u2019s algorithm favors local-language relevance, and an English title in the German marketplace meant lower keyword indexing, reduced CTR, and poor conversion rates.\n\n\n\ud83d\ude80 Key Takeaway:\n\u00a0\u2705 Double-check A/B test settings before launching\n\u00a0\u2705 Ensure title localization aligns with marketplace language\n\u00a0\u2705 Monitor performance daily to catch mistakes early\n\n\ud83d\udcac Have you ever made a testing mistake that impacted your sales? Let\u2019s discuss and learn from each other! \ud83d\udc47\n\n#AmazonFBA #Ecommerce #ABTesting #ConversionOptimization #AmazonAdvertising #MarketingMistakes #Scaling",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQEqRuC21Xps5g",
+          "sticker": false,
+          "size": {
+            "height": 533,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQEqRuC21Xps5g/feedshare-shrink_800/B4DZYBkxM9GwAk-/0/1743783140603?e=1779321600&v=beta&t=hzWiW1chW8BKf4-nrpf3AVGo178FdFXs0zMB8Jk78hM"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7313956607971745792",
+      "is_repost": false,
+      "parsed_datetime": "2025-04-04T16:12:22.083Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7252664699211681792",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonsellers-ppcoptimization-amazonads-activity-7252664699211681792-3Ymr?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1yr",
+      "comment_counter": 8,
+      "impressions_counter": 1352,
+      "reaction_counter": 15,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "\ud83d\udd25 Looking to Skyrocket Your Amazon PPC Performance While Reducing Ad Spend?\n.\n.\n.\nIt\u2019s time to supercharge your Amazon PPC strategy with our Top Performer Filters for Amazon PPC Optimization! \ud83d\ude80\n.\n.\nImagine focusing only on high-converting targets and prime placements, all while optimizing for better visibility and higher conversion rates. With our expert filtering process, you can achieve this and more! \ud83d\udca5\n.\n.\nReady to discover the 4 PROVEN STEPS we use to optimize Amazon PPC campaigns and drive exceptional results?\n\nHere\u2019s what you\u2019ll learn:\n\ud83d\udfe0 How to identify your top-performing keywords and maximize ROI\n\ud83d\udfe0 Strategies to boost ad placements and dominate top search results \ud83e\uddd0\n\ud83d\udfe0 Real steps that have helped sellers increase profitability while controlling costs!\n\nWant to dive deeper?\n\n\nComment \u201cOptimize\u201d below, and we\u2019ll share the detailed workflow and tips with a video!\n\n\n\ud83d\udd11 Take control of your Amazon ads and start optimizing like a pro today!\n\n\n #AmazonSellers #PPCOptimization #AmazonAds #BoostYourROI",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQHSmVVDyD9S-Q",
+          "sticker": false,
+          "size": {
+            "height": 418,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQHSmVVDyD9S-Q/feedshare-shrink_800/feedshare-shrink_800/0/1729118639984?e=1779321600&v=beta&t=h_kspwqwj7wsWKjO0SC2vG4FGDG4ljpteoyh0IdxM-Y"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7252664699211681792",
+      "is_repost": false,
+      "parsed_datetime": "2024-10-17T13:00:12.286Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7247384073453621251",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonppc-fbaexcel-adtactix-activity-7247384073453621251-CHzn?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "1yr",
+      "comment_counter": 52,
+      "impressions_counter": 1782,
+      "reaction_counter": 18,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "\ud83d\udd25 Want to Reduce Your Amazon Ad Spend and Boost Campaign Performance?\n.\n.\n.\nIt\u2019s time to take control of your Amazon PPC strategy with our game-changing Negation Optimization using FBA Excel Adtactix! \ud83d\ude80\n.\n.\nImagine cutting wasted ad spend and focusing only on high-converting keywords, while automating much of the process. With FBA Excel Adtactix, it\u2019s not just possible\u2014it\u2019s happening! \ud83d\udca5\n.\n.\nReady to discover the 7 PROVEN STEPS we use to optimize Amazon PPC campaigns and drive powerful results?\n\nHere\u2019s a sneak peek at what you\u2019ll learn:\n\n\ud83d\udfe0How we cut wasted ad spend by focusing on the right keywords\n\ud83d\udfe0The tool that helped us identify and eliminate budget-draining search terms \ud83e\uddd0\n\ud83d\udfe0Real strategies that have helped brands increase profitability in just weeks!\n\nWant to know more?\nComment \u201cControl\u201d below, and we\u2019ll share the workflow with the Video!\n\n\ud83d\udd11 Unlock the potential of your Amazon ads now with FBA Excel Adtactix!\n\n#AmazonPPC #FBAExcel #Adtactix #KeywordNegation #PPCOptimization #EcommerceGrowth #AmazonSellers #MarketingHacks #BoostROI",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQGTju7AblydIA",
+          "sticker": false,
+          "size": {
+            "height": 418,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQGTju7AblydIA/feedshare-shrink_800/feedshare-shrink_800/0/1727911011933?e=1779321600&v=beta&t=qWPVz-dOTAb9WObo0PoZQqylmVmBQAfFMKH8C5sR8JA"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7247384073453621251",
+      "is_repost": false,
+      "parsed_datetime": "2024-10-02T23:16:52.996Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7107403566113255424",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonseller-amazonupdates-amazonai-activity-7107403566113255424-QTr3?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "2yr",
+      "comment_counter": 1,
+      "impressions_counter": 0,
+      "reaction_counter": 10,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Amazon has introduced a new AI tool for creating listing content. \n\n\nIt's in early access, available on the new product page, and focuses on generating Titles, Descriptions, and Bullet Points quickly.\n\n\nWhile it's a helpful tool for inspiration and speeding up content writing, it's not a complete replacement. Manual optimization is still crucial for high-converting listings.\n\n\nThis AI feature is in beta and may expand in the future, but remember that aspects like branding, messaging, and SEO still need a human touch.\n\n\nYour thoughts on having access to this feature for creating new listings are valuable in this changing landscape.\n\nNote: \n\nYou need to add 100 words about the Product to help it generate relevant content\n\nDo not include personal data such as names, addresses, or telephone numbers.\n\n#amazonseller #amazonupdates #amazonai #ai #amazonlistingoptimization #ailistingcontent",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4E22AQE1fVytNkTWoQ",
+          "sticker": false,
+          "size": {
+            "height": 480,
+            "width": 480
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4E22AQE1fVytNkTWoQ/feedshare-shrink_480/feedshare-shrink_480/0/1694537057708?e=1779321600&v=beta&t=M81c-E86rhI9HylozX5aF2bFwXps60rtUugMMDgnqi0"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7107403566113255424",
+      "is_repost": false,
+      "parsed_datetime": "2023-09-12T16:44:19.334Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:ugcPost:7107035088449646592",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazon-activity-7107035089246597120-Pz7l?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "2yr",
+      "comment_counter": 2,
+      "impressions_counter": 0,
+      "reaction_counter": 10,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Optimizing Your Amazon Advertising: Tackling Keyword Cannibalization\n\n\n\nKeyword cannibalization in Amazon PPC is a challenge every seller should tackle head-on. \n\nIt occurs when multiple campaigns or ad groups inadvertently compete for the same keywords, negatively impacting campaign performance.\n\n\nCauses of Keyword Cannibalization:\nPoor campaign structure\nOverlapping keyword targeting\nOverlapping match types \nKeyword duplications\n\nEffects of Keyword Cannibalization:\nFluctuation in Click Through Rate (CTR) \nHigh Cost per Click (CPC)\nIn-effective Ads Spend\nLow Conversion (CVR) \nPoor Ads Efficency\n\nSolution of Keyword Cannibalization:\nRight campaign Nomenclature\u2028\nNegative Keyword over Different match type\nRight Bidding Strategy\nkeyword duplications\nRight Campaigns Budgeting\n\nConclusion:\n\nKeyword cannibalization, often caused by keyword duplication, can be managed with these strategies, leading to higher CTRs, lower CPCs, and improved conversion rates.\n\nTake control of your Amazon PPC campaigns and maximize their potential\n#amazonppc #amazonppctips #amazonadvertising #keywordoptimization #campaignoptimization #ecomscraper #amazonads",
+      "mentions": [],
+      "attachments": [
+        {
+          "type": "file",
+          "id": "D4D1FAQHgbvUg7OLCYQ",
+          "file_name": "Amazon ",
+          "file_size": 0,
+          "mimetype": "application/pdf",
+          "unavailable": false,
+          "url": "https://media.licdn.com/dms/document/media/v2/D4D1FAQHgbvUg7OLCYQ/feedshare-document-url-metadata-scrapper-pdf/feedshare-document-url-metadata-scrapper-pdf/0/1694448600761?e=1778457600&v=beta&t=fns9evR6JRk_M0kVnNVndRRLqFVxo-Vd_sWpVqb1RPQ",
+          "url_expires_at": 1778457600000
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7107035089246597120",
+      "is_repost": false,
+      "parsed_datetime": "2023-09-11T16:20:07.603Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:ugcPost:7061896773975293952",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_to-win-on-amazon-improve-your-pre-listing-activity-7061896774528974849-gPoK?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "2yr",
+      "comment_counter": 0,
+      "impressions_counter": 0,
+      "reaction_counter": 4,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "110% agreed Aaron Cordovez \n\nRecently we had an issue with scaling a product on Amazon \n\nListing images - EBC - OFFER - Reviews everything was top notch \n\nBut it was struggling a lot in ppc as well \n\nInstead of making changes in ppc we tried to test multiple MAIN IMAGES \n\nWe Ran A/B testing for the mail Image  and BOOM \n\nWith these tests we increased the revenue from $4000 a month to $22000 a month",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7061896773975293952",
+      "is_repost": true,
+      "repost_id": "7061896774528974849",
+      "parsed_datetime": "2023-05-10T02:56:34.613Z",
+      "repost_content": {
+        "id": "7058876983241236480",
+        "date": "3yr",
+        "parsed_datetime": "2023-05-01T18:57:00.397Z",
+        "text": "To win on Amazon - improve your pre listing! \n\n1. Main Image\n2. Title\n3. Reviews\n4. Price\n5. Coupons/Badges\n\nThose are the only 5 that you can use to get someone to your page!",
+        "author": {
+          "public_identifier": "aaroncordovez",
+          "id": "ACoAABROJj0B-H7vBXcOp2NyTTvrMEIuZhDWrAo",
+          "name": "Aaron Cordovez",
+          "is_company": false
+        }
+      }
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7049849735377035266",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonseller-inventorymanagement-amazoninventory-activity-7049849735377035266-sQYX?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "3yr",
+      "comment_counter": 1,
+      "impressions_counter": 0,
+      "reaction_counter": 8,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "\ud83d\udea8 Attention Amazon Sellers! \ud83d\udea8 \n.\n.\n.\n.\nHave you ever experienced delays in your inventory shipments to Amazon? \ud83d\udce6\ud83d\udd70\ufe0f\n.\nWe shipped our inventory on March 14th and are still waiting for it to arrive in stock. \n.\nAs a result, we're facing challenges with our sales and advertising performance.\n.\n.\nDelays in inventory shipments can be frustrating and impact sales for your business. \n.\nHave you ever faced similar challenges with delayed inventory shipments on Amazon? \n.\n.\nLet's discuss this in the comments below. \ud83d\udcac\n\n#AmazonSeller #InventoryManagement #AmazonInventory #ShippingDelays #AmazonSales #Ecommerce #OnlineBusiness #SmallBusiness #Entrepreneurship",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "D4D22AQHXDvWU2IIyUQ",
+          "sticker": false,
+          "size": {
+            "height": 397,
+            "width": 480
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQHXDvWU2IIyUQ/feedshare-shrink_480/feedshare-shrink_480/0/1680815155561?e=1779321600&v=beta&t=GkTQkRFm0tAAhUMDy-dw53NnoYRXcVObAznDD9tEj6w"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7049849735377035266",
+      "is_repost": false,
+      "parsed_datetime": "2023-04-06T21:05:56.788Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:ugcPost:7047981413618397184",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_advertising-amazonppcexpert-datadive-activity-7047981415291838464-jfmH?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "3yr",
+      "comment_counter": 3,
+      "impressions_counter": 0,
+      "reaction_counter": 10,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "From Average to Exceptional: How Data Dive Software helped in Boosting our Client's Product Revenue by 340%. \n.\n.\n.\n.\nWe were struggling with a low revenue of only $4k to $5k in the market with a 5% conversion rate on Amazon Advertising.\n.\n.\n.\n.\nBut, after attending \ud83d\ude80Anthony Cofrancesco on CLICK MORE SUMMIT webinar on A/B testing creatives with the help of Deep Dive, we knew we had to take action.\n.\n.\n.\nSo, we decided to follow the steps he outlined in his presentation, including A/B testing our creatives, optimizing our campaigns, and working on our ranking. And guess what? It worked!\n.\n.\n.\nOur Revenue skyrocketed, and we're now seeing incredible results. \ud83d\ude80 \n\nWe're so grateful to Kevin Sanderson for organizing the CLICK MORE SUMMIT, which gave us the opportunity to learn from experts like \ud83d\ude80Anthony Cofrancesco.\n.\n.\n.\nIf you're struggling to see results in your business, I highly recommend attending webinars and learning from experienced professionals. Who knows? You might just see a 340% increase in revenue like we did!\n\nBrandon Young Your tool has brought a lot of value to us and helped us beat our competitors. \ud83d\ude00 \n\n\n\n#advertising #amazonppcexpert #datadive #amazonfba #amazonads",
+      "mentions": [
+        {
+          "url": "https://www.linkedin.com/company/data-dive-software/",
+          "length": 18,
+          "start": 33
+        },
+        {
+          "url": "https://www.linkedin.com/in/ACoAABMZHvUBtSk3Pqm-OF57A-ETxxhFgG4QU0A",
+          "length": 20,
+          "start": 267
+        },
+        {
+          "url": "https://www.linkedin.com/in/ACoAAAxp7cYB96BvlheMxCdDV2p2hWrxSvCi6JI",
+          "length": 15,
+          "start": 690
+        },
+        {
+          "url": "https://www.linkedin.com/in/ACoAABMZHvUBtSk3Pqm-OF57A-ETxxhFgG4QU0A",
+          "length": 20,
+          "start": 801
+        },
+        {
+          "url": "https://www.linkedin.com/in/ACoAAAGHlZ0BzSvZ6I2giPx1tKHJG0ya4LI2vhw",
+          "length": 13,
+          "start": 1037
+        }
+      ],
+      "attachments": [
+        {
+          "id": "D4D22AQEJyN0yU3B3Eg",
+          "sticker": false,
+          "size": {
+            "height": 342,
+            "width": 480
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQEJyN0yU3B3Eg/feedshare-shrink_480/feedshare-shrink_480/0/1680369712569?e=1779321600&v=beta&t=OVFoCM0Ufxb-oop5h5s2Li_7PNBTXYXwW95uoeObXYs"
+        },
+        {
+          "id": "D4D22AQHxqzJIrO5aVw",
+          "sticker": false,
+          "size": {
+            "height": 480,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/D4D22AQHxqzJIrO5aVw/feedshare-shrink_800/feedshare-shrink_800/0/1680369712410?e=1779321600&v=beta&t=Ouk4FwY_vcTMD0HDFDzZT8CDgbInRAyPWVs-XPv8MYE"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7047981415291838464",
+      "is_repost": false,
+      "parsed_datetime": "2023-04-01T17:21:54.568Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7041548895058808832",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonadvertising-amazonppc-amazonseller-activity-7041548895058808832-JypV?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "3yr",
+      "comment_counter": 0,
+      "impressions_counter": 0,
+      "reaction_counter": 9,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Amazon is now providing the numbers of Units bought by the Customer in the Past month.\n.\n.\nJust saw this update from amazon.\n.\n#amazonadvertising #amazonppc #amazonseller #amazonlisting #AMAZONUPDATE #amazon",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "C4E22AQEcRiDBKXEqWg",
+          "sticker": false,
+          "size": {
+            "height": 465,
+            "width": 480
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C4E22AQEcRiDBKXEqWg/feedshare-shrink_480/feedshare-shrink_480/0/1678836079766?e=1779321600&v=beta&t=d_67Ft3ZoT6wImoAXTXHDM0BQtNYHs7YFl5d4mKBZcA"
+        },
+        {
+          "id": "C4E22AQE9Q7aMWCLcTg",
+          "sticker": false,
+          "size": {
+            "height": 321,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C4E22AQE9Q7aMWCLcTg/feedshare-shrink_800/feedshare-shrink_800/0/1678836081062?e=1779321600&v=beta&t=3gwp7iV9H1NlZI0xUuTjWjIBj9GiheMJHmQxoR6IL5Y"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7041548895058808832",
+      "is_repost": false,
+      "parsed_datetime": "2023-03-14T23:21:22.234Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:7041438363219832832",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_freelancers-upwork-boostyourproposal-activity-7041438363219832832-1pGM?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "3yr",
+      "comment_counter": 1,
+      "impressions_counter": 0,
+      "reaction_counter": 7,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "\ud83d\udce3 Attention Freelancers! \ud83d\udce3\n.\n.\n.\n.\n\nAs Upwork introduced the \"Boost your proposal\" feature on Upwork. While it may seem like a quick way to get ahead, it's also limiting opportunities for new freelancers to succeed. \ud83d\udc94\n.\n.\nThey need to find a solution that supports all freelancers, regardless of their experience level. We're considering:|\n\n\u2705 Limiting the feature to prevent abuse\n\u2705 Removing it altogether\n\u2705 Offering an alternative solution\n.\n.\nUpwork needs to be a platform that supports all freelancers! \ud83d\udcaa\n\n#freelancers #Upwork #BoostYourProposal #newbies #support #levelplayingfield #alternatives #success #opportunities #feedback",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "C4D22AQFCWbzoc-XEMQ",
+          "sticker": false,
+          "size": {
+            "height": 298,
+            "width": 480
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C4D22AQFCWbzoc-XEMQ/feedshare-shrink_480/feedshare-shrink_480/0/1678809727857?e=1779321600&v=beta&t=dHCll6sjkouWS7MNEIW9OyWZKm339Ry1und7URZz7mM"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "7041438363219832832",
+      "is_repost": false,
+      "parsed_datetime": "2023-03-14T16:02:09.390Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:6936136258586849280",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_business-copywriting-amazon-activity-6936136258586849280-Tn0h?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "3yr",
+      "comment_counter": 0,
+      "impressions_counter": 0,
+      "reaction_counter": 4,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "\ud83d\udcb2 PROFIT MATTERS\ud83d\udcb2\u00a0\n.\n\n.\nWhile investing in any business whether it's E-commerce, Real State, or any other business. It doesn't matter how much Revenue you Generate.\n.\nWhat Matter how much money is going into your Pocket\u00a0\u00a0\n.\nSo while Focusing on ROI in Amazon Business we need to take care of the following KPIs to achieve good ROI\u00a0\u00a0\n.\n.\n\n\u2b55Product Development Plays an extreme role in cracking the Market Competition\u2b55\n\n\u2b55Keyword Research Plays its Part in Terms of Ranking, Helping in Extracting Maximum juice($$) from the Niche\u2b55\n\n\u2b55Keyword Segmentation in Copywriting Content\u2b55\n\n\u2b55Listing Creatives helps buyers to make a Decision for the Purchase\u2b55 \n\n\u2b55Right PPC strategy for Ranking the Keywords and Expanding broadly in the Highly Converting Real State of Amazon Market Place.\u2b55\n.\nHopefully, it helps you guys understand the Keypoints to watch for the Product Launch.\n.\n.\nPS.\u2714If you are Stuck in any phase of Product Launch or Scaling your Product, we can schedule a Consultation Call to improve  it\u2714\n\n\nRegards\n\n#business #copywriting #amazon #commerce #amazonproductlaunch\n#amazonppc #amazonfba #amazonfbaseller",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "C4D22AQFJMghmb0fTKQ",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C4D22AQFJMghmb0fTKQ/feedshare-shrink_800/feedshare-shrink_800/0/1653703748214?e=1779321600&v=beta&t=eeVe1x8NkT6LwnYKZz5y9oiqaxb0ORVfgr8u00avn4c"
+        },
+        {
+          "id": "C4D22AQFwsSQafHejmQ",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C4D22AQFwsSQafHejmQ/feedshare-shrink_800/feedshare-shrink_800/0/1653703748504?e=1779321600&v=beta&t=2oT0XQISAFENAEzXzHWsLJh0J_SLs4YgP1y8zS8whqo"
+        },
+        {
+          "id": "C4D22AQGIPDYm2I2NLA",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C4D22AQGIPDYm2I2NLA/feedshare-shrink_800/feedshare-shrink_800/0/1653703748215?e=1779321600&v=beta&t=F01wwMQcLnQWbZ95J0euJEWeRbR27bJ65rpe6-9ZoEc"
+        },
+        {
+          "id": "C4D22AQEKiYDcXlI1Fw",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C4D22AQEKiYDcXlI1Fw/feedshare-shrink_800/feedshare-shrink_800/0/1653703748340?e=1779321600&v=beta&t=fUYw1ymQTc2z0C42VmoJRe0We6KRrsB97HAQ2tc8O6E"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "6936136258586849280",
+      "is_repost": false,
+      "parsed_datetime": "2022-05-28T02:09:11.227Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:6934595384778330112",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonfba-sellingonamazon-marketing-activity-6934595384778330112-D_3H?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "3yr",
+      "comment_counter": 0,
+      "impressions_counter": 0,
+      "reaction_counter": 6,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Willing to Launch a Product and you are Stuck in to decide in which Niche to Launch or Stuck with the Evaluation.\n\nMarket Evaluation is the First and most important role while considering any niche or Product to start investing.\n\nI am going to Point out th Key fundamentals of Market through which we can evaluate any market.\n\n\n--URGENCY\u00a0\n--Market Size\n--Price Potiential\n--Cost of Customer Acquisition\n--Cosst of Value Delievery\u00a0\n--Unique Selling Point\n--Speed fo Market\u00a0\n--Upfront Investment\u00a0\n--Upsell Potiential\u00a0\n--Evergreen Potiential \n\n\n\n\u00a0\u00a0These KPIs are the Descision Market for the Market Entery.\n\n#amazonfba #sellingonamazon #marketing \n#marketevaluation  #investment  #amazon",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "C4D22AQHxCqLc_AILXg",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C4D22AQHxCqLc_AILXg/feedshare-shrink_800/feedshare-shrink_800/0/1653336376840?e=1779321600&v=beta&t=VizQMwer1ivGpWhuMCmCyUZ7avGAhExIGOxJ__tMRj8"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "6934595384778330112",
+      "is_repost": false,
+      "parsed_datetime": "2022-05-23T20:06:18.283Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:6930680004892602368",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_research-branding-content-activity-6930680004892602368-t2a9?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "3yr",
+      "comment_counter": 0,
+      "impressions_counter": 0,
+      "reaction_counter": 3,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "To Become a King of a Niche Require Planning and Research of the Market.\n.\n.\n.\n.\nResearch to Fill the Loop Holes in the Market\n.\n.\nLoop Holes may be in terms of \n\n--Branding\n--Content\u00a0\n--Product Design\n--Creative Content\u00a0\n--Marketing Strategy \n\nCovering these Modules makes your Path even more Convenient to enter the Market.\n#research #branding #content #Amaozntips\n#amazonmarketing #amazonppc #amazonlauchtips\n#marketingandadvertising #marketingstrategy",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "C4D22AQHTbnw11nE06g",
+          "sticker": false,
+          "size": {
+            "height": 800,
+            "width": 800
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C4D22AQHTbnw11nE06g/feedshare-shrink_800/feedshare-shrink_800/0/1652402877353?e=1779321600&v=beta&t=gKc4EkEDUYitdg-lxkfbba9-qym4Tqa22QjJ2MDPY4c"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "6930680004892602368",
+      "is_repost": false,
+      "parsed_datetime": "2022-05-13T00:47:58.974Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:6929559132211417088",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_development-ppcadvertising-amazon-activity-6929559132211417088-Vrxs?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "3yr",
+      "comment_counter": 2,
+      "impressions_counter": 0,
+      "reaction_counter": 7,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Want to Crack Competition on Amazon\u00a0\n.\n.\n.\n.\nFocus on Product Development while finalizing the Product to Launch.\u00a0\n.\n.\nProduct Development Plays an Important Role in Grabbing consumer sight.\n.\n.\nThe consumer wants to get More Value with Less Money.\n.\n.\nThrough this, you can easily crack a Competiton of PPC.\n\n\n#development #ppcadvertising  #amazon #amazonfba #amazonfbasellers #amazonproductlisting",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "6929559132211417088",
+      "is_repost": false,
+      "parsed_datetime": "2022-05-09T22:34:02.102Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:6921472275280011264",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazon-sales-amazonsellerservices-activity-6921472275280011264-NSK2?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "4yr",
+      "comment_counter": 2,
+      "impressions_counter": 0,
+      "reaction_counter": 10,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Product Category browse Node issue\n\nProblem:\n\nI have got this issue where our category is being changed by Amazon while we were out of stock.\n\n\nDue to this they are not letting us back in our category and are sales and ranks are getting affected. \n\n\nAlso, they are not letting us back on our category after multiple case openings and calls to seller support as well \n\n\nSolution:\n\n\nI have started a Campaign in the relevant category which I want to keep\n\nOnce the conversion came through the relevant category which I targeted\n\nI have opened a Case with Amazon to switch to that category, This time they have done it \n\nAnd we are now on our Relevant Category\n\n#amazon #sales #amazonsellerservices #sellerproblems #amazonlife #amazonfba #amazonppctips #amazonppc #amazonhacks #amazonadvertising #amazonbusiness #amazon #amazonprivatelabel",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "6921472275280011264",
+      "is_repost": false,
+      "parsed_datetime": "2022-04-17T14:59:45.163Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:6907753359416147968",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_one-of-the-best-quotes-ive-heard-in-years-activity-6907753359416147968-JQTT?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "4yr",
+      "comment_counter": 0,
+      "impressions_counter": 0,
+      "reaction_counter": 1,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "best\u2665\ufe0f\u2665\ufe0f",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "6907753359416147968",
+      "is_repost": true,
+      "repost_id": "6907753359416147968",
+      "parsed_datetime": "2022-03-10T18:25:40.736Z",
+      "repost_content": {
+        "id": "6907686658750468096",
+        "date": "4yr",
+        "parsed_datetime": "2022-03-10T14:00:38.058Z",
+        "text": "One of the best quotes i've heard in years:\n\n\"Work for a better life as if you live forever, and work for a better end as if you die tomorrow. / Imam Ali A.S\"\n\nThanks for sharing it with me Usama Abrar Hashmi !",
+        "author": {
+          "public_identifier": "adamrunquist",
+          "id": "ACoAAABOupQB15QnKD4W_u_7dr9YBbCUDTS0LSg",
+          "name": "Adam Runquist",
+          "is_company": false
+        }
+      }
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:6895081435070373888",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonbusiness-amaozn-amazonadvertising-activity-6895081435070373888-vuu3?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "4yr",
+      "comment_counter": 1,
+      "impressions_counter": 0,
+      "reaction_counter": 9,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Launched the Product in Mid Of January and have been getting Quite Good Results \nAlso Testing the Product, start with 4 campaigns only \nwhile targeting all the Relevant Products to Build good relevancy and also Main Keywords \nand Have been in #1 in New Release For a Week and Hope so will continue to Do so \n\nResults Over PPC is quite good with a very minimalist Adspend \n\n\n\n#amazonbusiness  #Amaozn #amazonadvertising #amazonseller #amazonppctips #amazonbestseller #amazonnewrelease",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "C5622AQFg0bX8iLhI3Q",
+          "sticker": false,
+          "size": {
+            "height": 160,
+            "width": 480
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C5622AQFg0bX8iLhI3Q/feedshare-shrink_480/feedshare-shrink_480/0/1643915517638?e=1779321600&v=beta&t=-xqr1IhfXPwCwIlONhfIT3TgfkljV11bl25FcUsKFcM"
+        },
+        {
+          "id": "C5622AQFk_2chDv8svg",
+          "sticker": false,
+          "size": {
+            "height": 33,
+            "width": 160
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C5622AQFk_2chDv8svg/feedshare-shrink_160/feedshare-shrink_160/0/1643915517639?e=1779321600&v=beta&t=lUqHpV8sXllpxT_pGOPt7DrNbbxFaX93fn9juy2wyas"
+        },
+        {
+          "id": "C5622AQFv7jEvikQe7A",
+          "sticker": false,
+          "size": {
+            "height": 163,
+            "width": 480
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C5622AQFv7jEvikQe7A/feedshare-shrink_480/feedshare-shrink_480/0/1643915517638?e=1779321600&v=beta&t=QJxQNPg2GUY_LFeQtLsyV-GyLsy4asPsGJxsuzHYRxI"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "6895081435070373888",
+      "is_repost": false,
+      "parsed_datetime": "2022-02-03T19:11:58.539Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:6880236843850362880",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonseller-amazonfba-amazonadvertising-activity-6880236843850362880-LjGo?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "4yr",
+      "comment_counter": 0,
+      "impressions_counter": 0,
+      "reaction_counter": 4,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Defensive Product Targeting Campaign Insights\n\nHave Been Working on this Product From Past 9 Months and was not giving enough attention on the Defensive Campaigns \n\nand Started the Defensive Campaigns on 3 Oct and is very effective to us But CPC is quite high which is bearable. \n\nEveryone should test Them \nHopefully will Perform Better \n\nRegards \nLabib \n\n#amazonseller #amazonfba #amazonadvertising #amazonads",
+      "mentions": [],
+      "attachments": [
+        {
+          "id": "C4E22AQHw_9zeQncK3w",
+          "sticker": false,
+          "size": {
+            "height": 178,
+            "width": 480
+          },
+          "unavailable": false,
+          "type": "img",
+          "url": "https://media.licdn.com/dms/image/v2/C4E22AQHw_9zeQncK3w/feedshare-shrink_480/feedshare-shrink_480/0/1640376291519?e=1779321600&v=beta&t=vBJ3ym1mS2zoNTL3wYs8heuVhcvMXzYQ5GcRdIkrzYc"
+        }
+      ],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "6880236843850362880",
+      "is_repost": false,
+      "parsed_datetime": "2021-12-24T20:04:52.193Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:ugcPost:6829735584450277376",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_entrepreneurship-business-activity-6829735584769040384-pJw7?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "4yr",
+      "comment_counter": 0,
+      "impressions_counter": 0,
+      "reaction_counter": 1,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "Best One",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "6829735584450277376",
+      "is_repost": true,
+      "repost_id": "6829735584769040384",
+      "parsed_datetime": "2021-08-07T11:30:53.684Z",
+      "repost_content": {
+        "id": "6828393925963730944",
+        "date": "4yr",
+        "parsed_datetime": "2021-08-03T18:39:37.374Z",
+        "text": "Please rewatch this a few times until it becomes religion \u2764\ufe0f\n\n\n#entrepreneurship #business",
+        "author": {
+          "public_identifier": "garyvaynerchuk",
+          "id": "ACoAAACgAVMBb8w4dbaqCMriT5tTYE0H4M_oFKE",
+          "name": "Gary Vaynerchuk",
+          "is_company": false
+        }
+      }
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:6811755041079332864",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_amazonadvertising-amazonppc-germany-activity-6811755041079332864-xwH3?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "4yr",
+      "comment_counter": 0,
+      "impressions_counter": 0,
+      "reaction_counter": 4,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "German Market\u00a0\nHow to Grab the\u00a0Sales of the Competitors\u00a0in the Niche?\n\nPPC is also one of the way to\u00a0Grab the Sales\u00a0e\nBut Main Concern is not PPC Will discuss that is\u00a0Coming Post\nMain area is other Things that are Related to the PPC\nHere is as many People Move towards German Market\u00a0r\nSo let me add my\u00a0Experience of Multiple Launches in German Market \n\nAs the Work OF THE PPC is to get more Clicks and Engage Customer\u2019s to Your Listing here the Work of PPC is done\nNow the Role of the Conversion is of the Following\nUnique Selling Point\nPrice Point Analysis\nBranding\nThe main Concern of Making this Post is to provide awareness about the Unique Selling Point\n\n1.\u00a0Unique Selling Point\n\nThis is the Point which will make you Different from Your Competitors and let you\n\nGrab the Sales of the Market\nYou will grab more Attention over the Page\n\nGet More Traffic, Get more CTR, More Chances of the Conversion\nTo Get More\u00a0Conversion\u00a0\u00a0Your Price Should Be competitive in the Market\n\nAs You are a New seller also have No reviews So these things\nwe Should Keep in Mind\nn\u00a0Add some Value with the Product this will Provide an Upper hand in the Market\n\n2.\u00a0Branding\n\nYour Pictures Should Highly Optimize and Packaging with the Premium graphics.\nImages will be providing all the details of the Product.\nAlso do a Proper analysis of the Competitors Negative Review and mentioning that issue on the 7 Images of the Product and EBC\nGraphics will be Overwhelming to the Customers and Should Be attractive\n\nNote:\n \u00a0Price Should Be Competitive from the Market and Competitor\u2019s after Adding value also\nThat is the Plus Point.\nAnd German's\u00a0\u00a0are Quality Conscious Double-Check the Quality of Your Product and your Inventory\n\n#amazonadvertising #amazonppc #germany #PPC #amazonfba",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "6811755041079332864",
+      "is_repost": false,
+      "parsed_datetime": "2021-06-18T20:42:38.082Z"
+    },
+    {
+      "object": "Post",
+      "provider": "LINKEDIN",
+      "social_id": "urn:li:activity:6795358068369584128",
+      "share_url": "https://www.linkedin.com/posts/labibjaved_marketing-amazonmarketing-branding-activity-6795358068369584128-HheI?utm_source=social_share_send&utm_medium=member_desktop_web&rcm=ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+      "date": "4yr",
+      "comment_counter": 0,
+      "impressions_counter": 0,
+      "reaction_counter": 4,
+      "repost_counter": 0,
+      "permissions": {
+        "can_post_comments": true,
+        "can_react": true,
+        "can_share": true
+      },
+      "text": "German Market Keyword Research  \n\nHi guys after baked success stories in Au and UK, Recently I launched in Germany, stats will share soon, I noticed a lot of my mates move towards Germany. \n\nWhile product hunting keyword stats is the main key to move towards the evaluation and most of the People are hustling in resolving their issues. Let me add my 2 cents here.\n\n Keep your Word Count 0 BCZ some words in English which are 2 Tail Keywords are 1 Keyword In German Market  E.g (Water bottle)(Wasserflasche) as you see it's a 2 tail word in English and 1 word in German Language\n\n After Reverse ASIN any Product you choose for the submission what people do is keep their Organic rank(1-20) and main keyword doesn't appear there as there is a chance of the Product to be in struggling to do in the top 20 Position and to tackle that I will choose Organic (1-53) but in choosing this Sometimes semi relevant keywords also appears so keep conjusting Organic Rank to 40,30.\n \nYou will get your Main Keyword.\n\n And Choose Competitors who are getting higher Revenue for the Keywords as they're working on more Keywords and getting More junk from the relevant Niche Market.\n#marketing  #amazonmarketing  #branding #contentmarketing #linkedin #Amazon #amazonppc #amazonadvertising #amazonfba  #strategy",
+      "mentions": [],
+      "attachments": [],
+      "author": {
+        "public_identifier": "labibjaved",
+        "id": "ACoAACC1tj8BHf0kkLgdiWjNOYwTaTqcJ11i4Kg",
+        "name": "Labib Javed",
+        "is_company": false,
+        "headline": "I help 7\u20138 figure Amazon brands scale profitably with the LynxMethod\u2122 | \u20ac29M+ managed across 100+ accounts | DM \u201cAUDIT\u201d to start",
+        "profile_picture_url": "https://media.licdn.com/dms/image/v2/D4D03AQF87vkXDFcp1A/profile-displayphoto-scale_400_400/B4DZk.LN9.JAAg-/0/1757684754226?e=1779321600&v=beta&t=XCgb1u-3NJivkXqc2PG2xGyLSGgItnrDhQkZj4BW7MY"
+      },
+      "id": "6795358068369584128",
+      "is_repost": false,
+      "parsed_datetime": "2021-05-04T14:46:55.147Z"
+    }
+  ]
+}
