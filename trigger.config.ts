@@ -10,7 +10,7 @@ import { defineConfig } from "@trigger.dev/sdk/v3";
  *    from the `trigger/` directory.
  */
 export default defineConfig({
-  project: "REPLACE_WITH_YOUR_TRIGGER_DEV_PROJECT_REF",
+  project: "proj_ofmbomimygbybgbjskxe",
   runtime: "node",
   logLevel: "log",
   // Default max duration for any task (seconds). The CTA comment-response task

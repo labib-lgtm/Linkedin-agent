@@ -40,8 +40,10 @@ SCHEMA: dict[str, list[str]] = {
         # Image dimensions (only used when format=image; see normalize_image_size)
         "image_size",
         # Path to the rendered lead-magnet PDF for this angle (column W).
-        # Phase B will add a sibling lead_magnet_url for the Drive/DUB link.
         "lead_magnet_path",
+        # Public shareable URL for the lead magnet (Drive webViewLink, column X).
+        # Populated by tools/drive_upload_lead_magnet.py.
+        "lead_magnet_url",
     ],
     "patterns": [
         "pattern_id", "name", "description", "example_post_url", "active",
@@ -52,6 +54,24 @@ SCHEMA: dict[str, list[str]] = {
     "metrics": [
         "angle_id", "post_url", "impressions", "reactions", "comments",
         "reposts", "saves", "sends", "dwell_ratio", "verdict", "pulled_at",
+    ],
+    # Phase B engagement-loop recipient log. One row per CTA-keyword commenter.
+    # Written by tools/unipile_monitor_comments.py (queued state) and patched
+    # to completed by trigger/engagement_loop.ts at T+3h.
+    "lead_magnet_recipients": [
+        "recipient_id",       # uuid4 hex
+        "angle_id",
+        "post_url",
+        "comment_id",
+        "commenter_id",
+        "commenter_name",
+        "cta_keyword",
+        "trigger_run_id",     # Trigger.dev run ID for the audit trail
+        "queued_at",          # when unipile_monitor_comments detected the CTA
+        "t0_reply_at",        # public 'sharing soon' comment posted
+        "dm_sent_at",         # DM with lead_magnet_url sent
+        "t3_reply_at",        # public 'sent to your DMs' comment posted
+        "status",             # queued / replied / dm_sent / completed / failed
     ],
 }
 

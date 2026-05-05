@@ -16,9 +16,10 @@ __pycache__/
 venv/
 *.egg-info/
 
-# Node / Trigger.dev
+# Node / Trigger.dev / Next.js
 node_modules/
 .trigger/
+.next/
 dist/
 build/
 *.log
@@ -27,6 +28,8 @@ yarn-debug.log*
 yarn-error.log*
 .npm/
 .yarn-integrity
+*.tsbuildinfo
+next-env.d.ts
 
 # Working files (regenerable: drafts, rendered images, scraped data)
 /temp/outputs/

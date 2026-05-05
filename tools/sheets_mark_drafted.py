@@ -1,6 +1,6 @@
-"""Write a draft INTO the Sheet (cols O-S) and flip status Drafting → Drafted.
+"""Write a draft INTO the canonical store and flip status Drafting → Drafted.
 
-The Sheet is canonical for drafts. No more markdown files for the body.
+Supabase is canonical for drafts. No markdown files for the body.
 
 Args (mutually exclusive sources for the body):
   --draft-body <text>   Inline text. Watch for shell escaping on long bodies.
@@ -16,24 +16,17 @@ Required:
 Optional:
   --slide-outline <text> | --slide-outline-file <path>   for carousel/video formats
 
-Run examples:
-  python3 tools/sheets_mark_drafted.py \
-      --angle-id 2026-W18-A09 \
-      --hook-chosen B \
-      --hook-alternates-file /tmp/alts.txt \
-      --body-file /tmp/body.txt \
-      --critic-score "6/6 ship-ready" \
-      --slide-outline-file /tmp/slides.txt
+Filename kept (sheets_*) for compatibility with workflow doc commands; the
+implementation now writes to Supabase, not Google Sheets.
 """
 from __future__ import annotations
 
 import argparse
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
-from sheets_client import (
-    SCHEMA, find_row_by_id, header_map, safe_update, worksheet, col_letter,
-)
+from supabase_client import update_angle
 
 
 def _resolve(text: str | None, path: str | None) -> str:
@@ -72,25 +65,18 @@ def main() -> None:
             file=sys.stderr,
         )
 
-    ws = worksheet("angles")
-    hm = header_map(ws)
-    row = find_row_by_id(ws, args.angle_id, id_col=hm["angle_id"])
-    if row is None:
-        sys.exit(f"angle_id not found: {args.angle_id}")
-
-    updates = [
-        {"range": f"{col_letter(hm['status'])}{row}", "values": [["Drafted"]]},
-        {"range": f"{col_letter(hm['hook_chosen'])}{row}", "values": [[args.hook_chosen]]},
-        {"range": f"{col_letter(hm['hook_alternates'])}{row}", "values": [[alternates]]},
-        {"range": f"{col_letter(hm['draft_body'])}{row}", "values": [[body]]},
-        {"range": f"{col_letter(hm['critic_score'])}{row}", "values": [[args.critic_score]]},
-    ]
+    fields: dict[str, str] = {
+        "status":          "Drafted",
+        "hook_chosen":     args.hook_chosen,
+        "hook_alternates": alternates,
+        "draft_body":      body,
+        "critic_score":    args.critic_score,
+        "date_generated":  datetime.now(timezone.utc).isoformat(),
+    }
     if slide_outline:
-        updates.append({
-            "range": f"{col_letter(hm['slide_outline'])}{row}",
-            "values": [[slide_outline]],
-        })
-    safe_update(ws, updates)
+        fields["slide_outline"] = slide_outline
+
+    update_angle(args.angle_id, fields)
     print(
         f"OK — {args.angle_id} → Drafted "
         f"(hook {args.hook_chosen}, body {len(body)} chars, score '{args.critic_score}')"

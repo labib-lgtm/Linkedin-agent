@@ -23,18 +23,18 @@ The two-touch public sequence keeps engagement on the post alive past the first-
 (Phase B builds the timing + dispatch + recipient log. Phase A — this workflow — only ensures the asset exists.)
 
 ## Inputs
-- Approved post draft (status = `Drafted` on the angles tab)
-- `cta_keyword` from the angle row (e.g. `KILL`, `PRIME`)
+- Approved post draft (status = `Drafted` in the `angles` table)
+- `cta_keyword` from the angle record (e.g. `KILL`, `PRIME`)
 - The exact CTA promise from the post body (the words after "I'll send")
 
 ## Tools / skills used
 - **`linkedin-lead-magnet` skill** — writes the structured markdown for the deliverable. Voice rules locked: no em-dashes, no asterisks, no hashtags. Operator-grade specifics, not generic best-practice fluff.
 - [tools/gen_lead_magnet.py](../tools/gen_lead_magnet.py) — Pillow-based PDF renderer. Reads a JSON spec (`lead_magnet_spec.json`), produces page PNGs + combined `lead_magnet.pdf`. Letter portrait by default (1275×1650 px @ ~150 DPI).
-- [tools/sheets_mark_lead_magnet_ready.py](../tools/sheets_mark_lead_magnet_ready.py) — writes the relative path to column W. Does NOT change `status`.
+- [tools/sheets_mark_lead_magnet_ready.py](../tools/sheets_mark_lead_magnet_ready.py) — writes the relative path + URL to the angle's `lead_magnet_path` / `lead_magnet_url` fields. Does NOT change `status`. (Filename keeps the `sheets_*` prefix for backwards compatibility; the implementation now writes to Supabase.)
 
 ## Steps
 
-1. **Read the angle row.** The agent already has the draft body and `cta_keyword` from 04's output, or pulls fresh from the Sheet via [tools/sheets_read_draft.py](../tools/sheets_read_draft.py).
+1. **Read the angle record.** The agent already has the draft body and `cta_keyword` from 04's output, or pulls fresh from Supabase via [tools/sheets_read_draft.py](../tools/sheets_read_draft.py).
 
 2. **Invoke `linkedin-lead-magnet` skill** with `angle_id`, `cta_keyword`, `draft_body`, and the parsed `cta_promise` (verbatim text after "I'll send" in the post). The skill produces `temp/outputs/assets/<angle_id>/lead_magnet.md` with sections: COVER, WHY THIS MATTERS, the substance sections (CHECKLIST / FRAMEWORK_TABLE / PRINCIPLE), CLOSING.
 
@@ -53,7 +53,15 @@ The two-touch public sequence keeps engagement on the post alive past the first-
 
 5. **Present at Gate 3b.** Show the PDF in chat alongside (or after) the visual asset from 05. The user reviews against the post's CTA promise: does the deliverable match what was promised?
 
-6. **Mark lead magnet ready.** After approval:
+6. **Upload to Google Drive.** After Gate 3b approval:
+   ```
+   python3 tools/drive_upload_lead_magnet.py --angle-id <id>
+   ```
+   Uploads `lead_magnet.pdf` to a Drive folder (`lynx-lead-magnets` by default), sets sharing to "Anyone with link can view", returns the `webViewLink`, and writes the URL to the angle's `lead_magnet_url` field via `sheets_mark_lead_magnet_ready.py --lead-magnet-url ...`.
+
+   This URL is what the Trigger.dev engagement-loop task DMs to commenters at T+3h. It must be public-readable since LinkedIn DM recipients aren't in any single org.
+
+7. **Mark local path too** (audit trail, optional):
    ```
    python3 tools/sheets_mark_lead_magnet_ready.py \
        --angle-id <id> \

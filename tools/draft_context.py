@@ -26,7 +26,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 sys.path.insert(0, str(PROJECT_ROOT / "tools"))
-from sheets_client import header_map, worksheet
+from supabase_client import get_angle, read_table
 
 
 def topical_keywords(hook: str) -> set[str]:
@@ -47,12 +47,10 @@ def topical_keywords(hook: str) -> set[str]:
 
 
 def get_angle_row(angle_id: str) -> dict:
-    ws = worksheet("angles")
-    rows = ws.get_all_records()
-    for r in rows:
-        if str(r.get("angle_id", "")).strip() == angle_id:
-            return r
-    sys.exit(f"angle_id not found: {angle_id}")
+    angle = get_angle(angle_id)
+    if angle is None:
+        sys.exit(f"angle_id not found: {angle_id}")
+    return angle
 
 
 def get_topical_winners(hook: str, n: int = 3) -> list[dict]:
@@ -101,8 +99,7 @@ def read_voice_anchors() -> str:
 
 def get_killed_topics() -> list[dict]:
     try:
-        ws = worksheet("killed_topics")
-        return ws.get_all_records()
+        return read_table("killed_topics")
     except Exception:
         return []
 

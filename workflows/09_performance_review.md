@@ -14,7 +14,7 @@ Sunday morning, before [01_niche_research.md](01_niche_research.md) kicks off th
 ## Tools
 - `tools/unipile_get_my_posts.py` — refreshes `temp/resources/my_posts_raw.json` with the latest counters per post
 - `tools/score_my_posts.py` — scores reactions/comments/reposts and emits `temp/outputs/post_winners_*.md`
-- `tools/sheets_write_metrics.py` — appends metrics rows to the Sheet's `metrics` tab (one row per pull → time series)
+- `tools/sheets_write_metrics.py` — appends metrics rows to the `metrics` table (one row per pull → time series). Filename keeps `sheets_*` prefix; implementation now writes to Supabase.
 - `tools/update_winners_memory.py` — appends a structured row to `temp/resources/winners_memory.md` (the prompt-context file)
 - Optional: `data:create-viz` for a weekly chart
 
@@ -32,14 +32,14 @@ Sunday morning, before [01_niche_research.md](01_niche_research.md) kicks off th
 4. For losers, extract: what was generic, what hook fell flat, was the topic stale.
 5. Write a 1-page memo: this week's winners, losers, 1–3 hypotheses to test next week.
 6. Append structured rows to `temp/resources/winners_memory.md` so [03_topic_pipeline.md](03_topic_pipeline.md) can use them.
-7. **Sheet write-back.** Run `python tools/sheets_write_metrics.py --from-published YYYY-WW` → appends a row to the Sheet's `metrics` tab for every Posted angle from the week. This builds the long-form historical record (one row per metric pull, time series).
-8. For any angle that is clearly stale or disproven by metrics, mark it `Killed` in the Sheet (or use `tools/sheets_log_killed.py --angle-id <id> --reason <text>` to also propagate it to the dedupe table).
+7. **Metrics write-back.** Run `python tools/sheets_write_metrics.py --from-published YYYY-WW` → appends a row to the `metrics` table for every Posted angle from the week. This builds the long-form historical record (one row per metric pull, time series).
+8. For any angle that is clearly stale or disproven by metrics, mark it `Killed` in the webapp (or use `tools/sheets_log_killed.py --angle-id <id> --reason <text>` to also propagate it to the dedupe table).
 
 ## Output
 - `temp/outputs/retros/YYYY-WW.md` — the memo
 - `temp/resources/winners_memory.md` — append-only structured log (small + fast for the 03 prompt)
-- Sheet `metrics` tab — long-form historical record (browse, pivot, chart over time)
-- Two-tier on purpose: prompts read local files for speed; humans read the Sheet for browsing.
+- `metrics` table in Supabase — long-form historical record (browse, pivot, chart over time)
+- Two-tier on purpose: prompts read local files for speed; humans read the webapp for browsing.
 
 ## Edge cases
 - New account / not enough data for medians → use absolute thresholds for first 4 weeks (e.g., >2,500 impressions = winner), then switch to medians.

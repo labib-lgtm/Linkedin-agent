@@ -1,7 +1,7 @@
 """Visual asset dispatcher — reads a Drafted angle, branches on format.
 
 Runs after Gate 2 approval of the post draft from 04_post_writer. Reads the
-angle row from the Sheet, prints the context the agent needs to invoke the
+angle record from Supabase, prints the context the agent needs to invoke the
 right design skill (linkedin-image-asset, or the carousel chain, or write
 poll options), and atomically flips status Drafted -> Visualizing so re-runs
 are idempotent.
@@ -20,9 +20,8 @@ import json
 import sys
 from pathlib import Path
 
-from sheets_client import (
-    FORMAT_VALUES, find_row_by_id, header_map, normalize_image_size,
-    safe_update, worksheet, col_letter,
+from supabase_client import (
+    FORMAT_VALUES, get_angle, normalize_image_size, update_angle,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -36,23 +35,13 @@ def main() -> None:
                     help="Read-only — don't flip status Drafted -> Visualizing")
     args = ap.parse_args()
 
-    ws = worksheet("angles")
-    hm = header_map(ws)
-    rows = ws.get_all_records()
-
-    target = None
-    target_row_idx = None
-    for i, r in enumerate(rows, start=2):
-        if str(r.get("angle_id", "")).strip() == args.angle_id:
-            target = r
-            target_row_idx = i
-            break
+    target = get_angle(args.angle_id)
     if target is None:
         sys.exit(f"angle_id not found: {args.angle_id}")
 
-    status = str(target.get("status", "")).strip()
-    fmt = str(target.get("format", "")).strip().lower()
-    body = str(target.get("draft_body", "")).strip()
+    status = str(target.get("status") or "").strip()
+    fmt = str(target.get("format") or "").strip().lower()
+    body = str(target.get("draft_body") or "").strip()
 
     if fmt not in FORMAT_VALUES:
         sys.exit(f"Invalid format '{fmt}' on {args.angle_id}. "
@@ -88,10 +77,7 @@ def main() -> None:
 
     # Flip Drafted -> Visualizing (idempotent: only flip if currently Drafted).
     if not args.no_flip and status == "Drafted":
-        safe_update(ws, [{
-            "range": f"{col_letter(hm['status'])}{target_row_idx}",
-            "values": [["Visualizing"]],
-        }])
+        update_angle(args.angle_id, {"status": "Visualizing"})
 
     # Build the context bundle the agent needs to invoke the right skill.
     out = {

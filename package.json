@@ -5,12 +5,14 @@
   "description": "Lynx Media LinkedIn growth system. Python WAT framework + Trigger.dev for scheduled work.",
   "type": "module",
   "scripts": {
-    "trigger:dev": "trigger.dev dev",
-    "trigger:deploy": "trigger.dev deploy",
-    "trigger:login": "trigger.dev login"
+    "trigger:dev": "trigger dev",
+    "trigger:deploy": "trigger deploy",
+    "trigger:login": "trigger login",
+    "trigger:logout": "trigger logout"
   },
   "dependencies": {
-    "@trigger.dev/sdk": "^3.0.0"
+    "@supabase/supabase-js": "^2.45.4",
+    "@trigger.dev/sdk": "4.4.5"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

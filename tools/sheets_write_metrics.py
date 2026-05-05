@@ -1,4 +1,4 @@
-"""Append a metrics row to the Sheet's `metrics` tab.
+"""Append a metrics row to the `metrics` table.
 
 Called by 09_performance_review after Unipile metrics are pulled.
 Append-only — multiple rows per angle accumulate as a time series.
@@ -10,22 +10,19 @@ Run:
 
   python3 tools/sheets_write_metrics.py --from-published 2026-W18
       (bulk-pull all Posted rows for a week and append metrics from Unipile)
+
+Filename kept (sheets_*) for compatibility with workflow doc commands; the
+implementation now writes to Supabase, not Google Sheets.
 """
 from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sheets_client import SCHEMA, header_map, worksheet
-
-
-def append_one(ws, headers: list[str], data: dict) -> None:
-    row = [data.get(col, "") for col in headers]
-    ws.append_row(row, value_input_option="USER_ENTERED")
+from supabase_client import client, insert_row, read_angles
 
 
 def now_iso() -> str:
@@ -34,28 +31,20 @@ def now_iso() -> str:
 
 def bulk_from_published(week: str) -> None:
     """For every Posted angle in the given week, pull metrics from Unipile and append."""
-    angles_ws = worksheet("angles")
-    rows = angles_ws.get_all_records()
-    targets = [
-        r for r in rows
-        if str(r.get("status", "")).strip().lower() == "posted"
-        and str(r.get("week_assigned", "")).strip() == week
-        and str(r.get("post_url", "")).strip()
-    ]
+    res = (
+        client()
+        .table("angles")
+        .select("*")
+        .eq("status", "Posted")
+        .eq("week_assigned", week)
+        .execute()
+    )
+    targets = [r for r in (res.data or []) if str(r.get("post_url") or "").strip()]
     if not targets:
         print(f"No Posted angles for week {week}", file=sys.stderr)
         return
 
     project_root = Path(__file__).resolve().parent.parent
-    pulled = json.loads(
-        subprocess.check_output(
-            ["python3", str(project_root / "tools" / "unipile_get_my_posts.py")],
-            cwd=str(project_root),
-        )
-        if False  # we already have raw data on disk; re-using it
-        else "{}"
-    ) if False else None
-
     raw_path = project_root / "temp" / "resources" / "my_posts_raw.json"
     if not raw_path.exists():
         sys.exit(f"Need {raw_path}. Run: python3 tools/unipile_get_my_posts.py first.")
@@ -63,31 +52,28 @@ def bulk_from_published(week: str) -> None:
     raw = json.loads(raw_path.read_text())
     by_url = {p.get("share_url", "").split("?")[0]: p for p in raw.get("posts", [])}
 
-    metrics_ws = worksheet("metrics")
-    headers = SCHEMA["metrics"]
     appended = 0
     for r in targets:
-        url = str(r.get("post_url", "")).strip().split("?")[0]
+        url = str(r.get("post_url") or "").strip().split("?")[0]
         p = by_url.get(url)
         if not p:
             print(f"  no Unipile data for {r['angle_id']} ({url})", file=sys.stderr)
             continue
-        data = {
-            "angle_id": r["angle_id"],
-            "post_url": url,
-            "impressions": p.get("impressions_counter", ""),
-            "reactions": p.get("reaction_counter", ""),
-            "comments": p.get("comment_counter", ""),
-            "reposts": p.get("repost_counter", ""),
-            "saves": "",
-            "sends": "",
-            "dwell_ratio": "",
-            "verdict": "",
-            "pulled_at": now_iso(),
-        }
-        append_one(metrics_ws, headers, data)
+        insert_row("metrics", {
+            "angle_id":    r["angle_id"],
+            "post_url":    url,
+            "impressions": p.get("impressions_counter") or None,
+            "reactions":   p.get("reaction_counter") or None,
+            "comments":    p.get("comment_counter") or None,
+            "reposts":     p.get("repost_counter") or None,
+            "pulled_at":   now_iso(),
+        })
         appended += 1
-        print(f"  + {r['angle_id']}: imp={data['impressions']} rxn={data['reactions']} cmt={data['comments']}", file=sys.stderr)
+        print(
+            f"  + {r['angle_id']}: imp={p.get('impressions_counter')} "
+            f"rxn={p.get('reaction_counter')} cmt={p.get('comment_counter')}",
+            file=sys.stderr,
+        )
 
     print(f"\nMETRICS APPENDED: {appended}/{len(targets)}")
 
@@ -104,7 +90,10 @@ def main() -> None:
     ap.add_argument("--sends", type=int)
     ap.add_argument("--dwell-ratio", type=float)
     ap.add_argument("--verdict", choices=["winner", "loser", "median"])
-    ap.add_argument("--from-published", help="ISO week, e.g. 2026-W18 — bulk pull all Posted angles")
+    ap.add_argument(
+        "--from-published",
+        help="ISO week, e.g. 2026-W18 — bulk pull all Posted angles",
+    )
     args = ap.parse_args()
 
     if args.from_published:
@@ -114,22 +103,20 @@ def main() -> None:
     if not args.angle_id:
         sys.exit("Either --angle-id (single) or --from-published <week> (bulk) is required.")
 
-    ws = worksheet("metrics")
-    headers = SCHEMA["metrics"]
-    data = {
-        "angle_id": args.angle_id,
-        "post_url": args.post_url,
-        "impressions": args.impressions if args.impressions is not None else "",
-        "reactions": args.reactions if args.reactions is not None else "",
-        "comments": args.comments if args.comments is not None else "",
-        "reposts": args.reposts if args.reposts is not None else "",
-        "saves": args.saves if args.saves is not None else "",
-        "sends": args.sends if args.sends is not None else "",
-        "dwell_ratio": args.dwell_ratio if args.dwell_ratio is not None else "",
-        "verdict": args.verdict or "",
-        "pulled_at": now_iso(),
+    fields = {
+        "angle_id":    args.angle_id,
+        "post_url":    args.post_url or None,
+        "impressions": args.impressions,
+        "reactions":   args.reactions,
+        "comments":    args.comments,
+        "reposts":     args.reposts,
+        "saves":       args.saves,
+        "sends":       args.sends,
+        "dwell_ratio": args.dwell_ratio,
+        "verdict":     args.verdict,
+        "pulled_at":   now_iso(),
     }
-    append_one(ws, headers, data)
+    insert_row("metrics", {k: v for k, v in fields.items() if v is not None})
     print(f"OK — appended metrics row for {args.angle_id}")
 
 

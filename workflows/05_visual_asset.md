@@ -15,16 +15,16 @@ The trigger is explicit: the user says "go" after reviewing the draft in chat. 0
 - **Images must be publish-ready, not background-only.** The AI render must include every visible element — hero stats, supporting copy, charts, accents — fully rendered by the model. Do **not** produce empty canvases or "negative space designed for overlay" intended for later text injection in Canva. The `linkedin-image-asset` skill's default suggestion to overlay text post-generation is overridden for this project: describe the exact text content, font, weight, color, and placement directly in the PROMPT block, and remove "text/letters/numbers/typography/words" from the NEGATIVE PROMPT block (those are now required output, not failure modes). If the AI garbles a render, re-prompt with stronger typography description rather than falling back to overlay.
 - **No `brand_assets_path`** for this project. Carousel `.pptx` rendering uses HEX colors and Montserrat/Inter via system or web-safe fallback only.
 
-## Inputs (from the Sheet, via the dispatcher)
+## Inputs (from Supabase, via the dispatcher)
 
-The dispatcher (`tools/gen_visual_asset.py`) reads the angle row and prints:
+The dispatcher (`tools/gen_visual_asset.py`) reads the angle record and prints:
 
 - `angle_id`, `pillar`, `format`, `hook_chosen`, `draft_body`, `cta_keyword`, `winner_patterns`, `slide_outline`
-- `image_size` — only when `format = image`; resolved from the `image_size` column on the angles tab
+- `image_size` — only when `format = image`; resolved from the `image_size` field
 - `asset_dir` — `temp/outputs/assets/<angle_id>/` (auto-created)
 - `next_steps` — format-specific instructions
 
-### `image_size` column (column V on the angles tab)
+### `image_size` field
 
 Only relevant when `format = image`. Tells the renderer what aspect to produce.
 
