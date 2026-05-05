@@ -46,3 +46,4 @@ Standard Next.js — Vercel is the natural target.
 4. Add the four env vars in Vercel project settings: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `ALLOWED_EMAILS`
 5. **Deploy**. Subsequent pushes to `main` auto-deploy.
 6. After first deploy, Supabase dashboard → Authentication → URL Configuration → add `https://<your-vercel-url>/auth/callback` to **Redirect URLs** and the Vercel URL to **Site URL**. Without this, magic-link sign-in fails in production.
+
