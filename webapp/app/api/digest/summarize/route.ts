@@ -41,9 +41,14 @@ async function handle(req: NextRequest) {
       return NextResponse.json({ error: e.code, message: e.message }, { status: e.status });
     }
     if (e instanceof OpenRouterError) {
-      console.error("[digest/summarize] OpenRouterError", e.status, e.body);
+      console.error("[digest/summarize] OpenRouterError", e.status, e.message, e.body);
       return NextResponse.json(
-        { error: "openrouter_failed", status: e.status, body: e.body },
+        {
+          error: "openrouter_failed",
+          status: e.status,
+          message: e.message,
+          body: e.body,
+        },
         { status: 502 },
       );
     }
