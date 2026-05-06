@@ -1,5 +1,5 @@
 import { logger, schedules } from "@trigger.dev/sdk/v3";
-import { createClient } from "@supabase/supabase-js";
+import { getServiceClient } from "./lib/supabase.js";
 import { fetchProfile, fetchAndHashCover, hammingHex, normalizedCharDistance } from "./lib/profile.js";
 
 /**
@@ -42,14 +42,7 @@ type SnapshotRow = {
   followers_count: number | null;
 };
 
-function supabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing");
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
+const supabase = getServiceClient;
 
 async function uploadThumb(
   client: ReturnType<typeof supabase>,

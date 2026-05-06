@@ -10,10 +10,17 @@
  *   SUPABASE_SERVICE_ROLE_KEY
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import WebSocket from "ws";
 
 let _client: SupabaseClient | null = null;
 
-function getClient(): SupabaseClient {
+// Trigger.dev v4 runs on Node 21 which doesn't expose a global WebSocket.
+// supabase-js initializes its realtime client at createClient time and
+// throws on missing WebSocket even when we never use realtime. Pass the
+// `ws` package as transport to satisfy the check; we still don't hit
+// realtime endpoints anywhere in the worker so this is purely a startup
+// requirement.
+export function getServiceClient(): SupabaseClient {
   if (_client) return _client;
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -21,9 +28,17 @@ function getClient(): SupabaseClient {
   if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
   _client = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
+    // ws's WebSocket has stricter event types than the browser's; cast
+    // through `any` since supabase-js only uses the Construct signature
+    // and the runtime works fine.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    realtime: { transport: WebSocket as any },
   });
   return _client;
 }
+
+// Internal alias kept for legacy callers below.
+const getClient = getServiceClient;
 
 export interface PatchRecipientRowArgs {
   recipientId: string;

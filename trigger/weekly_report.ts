@@ -1,5 +1,5 @@
 import { logger, schedules } from "@trigger.dev/sdk/v3";
-import { createClient } from "@supabase/supabase-js";
+import { getServiceClient } from "./lib/supabase.js";
 
 /**
  * Weekly client report — Phase 5 of Compare v2.
@@ -25,12 +25,7 @@ type Account = {
   logo_url: string | null;
 };
 
-function supabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("SUPABASE creds missing");
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-}
+const supabase = getServiceClient;
 
 function isoWeekStart(d: Date): string {
   // Monday 00:00 UTC of the week containing d.
