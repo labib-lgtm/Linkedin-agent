@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StatusActions } from "./StatusActions";
+import { PublishButton } from "./PublishButton";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +59,19 @@ export default async function AnglePage({
         </CardHeader>
         <CardContent>
           <StatusActions angleId={a.angle_id} current={a.status} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Publish</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <PublishButton
+            angleId={a.angle_id}
+            status={a.status}
+            format={a.format}
+          />
         </CardContent>
       </Card>
 
