@@ -186,6 +186,7 @@ export async function prepareDigest(weekStart?: string): Promise<DigestPayloadOu
   });
   console.info("[digest] llm done", { ms: Date.now() - tLLM, total: Date.now() - t0 });
 
+  const tMap = Date.now();
   const topPostsJson = top.map((p) => {
     const c = compById[p.competitor_id];
     return {
@@ -202,12 +203,18 @@ export async function prepareDigest(weekStart?: string): Promise<DigestPayloadOu
     };
   });
 
-  return {
+  const out = {
     week_start: target,
     top_posts: topPostsJson,
     pattern_summary: summary,
     generated_at: new Date().toISOString(),
   };
+  console.info("[digest] return", {
+    mapMs: Date.now() - tMap,
+    total: Date.now() - t0,
+    bytes: JSON.stringify(out).length,
+  });
+  return out;
 }
 
 // Cron path: combine both phases. The cron route has its own

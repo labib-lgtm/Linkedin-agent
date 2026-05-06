@@ -54,6 +54,7 @@ async function callOpenRouter(opts: {
 
   let raw = "";
   let res: Response;
+  const tStart = Date.now();
   try {
     res = await fetch(ENDPOINT, {
       method: "POST",
@@ -66,9 +67,12 @@ async function callOpenRouter(opts: {
       body: JSON.stringify(body),
       signal: controller.signal,
     });
+    console.info("[openrouter] headers", { ms: Date.now() - tStart, status: res.status, model });
     // Read the body once as text so we can fall back to a meaningful error
     // when OpenRouter returns a non-JSON response (auth pages, gateway HTML).
+    const tBody = Date.now();
     raw = await res.text().catch(() => "");
+    console.info("[openrouter] body", { ms: Date.now() - tBody, bytes: raw.length });
   } finally {
     clearTimeout(abortTimer);
   }

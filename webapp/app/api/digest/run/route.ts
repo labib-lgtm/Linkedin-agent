@@ -31,8 +31,13 @@ async function handle(req: NextRequest) {
     // Phase 1 only: read + LLM, no DB write. The client follows up with
     // POST /api/digest/save to persist (split so each call fits Hobby's
     // 10s function ceiling on its own).
+    const tHandle = Date.now();
     const digest = await prepareDigest(body.week_start);
-    return NextResponse.json({ digest });
+    console.info("[digest/run] prepared", { ms: Date.now() - tHandle });
+    const tResp = Date.now();
+    const resp = NextResponse.json({ digest });
+    console.info("[digest/run] response built", { ms: Date.now() - tResp });
+    return resp;
   } catch (e) {
     if (e instanceof DigestError) {
       console.error("[digest/run] DigestError", e.code, e.message);
