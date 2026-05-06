@@ -101,9 +101,58 @@ export async function GET(req: NextRequest) {
     .map((id) => metaById[id])
     .filter((m): m is CompetitorMeta => Boolean(m));
 
+  // Latest profile snapshot per competitor (Phase 3). One row per
+  // competitor, newest first, deduped client-side. We pull all rows from
+  // the last 90 days then keep the most-recent — Postgres window-function
+  // distinct-on isn't available via PostgREST.
+  const { data: snapshotsData } = await supabase
+    .from("competitor_snapshots")
+    .select("competitor_id, captured_at, headline, cover_url, cover_thumb_path, followers_count, connections_count")
+    .in("competitor_id", ids)
+    .gte("captured_at", new Date(Date.now() - 90 * 86_400_000).toISOString())
+    .order("captured_at", { ascending: false });
+
+  type Snapshot = {
+    competitor_id: string;
+    captured_at: string;
+    headline: string | null;
+    cover_url: string | null;
+    cover_thumb_path: string | null;
+    followers_count: number | null;
+    connections_count: number | null;
+  };
+
+  // First (newest) snapshot per competitor wins.
+  const latestSnapshot: Record<string, Snapshot> = {};
+  const snapshotHistory: Record<string, Snapshot[]> = {};
+  for (const s of (snapshotsData as Snapshot[] | null) ?? []) {
+    if (!latestSnapshot[s.competitor_id]) latestSnapshot[s.competitor_id] = s;
+    if (!snapshotHistory[s.competitor_id]) snapshotHistory[s.competitor_id] = [];
+    snapshotHistory[s.competitor_id].push(s);
+  }
+
+  // Recent change events for the active account so the snapshot strip can
+  // show "Tagline 2d ago" markers without a second round-trip.
+  const { data: eventsData } = await supabase
+    .from("profile_change_events")
+    .select("competitor_id, detected_at, kind")
+    .eq("account_id", accountId)
+    .gte("detected_at", new Date(Date.now() - 30 * 86_400_000).toISOString())
+    .order("detected_at", { ascending: false });
+
+  type ChangeEvent = { competitor_id: string; detected_at: string; kind: string };
+  const recentEventsByCompetitor: Record<string, ChangeEvent[]> = {};
+  for (const e of (eventsData as ChangeEvent[] | null) ?? []) {
+    if (!recentEventsByCompetitor[e.competitor_id]) recentEventsByCompetitor[e.competitor_id] = [];
+    recentEventsByCompetitor[e.competitor_id].push(e);
+  }
+
   type CompareCompetitor = CompetitorAggregate & {
     is_self: boolean;
     recent_posts: AggregatePost[];
+    latest_snapshot: Snapshot | null;
+    snapshot_history: Snapshot[];
+    recent_events: ChangeEvent[];
   };
 
   const competitors: CompareCompetitor[] = orderedMeta.map((meta) => {
@@ -112,6 +161,9 @@ export async function GET(req: NextRequest) {
       ...aggregateCompetitor(meta, posts),
       is_self: !!meta.is_self,
       recent_posts: posts,
+      latest_snapshot: latestSnapshot[meta.id] ?? null,
+      snapshot_history: snapshotHistory[meta.id] ?? [],
+      recent_events: recentEventsByCompetitor[meta.id] ?? [],
     };
   });
 

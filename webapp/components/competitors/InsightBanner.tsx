@@ -7,6 +7,12 @@ import {
   type AggregatePost,
 } from "@/lib/competitor-aggregate";
 
+type ChangeEvent = {
+  competitor_id: string;
+  detected_at: string;
+  kind: string;
+};
+
 type Row = {
   id: string;
   display_name: string | null;
@@ -14,6 +20,7 @@ type Row = {
   is_self: boolean;
   recent_posts: AggregatePost[];
   avg_engagement_score: number;
+  recent_events?: ChangeEvent[];
 };
 
 // Three single-sentence insights at the top of Compare. Phase 1 templated
@@ -66,10 +73,7 @@ export function InsightBanner({ rows }: { rows: Row[] }) {
       </Card>
 
       <Card tone="warn" label="Positioning shifts (last 30d)">
-        <span className="text-muted-foreground">
-          Daily profile snapshots ship in Phase 3. Tagline + cover change detection lights up here
-          once the worker runs.
-        </span>
+        <PositioningShiftCard rows={rows} />
       </Card>
 
       <Card tone="info" label="Closest analog to you">
@@ -121,4 +125,38 @@ function Card({
 function titleCase(s: string): string {
   if (!s) return s;
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function PositioningShiftCard({ rows }: { rows: Row[] }) {
+  const competitorsWithChanges = rows.filter((r) => (r.recent_events?.length ?? 0) > 0 && !r.is_self);
+  if (competitorsWithChanges.length === 0) {
+    return (
+      <span className="text-muted-foreground">
+        No tagline / cover changes detected in the last 30 days. Snapshot worker keeps watching.
+      </span>
+    );
+  }
+  // Pick the two most-recent changers by their newest event.
+  const sorted = competitorsWithChanges
+    .map((r) => {
+      const newest = (r.recent_events ?? []).reduce(
+        (a, b) => (a > b.detected_at ? a : b.detected_at),
+        "",
+      );
+      return { row: r, newest };
+    })
+    .sort((a, b) => b.newest.localeCompare(a.newest));
+  const top = sorted.slice(0, 2).map((s) => s.row.display_name || s.row.identifier);
+  const total = competitorsWithChanges.length;
+  return (
+    <>
+      <strong>{total} of {rows.filter((r) => !r.is_self).length}</strong> competitors changed
+      their profile.{" "}
+      {top.length > 0 ? (
+        <>
+          <strong>{top.join(" and ")}</strong> shifted most recently.
+        </>
+      ) : null}
+    </>
+  );
 }

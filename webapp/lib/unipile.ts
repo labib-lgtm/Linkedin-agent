@@ -191,6 +191,141 @@ function isProviderId(s: string): boolean {
   return s.startsWith("ACo") && s.length > 5;
 }
 
+// Pull a fully-hydrated profile for snapshot tracking. Unipile returns
+// the same /users/{slug} response as resolveProviderId but with
+// linkedin_sections=* the body should include headline, follower count,
+// connection count, cover image. The exact field shape varies — defensive
+// walker pattern (mirrors extractMedia) handles renames + nested paths.
+export type ProfileSnapshot = {
+  provider_id: string | null;
+  identifier: string | null;       // public_identifier slug
+  display_name: string | null;
+  headline: string | null;
+  cover_url: string | null;
+  followers_count: number | null;
+  connections_count: number | null;
+  raw: UnipileUserProfile;
+};
+
+export async function fetchUserProfile(handleOrId: string): Promise<ProfileSnapshot> {
+  const trimmed = handleOrId.trim();
+  const { accountId } = await loadCreds();
+  const profile = await unipileFetch<UnipileUserProfile>(
+    "GET",
+    `/api/v1/users/${encodeURIComponent(trimmed)}`,
+    { params: { account_id: accountId, linkedin_sections: "*" }, timeoutMs: 8_000 },
+  );
+
+  const provider_id =
+    (typeof profile.provider_id === "string" && profile.provider_id) ||
+    (typeof profile.id === "string" && profile.id.startsWith("ACo") ? profile.id : null) ||
+    findLinkedInIdentifier(profile);
+
+  const identifier =
+    (typeof profile.public_identifier === "string" && profile.public_identifier) || null;
+
+  return {
+    provider_id: provider_id ?? null,
+    identifier,
+    display_name: extractDisplayName(profile),
+    headline: extractHeadline(profile),
+    cover_url: extractCoverUrl(profile),
+    followers_count: extractFollowersCount(profile),
+    connections_count: extractConnectionsCount(profile),
+    raw: profile,
+  };
+}
+
+function extractHeadline(p: UnipileUserProfile): string | null {
+  const candidates = [
+    p.headline, p.tagline, p.position, p.subtitle,
+    (p as Record<string, unknown>).description,
+  ];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) return c.trim();
+  }
+  // Walk one level deep into common nested objects.
+  for (const key of ["profile", "user", "basic_info"]) {
+    const nested = p[key] as Record<string, unknown> | undefined;
+    if (nested && typeof nested === "object") {
+      for (const k of ["headline", "tagline", "subtitle", "position"]) {
+        const v = nested[k];
+        if (typeof v === "string" && v.trim()) return v.trim();
+      }
+    }
+  }
+  return null;
+}
+
+function extractDisplayName(p: UnipileUserProfile): string | null {
+  const direct = p.full_name || p.display_name || p.name;
+  if (typeof direct === "string" && direct.trim()) return direct.trim();
+  const first = p.first_name as string | undefined;
+  const last = p.last_name as string | undefined;
+  if (first || last) return `${first ?? ""} ${last ?? ""}`.trim() || null;
+  return null;
+}
+
+function extractCoverUrl(p: UnipileUserProfile): string | null {
+  const candidates = [
+    p.cover_image_url, p.background_image_url, p.cover_url,
+    p.background_url, p.header_image, p.cover, p.background_image,
+  ];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.startsWith("http")) return c;
+    // Some shapes wrap in { url: "..." }
+    if (c && typeof c === "object" && "url" in c) {
+      const url = (c as { url?: unknown }).url;
+      if (typeof url === "string" && url.startsWith("http")) return url;
+    }
+  }
+  // Walk media-like containers.
+  for (const key of ["images", "media", "profile"]) {
+    const nested = p[key];
+    if (Array.isArray(nested)) {
+      for (const item of nested) {
+        if (item && typeof item === "object") {
+          const t = (item as Record<string, unknown>).type;
+          const u = (item as Record<string, unknown>).url;
+          if (
+            typeof u === "string" &&
+            u.startsWith("http") &&
+            (t === "cover" || t === "background" || t === "header")
+          ) {
+            return u;
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function extractFollowersCount(p: UnipileUserProfile): number | null {
+  const direct = p.followers_count ?? p.followers ?? p.follower_count;
+  if (typeof direct === "number" && Number.isFinite(direct)) return direct;
+  if (typeof direct === "string" && /^\d+$/.test(direct)) return Number(direct);
+  // Common nested paths.
+  const nd = (p as Record<string, unknown>).network_distance;
+  if (nd && typeof nd === "object") {
+    const f = (nd as Record<string, unknown>).followers;
+    if (typeof f === "number") return f;
+  }
+  return null;
+}
+
+function extractConnectionsCount(p: UnipileUserProfile): number | null {
+  const direct = p.connections_count ?? p.connections ?? p.connection_count;
+  if (typeof direct === "number" && Number.isFinite(direct)) return direct;
+  if (typeof direct === "string" && /^\d+$/.test(direct)) return Number(direct);
+  const nd = (p as Record<string, unknown>).network_distance;
+  if (nd && typeof nd === "object") {
+    const c = (nd as Record<string, unknown>).connections;
+    if (typeof c === "number") return c;
+  }
+  return null;
+}
+
 // Resolves a vanity slug (or provider_id) to the canonical provider_id
 // Unipile uses for everything else. Pass-through if already a provider_id.
 export async function resolveProviderId(handleOrId: string): Promise<{

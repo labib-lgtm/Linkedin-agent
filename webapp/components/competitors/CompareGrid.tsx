@@ -15,6 +15,8 @@ import { Leaderboard } from "./Leaderboard";
 import { CadenceCalendar } from "./CadenceCalendar";
 import { FormatMix } from "./FormatMix";
 import { Breakouts } from "./Breakouts";
+import { ProfileSnapshotStrip } from "./ProfileSnapshotStrip";
+import type { SnapshotRow } from "./CompareModal";
 
 const STALE_MS = 6 * 60 * 60 * 1000;
 
@@ -39,9 +41,19 @@ type CompetitorMeta = {
   is_self?: boolean;
 };
 
+type ChangeEvent = {
+  competitor_id: string;
+  detected_at: string;
+  kind: string;
+  diff_score?: number | null;
+};
+
 type CompareCompetitor = CompetitorAggregate & {
   is_self: boolean;
   recent_posts: AggregatePost[];
+  latest_snapshot: SnapshotRow | null;
+  snapshot_history: SnapshotRow[];
+  recent_events: ChangeEvent[];
 };
 
 type CompareResponse = {
@@ -234,14 +246,19 @@ export function CompareGrid({
             <Leaderboard rows={aggregates} />
           </section>
 
-          {/* 3. Profile snapshot strip placeholder (Phase 3 fills) */}
-          <section className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center">
-            <p className="text-sm font-semibold mb-1">Profile snapshot strip — coming in Phase 3</p>
-            <p className="text-xs text-muted-foreground">
-              Daily Trigger.dev worker captures tagline, cover image, follower count + change
-              detection. The mockup&apos;s 6-card snapshot row + side-by-side modal land here.
-            </p>
-          </section>
+          {/* 3. Profile snapshot strip + side-by-side modal */}
+          <ProfileSnapshotStrip
+            rows={aggregates.map((a) => ({
+              id: a.id,
+              display_name: a.display_name,
+              identifier: a.identifier,
+              role: a.role,
+              is_self: a.is_self,
+              latest_snapshot: a.latest_snapshot,
+              snapshot_history: a.snapshot_history,
+              recent_events: a.recent_events,
+            }))}
+          />
 
           {/* 4. Cadence calendar */}
           <CadenceCalendar rows={aggregates} />
