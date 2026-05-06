@@ -17,6 +17,7 @@ type Competitor = {
   last_analyzed_at: string | null;
   post_count: number;
   top_score: number;
+  is_self?: boolean;
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -35,6 +36,22 @@ export function CompetitorRow({ competitor }: { competitor: Competitor }) {
   const router = useRouter();
   const [analyzing, setAnalyzing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [togglingSelf, setTogglingSelf] = useState(false);
+
+  async function toggleSelf() {
+    setTogglingSelf(true);
+    try {
+      const method = competitor.is_self ? "DELETE" : "POST";
+      const res = await fetch(`/api/competitors/${competitor.id}/self`, { method });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      toast.success(competitor.is_self ? "Cleared self flag" : "Marked as self — pinned in Compare");
+      router.refresh();
+    } catch (e) {
+      toast.error(`Toggle failed: ${(e as Error).message}`);
+    } finally {
+      setTogglingSelf(false);
+    }
+  }
 
   async function analyze() {
     setAnalyzing(true);
@@ -72,11 +89,27 @@ export function CompetitorRow({ competitor }: { competitor: Competitor }) {
   }
 
   return (
-    <tr className="border-b border-border last:border-0">
+    <tr
+      className={
+        competitor.is_self
+          ? "border-b border-border last:border-0 bg-lynx-green/5 ring-1 ring-lynx-green/40"
+          : "border-b border-border last:border-0"
+      }
+    >
       <td className="py-3 pr-3">
-        <Link href={`/competitors/${competitor.id}`} className="font-medium hover:underline">
-          {competitor.display_name || competitor.identifier}
-        </Link>
+        <div className="flex items-center gap-2">
+          {competitor.is_self ? (
+            <span
+              title="This is your own profile — pinned in Compare as the baseline"
+              className="text-amber-500 text-sm leading-none"
+            >
+              ★
+            </span>
+          ) : null}
+          <Link href={`/competitors/${competitor.id}`} className="font-medium hover:underline">
+            {competitor.display_name || competitor.identifier}
+          </Link>
+        </div>
         <div className="text-xs text-muted-foreground font-mono">{competitor.identifier}</div>
       </td>
       <td className="py-3 pr-3">
@@ -95,6 +128,15 @@ export function CompetitorRow({ competitor }: { competitor: Competitor }) {
       </td>
       <td className="py-3 pr-3 text-right">
         <div className="inline-flex gap-2">
+          <Button
+            size="sm"
+            variant={competitor.is_self ? "default" : "outline"}
+            onClick={toggleSelf}
+            disabled={togglingSelf}
+            title={competitor.is_self ? "Currently marked as self" : "Mark as self (pin in Compare)"}
+          >
+            {togglingSelf ? "..." : competitor.is_self ? "★ Self" : "Mark self"}
+          </Button>
           <Button size="sm" variant="outline" onClick={analyze} disabled={analyzing}>
             {analyzing ? "..." : competitor.post_count === 0 ? "Analyze" : "Re-analyze"}
           </Button>

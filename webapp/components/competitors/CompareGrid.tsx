@@ -1,36 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { MediaTypeIcon } from "@/components/competitors/PostExpansion";
 import {
-  colorFor,
-  dowChartData,
-  hourChartData,
-  trendChartData,
+  type AggregatePost,
   type CompetitorAggregate,
 } from "@/lib/competitor-aggregate";
 import { shortDate } from "@/lib/utils";
-
-// Dynamic-imported with ssr:false because recharts uses ResizeObserver
-// which hydrates inconsistently in server components.
-const PostsByDow = dynamic(() => import("@/components/charts/PostsByDow"), {
-  ssr: false,
-  loading: () => <ChartSkeleton />,
-});
-const PostsByHour = dynamic(() => import("@/components/charts/PostsByHour"), {
-  ssr: false,
-  loading: () => <ChartSkeleton />,
-});
-const EngagementTrend = dynamic(() => import("@/components/charts/EngagementTrend"), {
-  ssr: false,
-  loading: () => <ChartSkeleton />,
-});
+import { InsightBanner } from "./InsightBanner";
+import { Leaderboard } from "./Leaderboard";
+import { CadenceCalendar } from "./CadenceCalendar";
+import { FormatMix } from "./FormatMix";
+import { Breakouts } from "./Breakouts";
 
 const STALE_MS = 6 * 60 * 60 * 1000;
 
@@ -52,8 +36,31 @@ type CompetitorMeta = {
   display_name: string | null;
   role: string;
   last_analyzed_at: string | null;
+  is_self?: boolean;
 };
 
+type CompareCompetitor = CompetitorAggregate & {
+  is_self: boolean;
+  recent_posts: AggregatePost[];
+};
+
+type CompareResponse = {
+  competitors?: CompareCompetitor[];
+  self_id?: string | null;
+  error?: string;
+};
+
+// Phase 1 Compare v2 layout:
+//   1. Competitor selector (kept; checkbox cards)
+//   2. InsightBanner (3 templated cards)
+//   3. Leaderboard (sortable, deltas vs Self, sparklines, #1 badges)
+//   4. Profile snapshot strip placeholder (Phase 3)
+//   5. CadenceCalendar (28-day grid)
+//   6. FormatMix (stacked bars)
+//   7. Breakouts (3x author median)
+//
+// The compare API always pins the is_self competitor into the response, so
+// there's nothing to do here to "include self" — it's just there.
 export function CompareGrid({
   allCompetitors,
   initialSelectedIds,
@@ -63,27 +70,28 @@ export function CompareGrid({
 }) {
   const router = useRouter();
   const params = useSearchParams();
-  const [aggregates, setAggregates] = useState<CompetitorAggregate[]>([]);
+  const [aggregates, setAggregates] = useState<CompareCompetitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [reanalyzing, startReanalyze] = useTransition();
+
+  // Hide self from the selector (auto-included server-side); keep it in the
+  // ordering of all rows for sparklines + leaderboard.
+  const selectableCompetitors = useMemo(
+    () => allCompetitors.filter((c) => !c.is_self),
+    [allCompetitors],
+  );
 
   const selectedIds = useMemo(() => {
     const fromUrl = (params.get("ids") ?? "").split(",").filter(Boolean);
     return fromUrl.length > 0 ? fromUrl : initialSelectedIds;
   }, [params, initialSelectedIds]);
 
-  // Refetch aggregates whenever selection changes.
   useEffect(() => {
     const ids = selectedIds.join(",");
-    if (!ids) {
-      setAggregates([]);
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     fetch(`/api/competitors/compare?ids=${ids}`)
       .then((r) => r.json())
-      .then((d: { competitors?: CompetitorAggregate[]; error?: string }) => {
+      .then((d: CompareResponse) => {
         if (d.error) throw new Error(d.error);
         setAggregates(d.competitors ?? []);
       })
@@ -96,16 +104,11 @@ export function CompareGrid({
       ? selectedIds.filter((x) => x !== id)
       : [...selectedIds, id];
     const qs = next.join(",");
-    router.replace(qs ? `/competitors/compare?ids=${qs}` : "/competitors/compare");
+    router.replace(qs ? `/competitors?tab=compare&ids=${qs}` : "/competitors?tab=compare");
   }
 
-  const series = aggregates.map((a, i) => ({
-    id: a.id,
-    name: a.display_name || a.identifier,
-    color: colorFor(i),
-  }));
-
   const staleSelected = aggregates.filter((a) => {
+    if (a.is_self) return false;
     if (!a.last_analyzed_at) return true;
     return Date.now() - new Date(a.last_analyzed_at).getTime() > STALE_MS;
   });
@@ -125,10 +128,8 @@ export function CompareGrid({
           throw new Error(detail || `HTTP ${res.status}`);
         }
         toast.success(`Re-analyzed ${next.display_name || next.identifier} — ${data.fetched} posts`);
-        // Refetch compare data so the page reflects the new posts.
-        router.refresh();
         const refresh = await fetch(`/api/competitors/compare?ids=${selectedIds.join(",")}`);
-        const refreshed = (await refresh.json()) as { competitors?: CompetitorAggregate[] };
+        const refreshed = (await refresh.json()) as CompareResponse;
         if (refreshed.competitors) setAggregates(refreshed.competitors);
       } catch (e) {
         toast.error(`Re-analyze failed: ${(e as Error).message}`);
@@ -136,11 +137,14 @@ export function CompareGrid({
     });
   }
 
+  const selfRow = aggregates.find((a) => a.is_self);
+  const hasAggregates = aggregates.length > 0;
+
   return (
     <div className="space-y-6">
-      {/* Checkbox cards */}
+      {/* Selector */}
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {allCompetitors.map((c) => {
+        {selectableCompetitors.map((c) => {
           const checked = selectedIds.includes(c.id);
           return (
             <label
@@ -182,7 +186,17 @@ export function CompareGrid({
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-xs text-muted-foreground">
-          Showing {aggregates.length} of {allCompetitors.length} competitors
+          {selfRow ? (
+            <>
+              <strong className="text-foreground">{selfRow.display_name || selfRow.identifier}</strong> is your
+              Self baseline.{" "}
+            </>
+          ) : (
+            <span className="text-amber-700">
+              No Self competitor marked — leaderboard deltas will be flat. Mark one in the List tab.
+            </span>
+          )}{" "}
+          {aggregates.length} competitors loaded · 28-day window
         </p>
         <Button
           variant="outline"
@@ -200,136 +214,56 @@ export function CompareGrid({
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading aggregates...</p>
-      ) : aggregates.length === 0 ? (
+      ) : !hasAggregates ? (
         <p className="text-sm text-muted-foreground">
           No competitors selected. Tick at least one above.
         </p>
       ) : (
         <>
-          <KpiTiles aggregates={aggregates} colors={series.map((s) => s.color)} />
-          <ChartCard title="Posts by day of week (UTC)">
-            <PostsByDow data={dowChartData(aggregates)} series={series} />
-          </ChartCard>
-          <ChartCard title="Posts by hour of day (UTC)">
-            <PostsByHour data={hourChartData(aggregates)} series={series} />
-          </ChartCard>
-          <ChartCard title="Average engagement score by ISO week">
-            <EngagementTrend data={trendChartData(aggregates)} series={series} />
-          </ChartCard>
-          <TopFiveGrid aggregates={aggregates} colors={series.map((s) => s.color)} />
+          {/* 1. Insight banner */}
+          <InsightBanner rows={aggregates} />
+
+          {/* 2. Leaderboard */}
+          <section className="space-y-2">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-lg font-semibold">Leaderboard</h2>
+              <span className="text-[11px] text-muted-foreground">
+                Sortable · #1 highlighted per metric · all deltas vs Self
+              </span>
+            </div>
+            <Leaderboard rows={aggregates} />
+          </section>
+
+          {/* 3. Profile snapshot strip placeholder (Phase 3 fills) */}
+          <section className="rounded-xl border border-dashed border-border bg-muted/20 p-6 text-center">
+            <p className="text-sm font-semibold mb-1">Profile snapshot strip — coming in Phase 3</p>
+            <p className="text-xs text-muted-foreground">
+              Daily Trigger.dev worker captures tagline, cover image, follower count + change
+              detection. The mockup&apos;s 6-card snapshot row + side-by-side modal land here.
+            </p>
+          </section>
+
+          {/* 4. Cadence calendar */}
+          <CadenceCalendar rows={aggregates} />
+
+          {/* 5. Format mix */}
+          <FormatMix rows={aggregates} />
+
+          {/* 6. Breakouts */}
+          <section className="space-y-2">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-lg font-semibold">Breakout posts to study</h2>
+              <span className="text-[11px] text-muted-foreground">
+                ≥ 3× the author&apos;s own 90-day median ·{" "}
+                <a className="underline hover:text-foreground" href="/methodology#breakouts">
+                  methodology
+                </a>
+              </span>
+            </div>
+            <Breakouts rows={aggregates} />
+          </section>
         </>
       )}
     </div>
   );
 }
-
-function ChartSkeleton() {
-  return <div className="h-60 rounded-md bg-muted/40 animate-pulse" />;
-}
-
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
-  );
-}
-
-function KpiTiles({
-  aggregates,
-  colors,
-}: {
-  aggregates: CompetitorAggregate[];
-  colors: string[];
-}) {
-  return (
-    <div
-      className="grid gap-3"
-      style={{ gridTemplateColumns: `repeat(${Math.min(aggregates.length, 4)}, minmax(0, 1fr))` }}
-    >
-      {aggregates.map((a, i) => (
-        <Card key={a.id} className="overflow-hidden">
-          <div className="h-1" style={{ backgroundColor: colors[i] }} />
-          <CardContent className="p-4">
-            <p className="font-medium text-sm truncate">{a.display_name || a.identifier}</p>
-            <p className="text-[11px] text-muted-foreground mb-3">
-              {a.post_count} posts · {a.recent_7d_count} in last 7d
-            </p>
-            <div className="grid grid-cols-2 gap-y-1 text-xs">
-              <span className="text-muted-foreground">Avg score</span>
-              <span className="text-right font-mono tabular-nums">
-                {Math.round(a.avg_engagement_score)}
-              </span>
-              <span className="text-muted-foreground">Top score</span>
-              <span className="text-right font-mono tabular-nums">{a.top_post?.score ?? 0}</span>
-              <span className="text-muted-foreground">Reactions</span>
-              <span className="text-right tabular-nums">{a.total_reactions}</span>
-              <span className="text-muted-foreground">Comments</span>
-              <span className="text-right tabular-nums">{a.total_comments}</span>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function TopFiveGrid({
-  aggregates,
-  colors,
-}: {
-  aggregates: CompetitorAggregate[];
-  colors: string[];
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Top 5 posts side by side</CardTitle>
-      </CardHeader>
-      <CardContent className="p-0 overflow-x-auto">
-        <div
-          className="grid gap-3 p-4 min-w-fit"
-          style={{
-            gridTemplateColumns: `repeat(${aggregates.length}, minmax(220px, 1fr))`,
-          }}
-        >
-          {aggregates.map((a, i) => (
-            <div key={a.id} className="space-y-2">
-              <div className="flex items-center gap-2 pb-1 border-b border-border">
-                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: colors[i] }} />
-                <p className="text-xs font-medium truncate">
-                  {a.display_name || a.identifier}
-                </p>
-              </div>
-              {a.top5.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground italic">No posts.</p>
-              ) : (
-                a.top5.map((p) => (
-                  <div
-                    key={p.post_id}
-                    className="rounded-md border border-border bg-background p-2 text-xs"
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <MediaTypeIcon mediaType={p.media_type} />
-                        <span className="text-[10px]">
-                          {p.posted_at ? shortDate(p.posted_at) : "—"}
-                        </span>
-                      </div>
-                      <span className="font-mono tabular-nums">{p.score}</span>
-                    </div>
-                    <p className="line-clamp-3 text-[11px] leading-snug">{p.excerpt || "—"}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-

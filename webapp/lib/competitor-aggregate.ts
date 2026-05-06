@@ -46,6 +46,30 @@ export type TopPost = {
   media_urls: unknown;
 };
 
+export type BreakoutPost = TopPost & {
+  competitor_id: string;
+  competitor_name: string;
+  multiplier: number;            // score / author 90d median
+  word_count: number;
+};
+
+// Format types we render. 'none' = text-only post.
+export type MediaType = "text" | "carousel" | "image" | "video" | "poll" | "document" | "article" | "gif" | "none";
+
+export type LeaderboardRow = {
+  id: string;
+  identifier: string;
+  display_name: string | null;
+  role: string;
+  is_self: boolean;
+  posts_per_week: number;        // last 28 days / 4
+  avg_score: number;
+  top_score: number;
+  total_reactions: number;
+  total_comments: number;
+  sparkline: number[];           // weekly avg score, last N weeks
+};
+
 function emptyDow(): Record<number, number> {
   return { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
 }
@@ -206,4 +230,209 @@ export const SERIES_COLORS = [
 
 export function colorFor(index: number): string {
   return SERIES_COLORS[index % SERIES_COLORS.length];
+}
+
+// =============================================================================
+// Phase 1 helpers — leaderboard / breakouts / cadence / format mix / insights
+// =============================================================================
+
+// 90-day rolling median engagement score. Used as the baseline for breakout
+// detection (a post >= 3x its author's own median is a breakout). Median is
+// more robust to a single mega-post than mean; sample sizes are small enough
+// that we sort each call (~30 posts max).
+export function authorMedian(posts: AggregatePost[], windowDays = 90): number {
+  const cutoff = Date.now() - windowDays * 86_400_000;
+  const scores: number[] = [];
+  for (const p of posts) {
+    if (!p.posted_at) continue;
+    const t = new Date(p.posted_at).getTime();
+    if (Number.isNaN(t) || t < cutoff) continue;
+    scores.push(Number(p.engagement_score ?? 0) || 0);
+  }
+  if (scores.length === 0) return 0;
+  scores.sort((a, b) => a - b);
+  const mid = Math.floor(scores.length / 2);
+  return scores.length % 2 === 0 ? (scores[mid - 1] + scores[mid]) / 2 : scores[mid];
+}
+
+// Posts where engagement_score >= threshold * authorMedian. Returns enriched
+// rows so the UI doesn't need to re-correlate against competitor metadata.
+export function breakoutPosts(
+  byCompetitor: Array<{
+    id: string;
+    name: string;
+    posts: AggregatePost[];
+  }>,
+  threshold = 3,
+): BreakoutPost[] {
+  const out: BreakoutPost[] = [];
+  for (const c of byCompetitor) {
+    const median = authorMedian(c.posts);
+    if (median <= 0) continue;
+    for (const p of c.posts) {
+      const score = Number(p.engagement_score ?? 0) || 0;
+      if (score < median * threshold) continue;
+      out.push({
+        post_id: p.post_id,
+        posted_at: p.posted_at,
+        score: Math.round(score),
+        excerpt: (p.text ?? "").slice(0, 220),
+        media_type: p.media_type,
+        media_urls: p.media_urls,
+        competitor_id: c.id,
+        competitor_name: c.name,
+        multiplier: Math.round((score / median) * 10) / 10,
+        word_count: (p.text ?? "").trim().split(/\s+/).filter(Boolean).length,
+      });
+    }
+  }
+  return out.sort((a, b) => b.score - a.score);
+}
+
+// 28-cell array of post counts per day, ordered chronologically (oldest first).
+// Cell index 0 = 27 days ago, index 27 = today (UTC).
+export function cadenceCells(posts: AggregatePost[], days = 28): number[] {
+  const cells = new Array<number>(days).fill(0);
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  for (const p of posts) {
+    if (!p.posted_at) continue;
+    const d = new Date(p.posted_at);
+    if (Number.isNaN(d.getTime())) continue;
+    const dUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    const daysAgo = Math.floor((todayUTC - dUTC) / 86_400_000);
+    if (daysAgo < 0 || daysAgo >= days) continue;
+    cells[days - 1 - daysAgo] += 1;
+  }
+  return cells;
+}
+
+// % share by media_type, normalized so values sum to 100. Null media_type
+// folds into "text" (the default for text-only posts pre-migration 003).
+export function formatMixPct(posts: AggregatePost[]): Record<MediaType, number> {
+  const counts: Record<string, number> = {};
+  let total = 0;
+  for (const p of posts) {
+    const mt = (p.media_type ?? "none") as string;
+    const key = mt === "none" ? "text" : mt;
+    counts[key] = (counts[key] ?? 0) + 1;
+    total += 1;
+  }
+  const out: Record<MediaType, number> = {
+    text: 0, carousel: 0, image: 0, video: 0, poll: 0,
+    document: 0, article: 0, gif: 0, none: 0,
+  };
+  if (total === 0) return out;
+  for (const k of Object.keys(counts)) {
+    if (k in out) (out as Record<string, number>)[k] = Math.round((counts[k] / total) * 1000) / 10;
+  }
+  return out;
+}
+
+// Last N ISO weeks of avg engagement score per competitor. Used by the
+// leaderboard sparkline column. Pads with zeros for weeks with no posts.
+export function weeklySparkline(posts: AggregatePost[], weeks = 8): number[] {
+  const buckets: Record<string, { sum: number; count: number; week_start: string }> = {};
+  for (const p of posts) {
+    if (!p.posted_at) continue;
+    const d = new Date(p.posted_at);
+    if (Number.isNaN(d.getTime())) continue;
+    const week_start = isoWeekStart(d);
+    const week_key = weekKeyFromStart(week_start);
+    const score = Number(p.engagement_score ?? 0) || 0;
+    const b = buckets[week_key] ?? { sum: 0, count: 0, week_start };
+    b.sum += score;
+    b.count += 1;
+    buckets[week_key] = b;
+  }
+  // Build the last `weeks` weeks ending today, even if some had no posts.
+  const today = new Date();
+  const out: number[] = [];
+  for (let i = weeks - 1; i >= 0; i--) {
+    const target = new Date(today);
+    target.setUTCDate(target.getUTCDate() - i * 7);
+    const ws = isoWeekStart(target);
+    const wk = weekKeyFromStart(ws);
+    const b = buckets[wk];
+    out.push(b ? b.sum / b.count : 0);
+  }
+  return out;
+}
+
+// "Closest analog" — the competitor most similar to `self` by aggregate
+// behavior. Vector: [posts_per_week, avg_score (z-scored), format mix shares].
+// Returns the competitor id + cosine similarity. Powers the third insight card.
+export function closestAnalog(
+  self: { id: string; posts: AggregatePost[] },
+  others: Array<{ id: string; name: string; posts: AggregatePost[] }>,
+): { id: string; name: string; similarity: number; theirAvgScore: number; selfAvgScore: number } | null {
+  function vector(posts: AggregatePost[]): number[] {
+    const fmix = formatMixPct(posts);
+    const total = posts.length;
+    const scoreSum = posts.reduce((s, p) => s + (Number(p.engagement_score ?? 0) || 0), 0);
+    const avg = total > 0 ? scoreSum / total : 0;
+    return [
+      total / 4,                 // posts per week (assuming 28d window)
+      Math.log1p(avg) / 5,       // log-scaled avg score so 100 vs 5000 don't dominate
+      fmix.text / 100, fmix.carousel / 100, fmix.video / 100, fmix.image / 100, fmix.poll / 100,
+    ];
+  }
+  function cosine(a: number[], b: number[]): number {
+    let dot = 0, na = 0, nb = 0;
+    for (let i = 0; i < a.length; i++) {
+      dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i];
+    }
+    if (na === 0 || nb === 0) return 0;
+    return dot / (Math.sqrt(na) * Math.sqrt(nb));
+  }
+  const sv = vector(self.posts);
+  const selfAvg = self.posts.length === 0
+    ? 0
+    : self.posts.reduce((s, p) => s + (Number(p.engagement_score ?? 0) || 0), 0) / self.posts.length;
+  let best: { id: string; name: string; similarity: number; theirAvgScore: number } | null = null;
+  for (const o of others) {
+    if (o.id === self.id) continue;
+    const sim = cosine(sv, vector(o.posts));
+    const oavg = o.posts.length === 0
+      ? 0
+      : o.posts.reduce((s, p) => s + (Number(p.engagement_score ?? 0) || 0), 0) / o.posts.length;
+    if (!best || sim > best.similarity) {
+      best = { id: o.id, name: o.name, similarity: sim, theirAvgScore: oavg };
+    }
+  }
+  if (!best) return null;
+  return { ...best, selfAvgScore: selfAvg };
+}
+
+// Group posts by simple first-line prefix (60 chars, lowercased, punctuation
+// stripped). Returns top hooks ranked by avg engagement_score, with sample
+// counts. Used by InsightBanner card #1 until Phase 4 ships real LLM hook
+// extraction.
+export function topHookByPrefix(
+  posts: AggregatePost[],
+  topK = 5,
+  minSample = 2,
+): Array<{ prefix: string; sample: number; avg_score: number }> {
+  const groups: Record<string, { sum: number; count: number }> = {};
+  for (const p of posts) {
+    const text = (p.text ?? "").trim();
+    if (!text) continue;
+    const firstLine = text.split(/\n/, 1)[0];
+    const key = firstLine
+      .toLowerCase()
+      .replace(/[^\w\s]/g, "")
+      .slice(0, 60)
+      .trim();
+    if (!key) continue;
+    const score = Number(p.engagement_score ?? 0) || 0;
+    const g = groups[key] ?? { sum: 0, count: 0 };
+    g.sum += score;
+    g.count += 1;
+    groups[key] = g;
+  }
+  return Object.entries(groups)
+    .filter(([, g]) => g.count >= minSample)
+    .map(([prefix, g]) => ({ prefix, sample: g.count, avg_score: g.sum / g.count }))
+    .sort((a, b) => b.avg_score - a.avg_score)
+    .slice(0, topK);
 }

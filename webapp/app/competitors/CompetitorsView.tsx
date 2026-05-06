@@ -18,6 +18,7 @@ type CompetitorRowData = {
   last_analyzed_at: string | null;
   post_count: number;
   top_score: number;
+  is_self?: boolean;
 };
 
 export function CompetitorsView({
