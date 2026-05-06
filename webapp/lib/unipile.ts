@@ -147,13 +147,60 @@ type PostsPage = {
   paging?: { cursors?: { after?: string } };
 };
 
-// Paginated post fetch. Hard caps at maxPosts to stay under Vercel's
-// function timeout — Unipile returns 50/page so a 200 cap = 4 page calls.
+type UnipileUserProfile = {
+  provider_id?: string;
+  id?: string;
+  public_identifier?: string;
+  [key: string]: unknown;
+};
+
+// LinkedIn provider IDs all start with "ACo" — Unipile uses these as the
+// canonical user key. The vanity slug from a /in/<slug>/ URL is not
+// directly accepted by /users/{id}/posts; we have to look the user up
+// first to get their provider_id.
+function isProviderId(s: string): boolean {
+  return s.startsWith("ACo") && s.length > 5;
+}
+
+// Resolves a vanity slug (or provider_id) to the canonical provider_id
+// Unipile uses for everything else. Pass-through if already a provider_id.
+export async function resolveProviderId(handleOrId: string): Promise<{
+  providerId: string;
+  profile: UnipileUserProfile;
+}> {
+  const trimmed = handleOrId.trim();
+  if (isProviderId(trimmed)) {
+    return { providerId: trimmed, profile: { provider_id: trimmed } };
+  }
+  const { accountId } = await loadCreds();
+  const profile = await unipileFetch<UnipileUserProfile>(
+    "GET",
+    `/api/v1/users/${encodeURIComponent(trimmed)}`,
+    { params: { account_id: accountId, linkedin_sections: "*" }, timeoutMs: 12_000 },
+  );
+  const id =
+    (typeof profile.provider_id === "string" && profile.provider_id) ||
+    (typeof profile.id === "string" && profile.id.startsWith("ACo") ? profile.id : null) ||
+    findLinkedInIdentifier(profile);
+  if (!id) {
+    throw new UnipileError(
+      `Could not resolve provider_id for "${trimmed}"`,
+      502,
+      JSON.stringify(profile).slice(0, 400),
+    );
+  }
+  return { providerId: id, profile };
+}
+
+// Paginated post fetch. Resolves vanity slugs to provider_id automatically.
+// Hard caps at maxPosts to stay under Vercel's function timeout — Unipile
+// returns 50/page so a 200 cap = 4 page calls.
 export async function fetchUserPosts(
-  identifier: string,
+  handleOrId: string,
   opts: { maxPosts?: number; pageSize?: number } = {},
 ): Promise<UnipilePost[]> {
   const { accountId } = await loadCreds();
+  const { providerId } = await resolveProviderId(handleOrId);
   const maxPosts = opts.maxPosts ?? 200;
   const pageSize = opts.pageSize ?? 50;
 
@@ -168,7 +215,7 @@ export async function fetchUserPosts(
     if (cursor) params.cursor = cursor;
     const resp = await unipileFetch<PostsPage>(
       "GET",
-      `/api/v1/users/${encodeURIComponent(identifier)}/posts`,
+      `/api/v1/users/${encodeURIComponent(providerId)}/posts`,
       { params, timeoutMs: 8_000 },
     );
     const items = resp.items ?? resp.data ?? [];
