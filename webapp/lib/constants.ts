@@ -30,9 +30,10 @@ export const KANBAN_STATUSES: Status[] = [
 ];
 
 export const PILLAR_VALUES = [
-  "PPC Operator",
+  "Performance Operator",
   "Conversion Lab",
   "Agency Founder",
+  "Channel Strategy",
 ] as const;
 export type Pillar = (typeof PILLAR_VALUES)[number];
 

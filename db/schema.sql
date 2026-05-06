@@ -19,7 +19,8 @@ create table if not exists public.angles (
                               'Scheduled', 'Posted', 'Reviewed'
                           )),
     pillar            text check (pillar is null or pillar in (
-                              'PPC Operator', 'Conversion Lab', 'Agency Founder'
+                              'Performance Operator', 'Conversion Lab',
+                              'Agency Founder', 'Channel Strategy'
                           )),
     format            text check (format is null or format in (
                               'text', 'carousel', 'image', 'video', 'poll'
