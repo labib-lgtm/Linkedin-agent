@@ -243,12 +243,27 @@ export type NormalizedPost = {
   raw: UnipilePost;
 };
 
+function safeIsoDate(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  // Unipile sometimes returns Unix timestamps (seconds or ms) as numbers,
+  // sometimes ISO strings, sometimes locale-formatted strings. Guard
+  // against all of them — toISOString() throws "Invalid time value" if
+  // the Date is NaN.
+  if (typeof value === "number") {
+    const ms = value > 1e12 ? value : value * 1000; // 13+ digits = ms
+    const d = new Date(ms);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 export function normalizePost(p: UnipilePost): NormalizedPost {
   const post_id =
     String(p.social_id ?? p.urn ?? p.id ?? "").trim() ||
     `unknown-${Math.random().toString(36).slice(2, 10)}`;
   const postedRaw = p.date ?? p.posted_at ?? p.created_at ?? null;
-  const posted_at = postedRaw ? new Date(postedRaw).toISOString() : null;
+  const posted_at = safeIsoDate(postedRaw);
   const text = (p.text ?? p.body ?? p.commentary ?? null) as string | null;
   return {
     post_id,
