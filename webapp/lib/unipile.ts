@@ -233,6 +233,15 @@ export async function fetchUserPosts(
 // Normalise post fields → the shape `competitor_posts` row expects.
 // engagement_score is computed by the DB (generated column); we only
 // expose a sortable score here for in-memory ordering.
+export type MediaItem = {
+  url: string;
+  type: "image" | "video" | "document" | "article" | "gif";
+  thumbnail_url?: string;
+  title?: string;
+};
+
+export type MediaType = MediaItem["type"] | "none";
+
 export type NormalizedPost = {
   post_id: string;
   posted_at: string | null;
@@ -240,6 +249,9 @@ export type NormalizedPost = {
   reactions: number;
   comments: number;
   reposts: number;
+  impressions: number | null;
+  media_urls: MediaItem[];
+  media_type: MediaType;
   raw: UnipilePost;
 };
 
@@ -277,6 +289,127 @@ function safeIsoDate(value: unknown): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+// Defensive media extraction. Unipile's post payloads aren't formally
+// documented in this repo and the shape varies by post type / source.
+// Walk every known location, return first match. Wrap in try/catch so
+// normalizePost never throws even on weird inputs.
+function pickType(raw: unknown): MediaItem["type"] | null {
+  const s = String(raw ?? "").toLowerCase();
+  if (!s) return null;
+  if (s.startsWith("image/") || s === "image" || s === "photo" || s === "gif") {
+    return s === "gif" ? "gif" : "image";
+  }
+  if (s.startsWith("video/") || s === "video") return "video";
+  if (s === "application/pdf" || s.startsWith("document") || s === "pdf" || s === "document") return "document";
+  if (s === "article" || s === "url" || s === "link" || s === "shared") return "article";
+  return null;
+}
+
+export function extractMedia(raw: UnipilePost): {
+  media_urls: MediaItem[];
+  media_type: MediaType;
+} {
+  try {
+    const out: MediaItem[] = [];
+
+    // 1. Generic attachments array — most LinkedIn posts via Unipile
+    const attachments = (raw.attachments ?? raw.media) as unknown;
+    if (Array.isArray(attachments)) {
+      for (const item of attachments) {
+        if (!item || typeof item !== "object") continue;
+        const a = item as Record<string, unknown>;
+        const url =
+          (a.url as string) ||
+          (a.media_url as string) ||
+          (a.image_url as string) ||
+          (a.download_url as string) ||
+          (a.video_url as string);
+        if (!url) continue;
+        const type =
+          pickType(a.type) ||
+          pickType(a.mime_type) ||
+          pickType(a.media_type) ||
+          (typeof url === "string" && /\.(mp4|mov|webm)(\?|$)/i.test(url) ? "video" : null) ||
+          (typeof url === "string" && /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(url)
+            ? url.endsWith(".gif")
+              ? "gif"
+              : "image"
+            : null) ||
+          "image";
+        out.push({
+          url,
+          type,
+          thumbnail_url: (a.thumbnail_url as string) || (a.poster as string) || (a.thumbnail as string),
+          title: (a.title as string) || (a.name as string),
+        });
+      }
+    }
+
+    // 2. images array
+    const images = raw.images as unknown;
+    if (out.length === 0 && Array.isArray(images)) {
+      for (const item of images) {
+        if (typeof item === "string") {
+          out.push({ url: item, type: "image" });
+        } else if (item && typeof item === "object") {
+          const img = item as Record<string, unknown>;
+          const url = (img.url as string) || (img.image_url as string);
+          if (url) out.push({ url, type: "image", thumbnail_url: img.thumbnail_url as string });
+        }
+      }
+    }
+
+    // 3. video object
+    const video = raw.video as unknown;
+    if (out.length === 0 && video && typeof video === "object") {
+      const v = video as Record<string, unknown>;
+      const url = (v.url as string) || (v.stream_url as string);
+      if (url) {
+        out.push({
+          url,
+          type: "video",
+          thumbnail_url: (v.poster as string) || (v.thumbnail as string),
+        });
+      }
+    }
+
+    // 4. article / shared link / link preview
+    const article =
+      (raw.article as Record<string, unknown> | undefined) ??
+      (raw.shared_url as Record<string, unknown> | undefined) ??
+      (raw.link_preview as Record<string, unknown> | undefined);
+    if (out.length === 0 && article && typeof article === "object") {
+      const url = (article.url as string) || (article.link as string);
+      if (url) {
+        out.push({
+          url,
+          type: "article",
+          thumbnail_url: (article.image as string) || (article.thumbnail as string),
+          title: (article.title as string) || (article.name as string),
+        });
+      }
+    }
+
+    if (out.length === 0) {
+      // Last-resort hint: post_type tells us a media kind exists somewhere
+      // we didn't find. Log for iteration without surfacing media in the UI.
+      const hint = pickType(raw.post_type) || pickType(raw.type);
+      if (hint && hint !== "article") {
+        console.warn(
+          "[extractMedia] post_type suggests media but no URL found",
+          JSON.stringify(raw).slice(0, 500),
+        );
+      }
+      return { media_urls: [], media_type: "none" };
+    }
+
+    return { media_urls: out, media_type: out[0].type };
+  } catch (e) {
+    console.warn("[extractMedia] threw", (e as Error).message);
+    return { media_urls: [], media_type: "none" };
+  }
+}
+
 export function normalizePost(p: UnipilePost): NormalizedPost {
   const post_id =
     String(p.social_id ?? p.urn ?? p.id ?? "").trim() ||
@@ -284,6 +417,12 @@ export function normalizePost(p: UnipilePost): NormalizedPost {
   const postedRaw = p.date ?? p.posted_at ?? p.created_at ?? null;
   const posted_at = safeIsoDate(postedRaw);
   const text = (p.text ?? p.body ?? p.commentary ?? null) as string | null;
+  const { media_urls, media_type } = extractMedia(p);
+  const impressionsRaw = p.impressions_counter;
+  const impressions =
+    typeof impressionsRaw === "number" && Number.isFinite(impressionsRaw)
+      ? impressionsRaw
+      : null;
   return {
     post_id,
     posted_at,
@@ -291,8 +430,113 @@ export function normalizePost(p: UnipilePost): NormalizedPost {
     reactions: Number(p.reaction_counter ?? 0) || 0,
     comments: Number(p.comment_counter ?? 0) || 0,
     reposts: Number(p.repost_counter ?? 0) || 0,
+    impressions,
+    media_urls,
+    media_type,
     raw: p,
   };
+}
+
+// ---- Comments ----------------------------------------------------------
+
+type UnipileComment = {
+  id?: string;
+  comment_id?: string;
+  social_id?: string;
+  urn?: string;
+  text?: string;
+  body?: string;
+  commentary?: string;
+  date?: string;
+  posted_at?: string;
+  created_at?: string;
+  commenter?: Record<string, unknown>;
+  author?: Record<string, unknown>;
+  user?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+type CommentsPage = {
+  items?: UnipileComment[];
+  data?: UnipileComment[];
+  comments?: UnipileComment[];
+  cursor?: string;
+  next_cursor?: string;
+  paging?: { cursors?: { after?: string } };
+};
+
+export type NormalizedComment = {
+  comment_id: string;
+  text: string | null;
+  posted_at: string | null;
+  commenter_name: string | null;
+  commenter_identifier: string | null;
+};
+
+function normalizeComment(c: UnipileComment): NormalizedComment {
+  const comment_id =
+    String(c.comment_id ?? c.id ?? c.social_id ?? c.urn ?? "").trim() ||
+    `c-${Math.random().toString(36).slice(2, 10)}`;
+  const text = (c.text ?? c.body ?? c.commentary ?? null) as string | null;
+  const postedRaw = c.date ?? c.posted_at ?? c.created_at ?? null;
+  const posted_at = safeIsoDate(postedRaw);
+  const author = (c.commenter ?? c.author ?? c.user ?? {}) as Record<string, unknown>;
+  const commenter_name =
+    (author.name as string) ||
+    (author.full_name as string) ||
+    (author.display_name as string) ||
+    null;
+  const commenter_identifier =
+    (author.public_identifier as string) ||
+    (author.provider_id as string) ||
+    (author.id as string) ||
+    null;
+  return { comment_id, text, posted_at, commenter_name, commenter_identifier };
+}
+
+// Single-page comment fetch for a post. 50 comment cap by default to keep
+// payload manageable and stay within Hobby's 10s function ceiling on the
+// caller route (~1-2s typical Unipile latency).
+export async function fetchPostComments(
+  postId: string,
+  opts: { maxComments?: number; pageSize?: number } = {},
+): Promise<NormalizedComment[]> {
+  const { accountId } = await loadCreds();
+  const maxComments = opts.maxComments ?? 50;
+  const pageSize = opts.pageSize ?? 50;
+
+  const params: Record<string, string | number | undefined> = {
+    account_id: accountId,
+    limit: pageSize,
+  };
+
+  // Primary endpoint shape: /api/v1/posts/{post_id}/comments. Some
+  // Unipile deployments use /api/v1/comments?post_id=X — fall back if
+  // the primary returns 404.
+  let resp: CommentsPage;
+  try {
+    resp = await unipileFetch<CommentsPage>(
+      "GET",
+      `/api/v1/posts/${encodeURIComponent(postId)}/comments`,
+      { params, timeoutMs: 8_000 },
+    );
+  } catch (e) {
+    if (e instanceof UnipileError && (e.status === 404 || e.status === 405)) {
+      resp = await unipileFetch<CommentsPage>(
+        "GET",
+        `/api/v1/comments`,
+        {
+          params: { ...params, post_id: postId },
+          timeoutMs: 8_000,
+        },
+      );
+    } else {
+      throw e;
+    }
+  }
+
+  const items = resp.items ?? resp.data ?? resp.comments ?? [];
+  return items.slice(0, maxComments).map(normalizeComment);
 }
 
 // In-memory score for sorting. Same formula as the DB generated column so

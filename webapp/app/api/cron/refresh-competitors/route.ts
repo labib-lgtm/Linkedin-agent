@@ -79,6 +79,9 @@ async function runRefresh() {
         reactions: p.reactions,
         comments: p.comments,
         reposts: p.reposts,
+        impressions: p.impressions,
+        media_urls: p.media_urls,
+        media_type: p.media_type,
         raw: p.raw,
         fetched_at: new Date().toISOString(),
       }));
