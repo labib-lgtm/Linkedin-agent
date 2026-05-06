@@ -29,18 +29,25 @@ export async function POST(
     return NextResponse.json({ error: cErr?.message ?? "not_found" }, { status: 404 });
   }
 
-  // If provider_id isn't cached yet, do the slow Unipile lookup first and
-  // persist it before attempting the post fetch. That way even if the
-  // post fetch times out, a second click skips the lookup and succeeds.
+  // First call for a competitor with no cached provider_id: do the Unipile
+  // lookup and persist it before the post fetch so even if subsequent
+  // steps fail, the next click skips the slow lookup.
   let providerId = competitor.provider_id as string | null;
   if (!providerId) {
     try {
       const resolved = await resolveProviderId(competitor.identifier);
       providerId = resolved.providerId;
-      await supabase
+      const { error: updErr } = await supabase
         .from("competitors")
         .update({ provider_id: providerId })
         .eq("id", id);
+      if (updErr) {
+        console.error("[analyze] cache provider_id failed", updErr);
+        return NextResponse.json(
+          { error: "cache_failed", message: updErr.message },
+          { status: 500 },
+        );
+      }
     } catch (e) {
       if (e instanceof UnipileError) {
         return NextResponse.json(
@@ -78,32 +85,61 @@ export async function POST(
     );
   }
 
-  const normalized = raw.map(normalizePost);
-  const rows = normalized.map((p) => ({
-    competitor_id: id,
-    post_id: p.post_id,
-    posted_at: p.posted_at,
-    text: p.text,
-    reactions: p.reactions,
-    comments: p.comments,
-    reposts: p.reposts,
-    raw: p.raw,
-    fetched_at: new Date().toISOString(),
-  }));
+  // Wrap normalize + upsert in a try so any synchronous throw (e.g. JSON
+  // serialization issue with raw payloads, or supabase client crash on a
+  // bad cell) returns a JSON error instead of an empty 500.
+  try {
+    const normalized = raw.map(normalizePost);
+    const rows = normalized.map((p) => ({
+      competitor_id: id,
+      post_id: p.post_id,
+      posted_at: p.posted_at,
+      text: p.text,
+      reactions: p.reactions,
+      comments: p.comments,
+      reposts: p.reposts,
+      raw: p.raw,
+      fetched_at: new Date().toISOString(),
+    }));
 
-  if (rows.length > 0) {
-    const { error: upsertErr } = await supabase
-      .from("competitor_posts")
-      .upsert(rows, { onConflict: "competitor_id,post_id" });
-    if (upsertErr) {
-      return NextResponse.json({ error: upsertErr.message }, { status: 500 });
+    if (rows.length > 0) {
+      const { error: upsertErr } = await supabase
+        .from("competitor_posts")
+        .upsert(rows, { onConflict: "competitor_id,post_id" });
+      if (upsertErr) {
+        console.error("[analyze] upsert posts failed", upsertErr);
+        return NextResponse.json(
+          {
+            error: "upsert_failed",
+            message: upsertErr.message,
+            details: upsertErr.details ?? null,
+            hint: upsertErr.hint ?? null,
+            code: upsertErr.code ?? null,
+          },
+          { status: 500 },
+        );
+      }
     }
-  }
 
-  await supabase
-    .from("competitors")
-    .update({ last_analyzed_at: new Date().toISOString() })
-    .eq("id", id);
+    await supabase
+      .from("competitors")
+      .update({ last_analyzed_at: new Date().toISOString() })
+      .eq("id", id);
+
+    return await respondWithTop(normalized, rows.length);
+  } catch (e) {
+    console.error("[analyze] post-fetch processing crashed", e);
+    return NextResponse.json(
+      { error: "processing_failed", message: (e as Error).message },
+      { status: 500 },
+    );
+  }
+}
+
+async function respondWithTop(
+  normalized: ReturnType<typeof normalizePost>[],
+  fetchedCount: number,
+) {
 
   const top = [...normalized]
     .sort((a, b) => scorePost(b) - scorePost(a))
@@ -118,5 +154,5 @@ export async function POST(
       excerpt: (p.text ?? "").slice(0, 140),
     }));
 
-  return NextResponse.json({ fetched: rows.length, top });
+  return NextResponse.json({ fetched: fetchedCount, top });
 }
