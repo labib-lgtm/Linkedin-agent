@@ -90,7 +90,16 @@ export async function POST(
   // bad cell) returns a JSON error instead of an empty 500.
   try {
     const normalized = raw.map(normalizePost);
-    const rows = normalized.map((p) => ({
+    // Unipile occasionally returns the same post_id twice in one page
+    // (reshares, sometimes quirks of pagination). Postgres rejects an
+    // upsert batch where two rows hit the same conflict target with
+    // "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    // — keep only the last occurrence of each post_id.
+    const byPostId = new Map<string, ReturnType<typeof normalizePost>>();
+    for (const p of normalized) byPostId.set(p.post_id, p);
+    const dedup = [...byPostId.values()];
+
+    const rows = dedup.map((p) => ({
       competitor_id: id,
       post_id: p.post_id,
       posted_at: p.posted_at,
@@ -126,7 +135,7 @@ export async function POST(
       .update({ last_analyzed_at: new Date().toISOString() })
       .eq("id", id);
 
-    return await respondWithTop(normalized, rows.length);
+    return await respondWithTop(dedup, rows.length);
   } catch (e) {
     console.error("[analyze] post-fetch processing crashed", e);
     return NextResponse.json(

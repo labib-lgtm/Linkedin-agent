@@ -67,7 +67,11 @@ async function runRefresh() {
           .update({ provider_id: result.providerId })
           .eq("id", c.id);
       }
-      const rows = raw.map(normalizePost).map((p) => ({
+      // Dedupe: Unipile sometimes returns the same post_id twice; the
+      // upsert refuses a batch that hits the same conflict target twice.
+      const byPostId = new Map<string, ReturnType<typeof normalizePost>>();
+      for (const p of raw.map(normalizePost)) byPostId.set(p.post_id, p);
+      const rows = [...byPostId.values()].map((p) => ({
         competitor_id: c.id,
         post_id: p.post_id,
         posted_at: p.posted_at,
