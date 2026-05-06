@@ -62,7 +62,10 @@ export async function POST(req: NextRequest) {
   const identifier = identifierFromProfileUrl(url);
   if (!identifier) {
     return NextResponse.json(
-      { error: "invalid_profile_url", message: "Expected linkedin.com/in/<handle>" },
+      {
+        error: "invalid_profile_url",
+        message: `Could not parse a LinkedIn handle from "${url}". Expected linkedin.com/in/<handle>, a bare slug, or an ACo... id.`,
+      },
       { status: 400 },
     );
   }

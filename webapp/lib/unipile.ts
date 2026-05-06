@@ -112,12 +112,31 @@ export function findLinkedInIdentifier(account: unknown): string | null {
   return found[0] ?? null;
 }
 
-// Extract the LinkedIn identifier from a profile URL. Handles locale-prefixed
-// paths like /uk/in/foo, trailing slashes, and query strings. Returns null
-// for anything that isn't a LinkedIn /in/ URL.
+// Extract the LinkedIn identifier from a profile URL. Handles:
+// - www.linkedin.com/in/handle
+// - linkedin.com/in/handle           (no www)
+// - uk.linkedin.com/in/handle        (country subdomain)
+// - linkedin.com/uk/in/handle        (locale path prefix)
+// - linkedin.com/en-us/in/handle     (multi-char locale)
+// - trailing slashes, query strings, fragments
+// - URLs without a scheme (linkedin.com/in/handle)
+// - bare handles (just "elizabeth-greene-junglr")
+// Returns null only when truly nothing handle-like is present.
 export function identifierFromProfileUrl(url: string): string | null {
-  const m = /linkedin\.com(?:\/[a-z]{2})?\/in\/([^/?#]+)/i.exec(url.trim());
-  return m ? decodeURIComponent(m[1]) : null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+
+  // 1. Standard /in/<handle> match — case-insensitive, optional locale.
+  const m = /linkedin\.com\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?in\/([^/?#\s]+)/i.exec(trimmed);
+  if (m) return decodeURIComponent(m[1]);
+
+  // 2. Already a bare handle — no slashes, no spaces, looks slug-y.
+  if (/^[a-z0-9][a-z0-9_-]{2,}$/i.test(trimmed)) return trimmed;
+
+  // 3. Already an ACo... provider id. Unipile accepts these directly.
+  if (/^ACo[A-Za-z0-9_-]{4,}$/.test(trimmed)) return trimmed;
+
+  return null;
 }
 
 export type UnipilePost = {
