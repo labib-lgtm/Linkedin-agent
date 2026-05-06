@@ -67,13 +67,20 @@ async function buildReportPayload(
     .eq("account_id", account.id)
     .gte("posted_at", since90);
 
-  const byCompetitor: Record<string, Array<{ score: number; row: typeof posts90 extends Array<infer T> ? T : never }>> = {};
-  for (const p of posts90 ?? []) {
-    const cid = p.competitor_id as string;
+  type PostRow = {
+    competitor_id: string;
+    post_id: string;
+    posted_at: string | null;
+    text: string | null;
+    engagement_score: number | string | null;
+    media_type: string | null;
+  };
+  const byCompetitor: Record<string, Array<{ score: number; row: PostRow }>> = {};
+  for (const p of (posts90 as PostRow[] | null) ?? []) {
+    const cid = p.competitor_id;
     const score = Number(p.engagement_score ?? 0) || 0;
     if (!byCompetitor[cid]) byCompetitor[cid] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    byCompetitor[cid].push({ score, row: p as any });
+    byCompetitor[cid].push({ score, row: p });
   }
   const breakouts: Array<{
     competitor_id: string;
@@ -90,18 +97,17 @@ async function buildReportPayload(
     const median = scores[Math.floor(scores.length / 2)] ?? 0;
     if (median <= 0) continue;
     for (const { score, row } of all) {
-      const r = row as Record<string, unknown>;
-      const posted = String(r.posted_at ?? "");
+      const posted = row.posted_at ?? "";
       if (!posted || posted < since7) continue;
       if (score < median * BREAKOUT_MULTIPLIER) continue;
       breakouts.push({
         competitor_id: cid,
-        post_id: String(r.post_id),
+        post_id: row.post_id,
         posted_at: posted,
         score: Math.round(score),
         multiplier: Math.round((score / median) * 10) / 10,
-        text_excerpt: String(r.text ?? "").slice(0, 240),
-        media_type: r.media_type ? String(r.media_type) : null,
+        text_excerpt: (row.text ?? "").slice(0, 240),
+        media_type: row.media_type,
       });
       competitorIds.add(cid);
     }
