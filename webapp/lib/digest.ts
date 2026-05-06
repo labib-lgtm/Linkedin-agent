@@ -65,18 +65,31 @@ export class DigestError extends Error {
 }
 
 // Race a thenable against a timeout so a hung Supabase call can't push the
-// whole route past Vercel's 10s function ceiling. Supabase builders are
-// thenable but not formally Promise<T>, so accept PromiseLike here.
+// whole route past Vercel's 10s function ceiling. Critical: clear the
+// timer when the original promise wins, otherwise the pending setTimeout
+// keeps Node's event loop alive after the response is sent and Vercel
+// waits for it to fire — burning the rest of the maxDuration budget for
+// no reason.
 function withTimeout<T>(p: PromiseLike<T>, ms: number, label: string): Promise<T> {
-  return Promise.race<T>([
-    Promise.resolve(p),
-    new Promise<T>((_, reject) =>
-      setTimeout(
-        () => reject(new DigestError("timeout", `${label} timed out after ${ms}ms`, 504)),
-        ms,
-      ),
-    ),
-  ]);
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new DigestError("timeout", `${label} timed out after ${ms}ms`, 504));
+    }, ms);
+    // .unref() tells Node not to keep the process alive solely for this
+    // timer; in serverless that helps the function terminate cleanly when
+    // the response has been sent.
+    timer.unref?.();
+    Promise.resolve(p).then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
 }
 
 export type DigestPayloadOut = {
