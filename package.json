@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "trigger.dev": "^3.0.0",
+    "trigger.dev": "4.4.5",
     "typescript": "^5.0.0"
   },
   "engines": {
