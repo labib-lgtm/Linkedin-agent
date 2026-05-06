@@ -12,7 +12,9 @@ export const maxDuration = 10;
 type CompetitorRow = {
   id: string;
   identifier: string;
+  provider_id: string | null;
   active: boolean;
+  last_analyzed_at: string | null;
 };
 
 export async function GET(req: NextRequest) {
@@ -37,7 +39,7 @@ async function runRefresh() {
   // invocations the whole roster cycles.
   const { data: comps, error } = await supabase
     .from("competitors")
-    .select("id, identifier, active, last_analyzed_at")
+    .select("id, identifier, provider_id, active, last_analyzed_at")
     .eq("active", true)
     .order("last_analyzed_at", { ascending: true, nullsFirst: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -53,7 +55,18 @@ async function runRefresh() {
       continue;
     }
     try {
-      const raw = await fetchUserPosts(c.identifier, { maxPosts: 50, pageSize: 50 });
+      const result = await fetchUserPosts(c.identifier, {
+        maxPosts: 30,
+        pageSize: 30,
+        providerId: c.provider_id || undefined,
+      });
+      const raw = result.posts;
+      if (!c.provider_id && result.providerId) {
+        await supabase
+          .from("competitors")
+          .update({ provider_id: result.providerId })
+          .eq("id", c.id);
+      }
       const rows = raw.map(normalizePost).map((p) => ({
         competitor_id: c.id,
         post_id: p.post_id,

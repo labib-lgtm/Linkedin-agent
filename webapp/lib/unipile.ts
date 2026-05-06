@@ -192,15 +192,19 @@ export async function resolveProviderId(handleOrId: string): Promise<{
   return { providerId: id, profile };
 }
 
-// Paginated post fetch. Resolves vanity slugs to provider_id automatically.
-// Hard caps at maxPosts to stay under Vercel's function timeout — Unipile
-// returns 50/page so a 200 cap = 4 page calls.
+// Paginated post fetch. Resolves vanity slugs to provider_id automatically
+// when no providerId is supplied; on Hobby plans the analyze route should
+// cache the resolved id on the competitor row and pass it via opts so the
+// 5s lookup doesn't run on every click.
 export async function fetchUserPosts(
   handleOrId: string,
-  opts: { maxPosts?: number; pageSize?: number } = {},
-): Promise<UnipilePost[]> {
+  opts: { maxPosts?: number; pageSize?: number; providerId?: string } = {},
+): Promise<{ posts: UnipilePost[]; providerId: string }> {
   const { accountId } = await loadCreds();
-  const { providerId } = await resolveProviderId(handleOrId);
+  const providerId =
+    opts.providerId && isProviderId(opts.providerId)
+      ? opts.providerId
+      : (await resolveProviderId(handleOrId)).providerId;
   const maxPosts = opts.maxPosts ?? 200;
   const pageSize = opts.pageSize ?? 50;
 
@@ -223,7 +227,7 @@ export async function fetchUserPosts(
     cursor = resp.cursor ?? resp.next_cursor ?? resp.paging?.cursors?.after;
     if (!cursor || items.length === 0) break;
   }
-  return out.slice(0, maxPosts);
+  return { posts: out.slice(0, maxPosts), providerId };
 }
 
 // Normalise post fields → the shape `competitor_posts` row expects.

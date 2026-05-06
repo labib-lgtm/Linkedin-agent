@@ -1,8 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { identifierFromProfileUrl } from "@/lib/unipile";
+import { identifierFromProfileUrl, resolveProviderId, UnipileError } from "@/lib/unipile";
 
 export const dynamic = "force-dynamic";
+// Add does the Unipile lookup so analyze can skip it. Lookup ~5s + DB
+// insert ~0.5s → fits under Hobby's 10s ceiling.
+export const maxDuration = 10;
 
 const ROLES = new Set(["direct", "format_source", "topic_source"]);
 
@@ -66,12 +69,37 @@ export async function POST(req: NextRequest) {
 
   const role = body.role && ROLES.has(body.role) ? body.role : "direct";
 
+  // Resolve the Unipile provider_id now so subsequent analyze clicks
+  // don't have to re-do the slow lookup. This also validates the profile
+  // is reachable before we save a useless row.
+  let providerId: string | null = null;
+  try {
+    const resolved = await resolveProviderId(identifier);
+    providerId = resolved.providerId;
+  } catch (e) {
+    if (e instanceof UnipileError) {
+      return NextResponse.json(
+        {
+          error: "lookup_failed",
+          message: `Could not resolve LinkedIn profile via Unipile: ${e.message}`,
+          body: e.body,
+        },
+        { status: 502 },
+      );
+    }
+    return NextResponse.json(
+      { error: "lookup_failed", message: (e as Error).message },
+      { status: 502 },
+    );
+  }
+
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("competitors")
     .insert({
       profile_url: url,
       identifier,
+      provider_id: providerId,
       display_name: body.display_name?.trim() || null,
       role,
       notes: body.notes?.trim() || null,

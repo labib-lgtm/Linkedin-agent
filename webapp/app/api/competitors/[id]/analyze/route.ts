@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { fetchUserPosts, normalizePost, scorePost, UnipileError } from "@/lib/unipile";
+import {
+  fetchUserPosts,
+  normalizePost,
+  resolveProviderId,
+  scorePost,
+  UnipileError,
+} from "@/lib/unipile";
 
 export const dynamic = "force-dynamic";
 // Vercel Hobby caps functions at 10s. Stay well under so a slow Unipile
@@ -23,11 +29,42 @@ export async function POST(
     return NextResponse.json({ error: cErr?.message ?? "not_found" }, { status: 404 });
   }
 
+  // If provider_id isn't cached yet, do the slow Unipile lookup first and
+  // persist it before attempting the post fetch. That way even if the
+  // post fetch times out, a second click skips the lookup and succeeds.
+  let providerId = competitor.provider_id as string | null;
+  if (!providerId) {
+    try {
+      const resolved = await resolveProviderId(competitor.identifier);
+      providerId = resolved.providerId;
+      await supabase
+        .from("competitors")
+        .update({ provider_id: providerId })
+        .eq("id", id);
+    } catch (e) {
+      if (e instanceof UnipileError) {
+        return NextResponse.json(
+          { error: "lookup_failed", status: e.status, body: e.body },
+          { status: 502 },
+        );
+      }
+      return NextResponse.json(
+        { error: "lookup_failed", message: (e as Error).message },
+        { status: 502 },
+      );
+    }
+  }
+
   let raw;
   try {
-    // 10 posts per click on Hobby — the Unipile lookup itself can take
-    // 3-4s, leaving little budget. Click again to backfill; upserts dedupe.
-    raw = await fetchUserPosts(competitor.identifier, { maxPosts: 10, pageSize: 10 });
+    // provider_id is cached now → just one paginated post fetch, ~3s.
+    // 30 posts per click; click again to backfill, upserts dedupe.
+    const result = await fetchUserPosts(competitor.identifier, {
+      maxPosts: 30,
+      pageSize: 30,
+      providerId,
+    });
+    raw = result.posts;
   } catch (e) {
     if (e instanceof UnipileError) {
       return NextResponse.json(
