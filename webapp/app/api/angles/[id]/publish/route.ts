@@ -1,9 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-
-const UNIPILE_API_KEY = process.env.UNIPILE_API_KEY;
-const UNIPILE_DSN = process.env.UNIPILE_DSN;
-const UNIPILE_LINKEDIN_ACCOUNT_ID = process.env.UNIPILE_LINKEDIN_ACCOUNT_ID;
+import { getSetting } from "@/lib/settings";
 
 const PUBLISHABLE_STATUSES = new Set(["Visual Ready", "Drafted", "Scheduled"]);
 
@@ -11,11 +8,14 @@ export async function POST(
   _request: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  if (!UNIPILE_API_KEY || !UNIPILE_DSN || !UNIPILE_LINKEDIN_ACCOUNT_ID) {
+  const apiKey = await getSetting("unipile.api_key");
+  const dsnRaw = await getSetting("unipile.dsn");
+  const accountId = await getSetting("unipile.account_id");
+  if (!apiKey || !dsnRaw || !accountId) {
     return NextResponse.json(
       {
         error:
-          "Unipile env vars not set in Vercel. Required: UNIPILE_API_KEY, UNIPILE_DSN, UNIPILE_LINKEDIN_ACCOUNT_ID.",
+          "Unipile credentials missing. Set them in /settings or in Vercel env (UNIPILE_API_KEY, UNIPILE_DSN, UNIPILE_LINKEDIN_ACCOUNT_ID).",
       },
       { status: 500 },
     );
@@ -70,16 +70,16 @@ export async function POST(
   }
 
   // Publish text-only via Unipile.
-  const dsn = UNIPILE_DSN.replace(/\/$/, "");
+  const dsn = dsnRaw.replace(/\/$/, "");
   const publishResp = await fetch(`${dsn}/api/v1/posts`, {
     method: "POST",
     headers: {
-      "X-API-KEY": UNIPILE_API_KEY,
+      "X-API-KEY": apiKey,
       "Content-Type": "application/json",
       accept: "application/json",
     },
     body: JSON.stringify({
-      account_id: UNIPILE_LINKEDIN_ACCOUNT_ID,
+      account_id: accountId,
       text: body,
     }),
   });

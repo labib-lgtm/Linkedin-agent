@@ -1,13 +1,30 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { Lock } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "Pipeline" },
+  { href: "/competitors", label: "Competitors" },
   { href: "/recipients", label: "Recipients" },
   { href: "/calendar", label: "Calendar" },
+  { href: "/settings", label: "Settings" },
   { href: "/angles/new", label: "+ New" },
 ];
 
 export function Header() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  if (pathname === "/lock") return null;
+
+  async function lock() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/lock");
+    router.refresh();
+  }
+
   return (
     <header className="border-b border-border bg-background">
       <div className="container-tight flex h-14 items-center justify-between gap-4">
@@ -29,6 +46,14 @@ export function Header() {
               {n.label}
             </Link>
           ))}
+          <button
+            type="button"
+            onClick={lock}
+            title="Lock app"
+            className="ml-1 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-muted text-muted-foreground"
+          >
+            <Lock className="h-4 w-4 inline" />
+          </button>
         </nav>
       </div>
 
@@ -44,6 +69,13 @@ export function Header() {
               {n.label}
             </Link>
           ))}
+          <button
+            type="button"
+            onClick={lock}
+            className="shrink-0 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-muted text-muted-foreground"
+          >
+            <Lock className="h-4 w-4 inline" />
+          </button>
         </div>
       </nav>
     </header>
