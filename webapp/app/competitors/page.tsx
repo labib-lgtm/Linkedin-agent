@@ -1,6 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/server";
-import { AddCompetitorForm } from "./AddCompetitorForm";
-import { CompetitorRow } from "./CompetitorRow";
+import { CompetitorsView } from "./CompetitorsView";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +41,12 @@ export default async function CompetitorsPage() {
     }
   }
 
+  const enriched = (competitors ?? []).map((c: CompetitorRowData) => ({
+    ...c,
+    post_count: stats[c.id]?.count ?? 0,
+    top_score: stats[c.id]?.topScore ?? 0,
+  }));
+
   return (
     <div className="container-tight py-6 sm:py-8 space-y-6">
       <div className="flex items-baseline justify-between">
@@ -52,43 +57,7 @@ export default async function CompetitorsPage() {
           {competitors?.length ?? 0} tracked
         </p>
       </div>
-
-      <AddCompetitorForm />
-
-      {error ? (
-        <p className="text-sm text-red-700">Failed to load: {error.message}</p>
-      ) : (competitors ?? []).length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No competitors yet. Paste a LinkedIn profile URL above to start tracking.
-        </p>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-border bg-background">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="py-3 px-3 font-semibold">Creator</th>
-                <th className="py-3 px-3 font-semibold">Role</th>
-                <th className="py-3 px-3 font-semibold">Posts</th>
-                <th className="py-3 px-3 font-semibold">Top score</th>
-                <th className="py-3 px-3 font-semibold">Last analyzed</th>
-                <th className="py-3 px-3 font-semibold text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(competitors ?? []).map((c: CompetitorRowData) => (
-                <CompetitorRow
-                  key={c.id}
-                  competitor={{
-                    ...c,
-                    post_count: stats[c.id]?.count ?? 0,
-                    top_score: stats[c.id]?.topScore ?? 0,
-                  }}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <CompetitorsView competitors={enriched} loadError={error?.message ?? null} />
     </div>
   );
 }
