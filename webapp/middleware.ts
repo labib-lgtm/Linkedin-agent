@@ -14,6 +14,10 @@ function isPublic(pathname: string): boolean {
   // Cron routes do their own auth via CRON_SECRET — middleware can't see
   // the Authorization header in a way that survives Vercel's cron invoker.
   if (pathname.startsWith("/api/cron/")) return true;
+  // Phase 5 public report pages — share link is the auth (16-char token,
+  // 2^64 keyspace). Lynx pastes these into emails/Slack to clients.
+  // Bare /reports stays gated; only /reports/<token> is public.
+  if (/^\/reports\/[a-f0-9]{16}$/.test(pathname)) return true;
   if (/\.(svg|png|jpg|jpeg|webp|ico|gif|css|js|map)$/i.test(pathname)) return true;
   return false;
 }
