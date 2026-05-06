@@ -1,20 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { GenerateAnglesDialog } from "./GenerateAnglesDialog";
 
-// Stage-1 placeholder. The actual generate flow ships in Stage 2 once
-// /api/angles/generate and the dialog land.
 export function GenerateAnglesButton() {
+  const [open, setOpen] = useState(false);
   return (
-    <Button
-      variant="accent"
-      size="sm"
-      onClick={() => toast.info("Angle generation arrives in Stage 2")}
-    >
-      <Sparkles className="h-4 w-4" />
-      Generate angles
-    </Button>
+    <>
+      <Button variant="accent" size="sm" onClick={() => setOpen(true)}>
+        <Sparkles className="h-4 w-4" />
+        Generate angles
+      </Button>
+      <GenerateAnglesDialog open={open} onOpenChange={setOpen} />
+    </>
   );
 }

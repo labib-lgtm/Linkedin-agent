@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getSetting } from "@/lib/settings";
+import { publishTextPost, UnipileError } from "@/lib/unipile";
 
 const PUBLISHABLE_STATUSES = new Set(["Visual Ready", "Drafted", "Scheduled"]);
 
@@ -8,19 +8,6 @@ export async function POST(
   _request: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
-  const apiKey = await getSetting("unipile.api_key");
-  const dsnRaw = await getSetting("unipile.dsn");
-  const accountId = await getSetting("unipile.account_id");
-  if (!apiKey || !dsnRaw || !accountId) {
-    return NextResponse.json(
-      {
-        error:
-          "Unipile credentials missing. Set them in /settings or in Vercel env (UNIPILE_API_KEY, UNIPILE_DSN, UNIPILE_LINKEDIN_ACCOUNT_ID).",
-      },
-      { status: 500 },
-    );
-  }
-
   const { id } = await ctx.params;
   const supabase = createServiceClient();
 
@@ -55,10 +42,6 @@ export async function POST(
   }
 
   const fmt = String(angle.format ?? "text").toLowerCase();
-
-  // Webapp can only publish text-only posts directly. Media posts (image,
-  // carousel) need the local CLI because the rendered asset lives on the
-  // user's Mac, not Vercel. Tell the caller to use the CLI for those.
   if (fmt !== "text") {
     return NextResponse.json(
       {
@@ -69,60 +52,25 @@ export async function POST(
     );
   }
 
-  // Publish text-only via Unipile.
-  const dsn = dsnRaw.replace(/\/$/, "");
-  const publishResp = await fetch(`${dsn}/api/v1/posts`, {
-    method: "POST",
-    headers: {
-      "X-API-KEY": apiKey,
-      "Content-Type": "application/json",
-      accept: "application/json",
-    },
-    body: JSON.stringify({
-      account_id: accountId,
-      text: body,
-    }),
-  });
-
-  if (!publishResp.ok) {
-    const errText = await publishResp.text().catch(() => "");
+  let postId: string;
+  let postUrl: string;
+  try {
+    const result = await publishTextPost(body);
+    postId = result.postId;
+    postUrl = result.postUrl;
+  } catch (e) {
+    if (e instanceof UnipileError) {
+      return NextResponse.json(
+        { error: "unipile_publish_failed", status: e.status, body: e.body },
+        { status: e.status === 400 ? 500 : 502 },
+      );
+    }
     return NextResponse.json(
-      {
-        error: "unipile_publish_failed",
-        status: publishResp.status,
-        body: errText.slice(0, 800),
-      },
+      { error: "unipile_publish_failed", message: (e as Error).message },
       { status: 502 },
     );
   }
 
-  const publishJson = (await publishResp.json().catch(() => ({}))) as Record<
-    string,
-    unknown
-  >;
-  const postId =
-    (publishJson.post_id as string | undefined) ??
-    (publishJson.id as string | undefined) ??
-    (publishJson.social_id as string | undefined) ??
-    (publishJson.urn as string | undefined);
-  if (!postId) {
-    return NextResponse.json(
-      {
-        error: "unipile_response_missing_post_id",
-        payload: JSON.stringify(publishJson).slice(0, 800),
-      },
-      { status: 502 },
-    );
-  }
-
-  const postUrl =
-    (publishJson.share_url as string | undefined) ??
-    (publishJson.url as string | undefined) ??
-    (publishJson.post_url as string | undefined) ??
-    (publishJson.public_url as string | undefined) ??
-    `https://www.linkedin.com/feed/update/${postId}/`;
-
-  // Update angle row + insert audit event (best-effort).
   await supabase
     .from("angles")
     .update({
@@ -138,9 +86,5 @@ export async function POST(
     payload: { format: fmt, post_url: postUrl, source: "webapp" },
   });
 
-  return NextResponse.json({
-    angle_id: id,
-    post_id: postId,
-    post_url: postUrl,
-  });
+  return NextResponse.json({ angle_id: id, post_id: postId, post_url: postUrl });
 }

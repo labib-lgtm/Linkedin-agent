@@ -7,6 +7,7 @@ import { Lock } from "lucide-react";
 const NAV = [
   { href: "/", label: "Pipeline" },
   { href: "/competitors", label: "Competitors" },
+  { href: "/digest", label: "Digest" },
   { href: "/recipients", label: "Recipients" },
   { href: "/calendar", label: "Calendar" },
   { href: "/settings", label: "Settings" },
