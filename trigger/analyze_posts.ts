@@ -32,14 +32,28 @@ const HOOK_SYSTEM = `You are an analyst extracting reusable LinkedIn hook templa
 
 Given the first line of a post, return JSON:
 {
-  "hook_template": "Short, parameterized template like 'I spent X hours / N days collecting Y' — make placeholders for numbers, durations, names. Capitalize like the original.",
-  "hook_normalized": "Lowercased, no punctuation, with placeholders as 'x' (e.g. 'i spent x hours collecting y') — for grouping similar hooks."
+  "hook_template": "Short, parameterized template like 'I spent X hours collecting Y' — keep capitalization from the original.",
+  "hook_normalized": "Lowercased structural skeleton with ALL specifics replaced by placeholders. See examples."
 }
 
-Rules:
-- If the first line is generic ('Hey everyone', 'Quick thought'), return template "" and normalized "".
-- Keep templates 3-12 words.
-- Don't include emojis, hashtags, or mentions.`;
+NORMALIZATION RULES (critical for grouping):
+- Replace ALL numbers, durations, named tools, named brands, named tactics, and product names with placeholders.
+- Use 'x' for nouns/values, 'y' for objects/topics, 'z' if a third slot is needed.
+- Replace synonyms with the dominant verb. Examples:
+    "I spent 42 hours collecting Claude resources"   -> "i spent x hours collecting y"
+    "I spent 12 days organizing Notion templates"    -> "i spent x days organizing y"   (different unit -> different group)
+    "I spent 12 days collecting outbound playbooks"  -> "i spent x days collecting y"
+    "After 100 days of testing TikTok ads"           -> "after x days of testing y"
+    "These are the best AI tools I've tried"         -> "these are the best y i have x"
+    "Most founders fail because of bad ICP fit"      -> "most x fail because of y"
+    "7 lessons from running a $50M agency"           -> "x lessons from running a y"
+    "Hot take: PPC is dead"                          -> "hot take y is x"
+- Keep core verbs and conjunctions ("from", "because", "with", "after", "before", "for", "to").
+- Strip emojis, hashtags, mentions, leading punctuation.
+- If the first line is conversational filler ("Hey everyone", "Quick thought"), return template "" and normalized "".
+- 3-10 words max in the normalized form.
+
+Aim for normalized strings that ~5-10% of all peer-set posts could share. If your output is unique to a single post, you have not normalized enough.`;
 
 type Account = { id: string; name: string };
 
@@ -338,8 +352,11 @@ async function refreshHookPatterns(client: ReturnType<typeof supabase>, accountI
     groups[key] = g;
   }
 
+  // No minimum sample count — single-sample patterns are still useful to
+  // surface as long as the score is high. The UI shows the n= count
+  // alongside avg_score so the operator can judge confidence.
   const upserts = Object.entries(groups)
-    .filter(([, g]) => g.count >= 2)
+    .filter(([, g]) => g.count >= 1)
     .map(([normalized_key, g]) => ({
       account_id: accountId,
       template: g.template,
