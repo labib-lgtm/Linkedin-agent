@@ -218,3 +218,63 @@ export async function generateText(opts: {
     maxTokens: opts.maxTokens,
   });
 }
+
+// Embed text via OpenRouter's embeddings endpoint. Default model is
+// openai/text-embedding-3-small at $0.02/1M tokens. Returns the 1536-dim
+// vector. Used by Phase 4 clustering — call per post, store in
+// competitor_post_analysis.embedding as JSONB, cluster in JS with
+// cosine similarity (no pgvector required).
+export async function generateEmbedding(
+  text: string,
+  opts: { model?: string; timeoutMs?: number } = {},
+): Promise<number[]> {
+  const apiKey = await getSetting("openrouter.api_key");
+  if (!apiKey) {
+    throw new OpenRouterError("OpenRouter API key missing", 400, "");
+  }
+  const model = opts.model ?? "openai/text-embedding-3-small";
+  const timeoutMs = opts.timeoutMs ?? 8_000;
+
+  const controller = new AbortController();
+  const abortTimer = setTimeout(() => controller.abort(), timeoutMs);
+  abortTimer.unref?.();
+
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/embeddings", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://lynxmedia.co",
+        "X-Title": "LinkedIn Agent",
+      },
+      body: JSON.stringify({ model, input: text.slice(0, 4000) }),
+      signal: controller.signal,
+    });
+    const raw = await res.text();
+    if (!res.ok) {
+      throw new OpenRouterError(`Embedding ${res.status}`, res.status, raw.slice(0, 400));
+    }
+    const json = JSON.parse(raw) as {
+      data?: Array<{ embedding?: number[] }>;
+      error?: { message?: string };
+    };
+    if (json.error) {
+      throw new OpenRouterError(`Embedding error: ${json.error.message ?? "unknown"}`, 502, raw.slice(0, 400));
+    }
+    const vec = json.data?.[0]?.embedding;
+    if (!Array.isArray(vec) || vec.length === 0) {
+      throw new OpenRouterError("Embedding response missing data", 502, raw.slice(0, 400));
+    }
+    return vec;
+  } catch (e) {
+    const err = e as Error;
+    if (err instanceof OpenRouterError) throw err;
+    if (err.name === "AbortError") {
+      throw new OpenRouterError(`Embedding timeout after ${timeoutMs}ms`, 504, "");
+    }
+    throw new OpenRouterError(`Embedding network: ${err.message}`, 502, "");
+  } finally {
+    clearTimeout(abortTimer);
+  }
+}

@@ -17,6 +17,8 @@ import { FormatMix } from "./FormatMix";
 import { Breakouts } from "./Breakouts";
 import { ProfileSnapshotStrip } from "./ProfileSnapshotStrip";
 import type { SnapshotRow } from "./CompareModal";
+import { HookPatternsPanel } from "./HookPatternsPanel";
+import { ThemesPanel } from "./ThemesPanel";
 
 const STALE_MS = 6 * 60 * 60 * 1000;
 
@@ -59,8 +61,29 @@ type CompareCompetitor = CompetitorAggregate & {
 type CompareResponse = {
   competitors?: CompareCompetitor[];
   self_id?: string | null;
+  account_id?: string | null;
   error?: string;
 };
+
+type HookPattern = {
+  id: string;
+  template: string;
+  normalized_key: string;
+  sample_count: number;
+  avg_score: number;
+};
+
+type Theme = {
+  id: string;
+  name: string;
+  llm_summary: string | null;
+  post_count: number;
+  avg_score: number;
+  leader_competitor_id: string | null;
+  leader_name: string | null;
+};
+
+type Insights = { hook_patterns: HookPattern[]; themes: Theme[] };
 
 // Phase 1 Compare v2 layout:
 //   1. Competitor selector (kept; checkbox cards)
@@ -83,6 +106,8 @@ export function CompareGrid({
   const router = useRouter();
   const params = useSearchParams();
   const [aggregates, setAggregates] = useState<CompareCompetitor[]>([]);
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
   const [reanalyzing, startReanalyze] = useTransition();
 
@@ -106,10 +131,23 @@ export function CompareGrid({
       .then((d: CompareResponse) => {
         if (d.error) throw new Error(d.error);
         setAggregates(d.competitors ?? []);
+        setAccountId(d.account_id ?? null);
       })
       .catch((e: Error) => toast.error(`Compare load failed: ${e.message}`))
       .finally(() => setLoading(false));
   }, [selectedIds]);
+
+  // Phase 4 insights: hook patterns + themes per active account.
+  // Loads after the compare data so it doesn't block the leaderboard render.
+  useEffect(() => {
+    if (!accountId) return;
+    fetch(`/api/accounts/${accountId}/insights`)
+      .then((r) => r.json())
+      .then((d: Insights) => setInsights(d))
+      .catch(() => {
+        // Insights are non-critical; silent fail is fine.
+      });
+  }, [accountId]);
 
   function toggle(id: string) {
     const next = selectedIds.includes(id)
@@ -266,7 +304,23 @@ export function CompareGrid({
           {/* 5. Format mix */}
           <FormatMix rows={aggregates} />
 
-          {/* 6. Breakouts */}
+          {/* 6. Hook patterns + Themes (Phase 4 LLM-driven) */}
+          {insights ? (
+            <section className="space-y-2">
+              <div className="flex items-baseline justify-between">
+                <h2 className="text-lg font-semibold">What&apos;s winning in this peer set</h2>
+                <span className="text-[11px] text-muted-foreground">
+                  Daily LLM analysis · sample sizes shown per pattern
+                </span>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <HookPatternsPanel hooks={insights.hook_patterns} />
+                <ThemesPanel themes={insights.themes} />
+              </div>
+            </section>
+          ) : null}
+
+          {/* 7. Breakouts */}
           <section className="space-y-2">
             <div className="flex items-baseline justify-between">
               <h2 className="text-lg font-semibold">Breakout posts to study</h2>

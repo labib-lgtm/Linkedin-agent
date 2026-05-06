@@ -170,5 +170,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     competitors,
     self_id: selfRow?.id ?? null,
+    account_id: accountId,
   });
 }
