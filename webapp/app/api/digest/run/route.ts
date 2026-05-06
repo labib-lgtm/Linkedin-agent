@@ -1,12 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prepareDigest, DigestError } from "@/lib/digest";
-import { OpenRouterError } from "@/lib/openrouter";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 10;
 
-// Outer safety net guarantees a JSON response so the client's res.json()
-// never sees Vercel's default HTML error page.
+// Phase 1 of the three-phase digest flow:
+//   /run        -> DB reads only, returns posts + the LLM prompt body
+//   /summarize  -> LLM call, returns pattern_summary
+//   /save       -> persist the merged payload
+// Each phase owns its own 10s budget on Vercel Hobby. The reads phase
+// finishes in ~1s, leaving the other two with full headroom.
 export async function POST(req: NextRequest) {
   try {
     return await handle(req);
@@ -28,27 +31,12 @@ async function handle(req: NextRequest) {
   }
 
   try {
-    // Phase 1 only: read + LLM, no DB write. The client follows up with
-    // POST /api/digest/save to persist (split so each call fits Hobby's
-    // 10s function ceiling on its own).
-    const tHandle = Date.now();
-    const digest = await prepareDigest(body.week_start);
-    console.info("[digest/run] prepared", { ms: Date.now() - tHandle });
-    const tResp = Date.now();
-    const resp = NextResponse.json({ digest });
-    console.info("[digest/run] response built", { ms: Date.now() - tResp });
-    return resp;
+    const read = await prepareDigest(body.week_start);
+    return NextResponse.json({ read });
   } catch (e) {
     if (e instanceof DigestError) {
       console.error("[digest/run] DigestError", e.code, e.message);
       return NextResponse.json({ error: e.code, message: e.message }, { status: e.status });
-    }
-    if (e instanceof OpenRouterError) {
-      console.error("[digest/run] OpenRouterError", e.status, e.body);
-      return NextResponse.json(
-        { error: "openrouter_failed", status: e.status, body: e.body },
-        { status: 502 },
-      );
     }
     console.error("[digest/run] unhandled", e);
     return NextResponse.json(

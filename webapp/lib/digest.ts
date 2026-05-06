@@ -34,7 +34,7 @@ type Pattern = {
   example_post_url?: string;
   applies_to_format?: string;
 };
-type DigestPayload = { patterns?: Pattern[]; topics_in_niche?: string[] };
+export type DigestPatternSummary = { patterns?: Pattern[]; topics_in_niche?: string[] };
 
 type CompetitorRow = {
   id: string;
@@ -75,9 +75,6 @@ function withTimeout<T>(p: PromiseLike<T>, ms: number, label: string): Promise<T
     const timer = setTimeout(() => {
       reject(new DigestError("timeout", `${label} timed out after ${ms}ms`, 504));
     }, ms);
-    // .unref() tells Node not to keep the process alive solely for this
-    // timer; in serverless that helps the function terminate cleanly when
-    // the response has been sent.
     timer.unref?.();
     Promise.resolve(p).then(
       (v) => {
@@ -92,27 +89,43 @@ function withTimeout<T>(p: PromiseLike<T>, ms: number, label: string): Promise<T
   });
 }
 
-export type DigestPayloadOut = {
+export type DigestTopPost = {
+  post_id: string;
+  competitor_id: string;
+  creator: string | undefined;
+  role: string | undefined;
+  score: number;
+  reactions: number | null;
+  comments: number | null;
+  reposts: number | null;
+  posted_at: string | null;
+  excerpt: string;
+};
+
+// Reads-only payload — what comes back from /api/digest/run. Keeps the
+// raw LLM prompt material so /summarize doesn't have to re-query.
+export type DigestReadOut = {
   week_start: string;
-  top_posts: Array<{
-    post_id: string;
-    competitor_id: string;
-    creator: string | undefined;
-    role: string | undefined;
-    score: number;
-    reactions: number | null;
-    comments: number | null;
-    reposts: number | null;
-    posted_at: string | null;
-    excerpt: string;
-  }>;
-  pattern_summary: DigestPayload;
+  top_posts: DigestTopPost[];
+  llm_input: string;
+  comps_count: number;
   generated_at: string;
 };
 
-// Phase 1: read + LLM, NO database write. Lets the heavy LLM call have
-// its own 10s budget separate from the upsert phase.
-export async function prepareDigest(weekStart?: string): Promise<DigestPayloadOut> {
+// Full payload after summarize, ready to persist.
+export type DigestPayloadOut = {
+  week_start: string;
+  top_posts: DigestTopPost[];
+  pattern_summary: DigestPatternSummary;
+  generated_at: string;
+};
+
+// Phase 1: DB reads only. No LLM call. Returns the prepared prompt body
+// so /summarize can hand it to OpenRouter. Splitting reads from the LLM
+// gives each phase its own 10s budget on Vercel Hobby — the LLM call
+// alone was eating enough budget to break the combined route even after
+// timer fixes.
+export async function prepareDigest(weekStart?: string): Promise<DigestReadOut> {
   const supabase = createServiceClient();
   const target = weekStart || isoWeekStart(new Date());
 
@@ -150,9 +163,7 @@ export async function prepareDigest(weekStart?: string): Promise<DigestPayloadOu
   );
   if (pErr) throw new DigestError("supabase", pErr.message, 500);
 
-  // Cap the LLM input at 15 posts and 600-char excerpts. With Hobby's 10s
-  // ceiling and a slow upsert, fewer tokens = faster model = more headroom.
-  const top = ((posts as PostRow[] | null) ?? []).slice(0, 15);
+  const top = ((posts as PostRow[] | null) ?? []).slice(0, 12);
   if (top.length === 0) {
     throw new DigestError(
       "no_posts_in_window",
@@ -170,24 +181,16 @@ export async function prepareDigest(weekStart?: string): Promise<DigestPayloadOu
       `Creator: ${c?.display_name || c?.identifier || "unknown"} (role: ${c?.role || "n/a"})`,
       `URL: https://www.linkedin.com/feed/update/${p.post_id}/`,
       `Score: ${Math.round(Number(p.engagement_score ?? 0))} (likes ${p.reactions ?? 0}, comments ${p.comments ?? 0}, reposts ${p.reposts ?? 0})`,
-      `Text: ${(p.text ?? "").slice(0, 600)}`,
+      `Text: ${(p.text ?? "").slice(0, 500)}`,
     ].join("\n");
   });
 
-  const tLLM = Date.now();
-  const summary = await generateJson<DigestPayload>({
-    system: SYSTEM,
-    user:
-      `Week starting ${target}. Top ${top.length} posts across ${comps.length} tracked creators.\n\n` +
-      lines.join("\n\n") +
-      "\n\nReturn ONLY the JSON object.",
-    temperature: 0.4,
-    maxTokens: 1200,
-  });
-  console.info("[digest] llm done", { ms: Date.now() - tLLM, total: Date.now() - t0 });
+  const llm_input =
+    `Week starting ${target}. Top ${top.length} posts across ${comps.length} tracked creators.\n\n` +
+    lines.join("\n\n") +
+    "\n\nReturn ONLY the JSON object.";
 
-  const tMap = Date.now();
-  const topPostsJson = top.map((p) => {
+  const topPostsJson: DigestTopPost[] = top.map((p) => {
     const c = compById[p.competitor_id];
     return {
       post_id: p.post_id,
@@ -203,30 +206,47 @@ export async function prepareDigest(weekStart?: string): Promise<DigestPayloadOu
     };
   });
 
-  const out = {
+  return {
     week_start: target,
     top_posts: topPostsJson,
-    pattern_summary: summary,
+    llm_input,
+    comps_count: comps.length,
     generated_at: new Date().toISOString(),
   };
-  console.info("[digest] return", {
-    mapMs: Date.now() - tMap,
-    total: Date.now() - t0,
-    bytes: JSON.stringify(out).length,
-  });
-  return out;
 }
 
-// Cron path: combine both phases. The cron route has its own
-// invocation lifetime separate from interactive use, so the upsert can
-// piggyback on the same call.
+// Phase 2: just the LLM call. Owns its own 10s budget. If pattern
+// extraction fails the caller can still save the digest with empty
+// patterns — better to ship the top posts than block the whole digest
+// on the model.
+export async function summarizeDigest(read: DigestReadOut): Promise<DigestPatternSummary> {
+  const t0 = Date.now();
+  const summary = await generateJson<DigestPatternSummary>({
+    system: SYSTEM,
+    user: read.llm_input,
+    temperature: 0.4,
+    maxTokens: 900,
+  });
+  console.info("[digest] summarized", { ms: Date.now() - t0 });
+  return summary;
+}
+
+// Cron path: combine all three phases. The cron invocation has the same
+// 10s ceiling, but cron is allowed to fail and retry — UI flow can't.
 export async function runDigest(weekStart?: string) {
-  const payload = await prepareDigest(weekStart);
+  const read = await prepareDigest(weekStart);
+  const summary = await summarizeDigest(read);
+  const payload: DigestPayloadOut = {
+    week_start: read.week_start,
+    top_posts: read.top_posts,
+    pattern_summary: summary,
+    generated_at: read.generated_at,
+  };
   await saveDigest(payload);
   return payload;
 }
 
-// Phase 2: just the upsert. Trivially fits in 10s on its own.
+// Phase 3: just the upsert. Trivially fits in 10s on its own.
 export async function saveDigest(payload: DigestPayloadOut) {
   const supabase = createServiceClient();
   const t0 = Date.now();
