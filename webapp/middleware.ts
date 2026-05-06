@@ -1,13 +1,7 @@
-import { type NextRequest } from "next/server";
-import { updateSession } from "./lib/supabase/middleware";
-
-export async function middleware(request: NextRequest) {
-  return await updateSession(request);
-}
+// Auth bypassed: webapp is intentionally open. Anyone with the URL can access.
+// Protection comes from keeping the production URL private. If we add real auth
+// later, restore the imports + updateSession() call from lib/supabase/middleware.ts.
 
 export const config = {
-  matcher: [
-    // Skip Next internals and static assets.
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: [],
 };

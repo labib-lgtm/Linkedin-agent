@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +11,6 @@ import { FORMAT_VALUES, PILLAR_VALUES } from "@/lib/constants";
 
 export default function NewAnglePage() {
   const router = useRouter();
-  const supabase = createClient();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -39,10 +37,15 @@ export default function NewAnglePage() {
       return;
     }
 
-    const { error: dbError } = await supabase.from("angles").insert(payload);
+    const res = await fetch("/api/angles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-    if (dbError) {
-      setError(dbError.message);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? `Failed (${res.status})`);
       setSubmitting(false);
       return;
     }

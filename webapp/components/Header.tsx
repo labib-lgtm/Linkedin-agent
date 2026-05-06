@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import { SignOutButton } from "./SignOutButton";
 
 const NAV = [
   { href: "/", label: "Pipeline" },
@@ -9,12 +7,7 @@ const NAV = [
   { href: "/angles/new", label: "+ New" },
 ];
 
-export async function Header() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+export function Header() {
   return (
     <header className="border-b border-border bg-background">
       <div className="container-tight flex h-14 items-center justify-between gap-4">
@@ -37,17 +30,6 @@ export async function Header() {
             </Link>
           ))}
         </nav>
-
-        <div className="flex items-center gap-3">
-          {user?.email ? (
-            <>
-              <span className="hidden sm:block text-xs text-muted-foreground">
-                {user.email}
-              </span>
-              <SignOutButton />
-            </>
-          ) : null}
-        </div>
       </div>
 
       {/* Mobile nav */}

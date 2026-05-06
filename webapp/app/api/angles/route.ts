@@ -3,22 +3,17 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { STATUS_VALUES } from "@/lib/constants";
 
 const ALLOWED_FIELDS = new Set([
+  "angle_id",
   "status",
-  "notes",
-  "week_assigned",
-  "scheduled_at",
-  "draft_body",
-  "hook_chosen",
+  "pillar",
+  "format",
+  "hook_seed",
   "cta_keyword",
+  "week_assigned",
+  "notes",
 ]);
 
-export async function PATCH(
-  request: NextRequest,
-  ctx: { params: Promise<{ id: string }> },
-) {
-  const { id } = await ctx.params;
-  const supabase = createServiceClient();
-
+export async function POST(request: NextRequest) {
   let body: Record<string, unknown>;
   try {
     body = await request.json();
@@ -26,27 +21,26 @@ export async function PATCH(
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
-  const patch: Record<string, unknown> = {};
+  if (typeof body.angle_id !== "string" || !body.angle_id.trim()) {
+    return NextResponse.json({ error: "angle_id_required" }, { status: 400 });
+  }
+
+  const insert: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(body)) {
-    if (!ALLOWED_FIELDS.has(k)) continue;
-    patch[k] = v;
+    if (ALLOWED_FIELDS.has(k)) insert[k] = v;
   }
 
   if (
-    typeof patch.status === "string" &&
-    !STATUS_VALUES.includes(patch.status as (typeof STATUS_VALUES)[number])
+    typeof insert.status === "string" &&
+    !STATUS_VALUES.includes(insert.status as (typeof STATUS_VALUES)[number])
   ) {
     return NextResponse.json({ error: "invalid_status" }, { status: 400 });
   }
 
-  if (Object.keys(patch).length === 0) {
-    return NextResponse.json({ error: "no_allowed_fields" }, { status: 400 });
-  }
-
+  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("angles")
-    .update(patch)
-    .eq("angle_id", id)
+    .insert(insert)
     .select()
     .single();
 

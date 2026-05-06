@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { AngleCard } from "@/components/AngleCard";
 import { KANBAN_STATUSES, type Status } from "@/lib/constants";
 import { type Angle } from "@/lib/types";
@@ -6,7 +6,7 @@ import { type Angle } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 export default async function KanbanPage() {
-  const supabase = await createClient();
+  const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("angles")
     .select("*")
