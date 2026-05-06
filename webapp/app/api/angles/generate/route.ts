@@ -48,6 +48,20 @@ type Generated = {
 };
 
 export async function POST(req: NextRequest) {
+  // Outer safety net: any uncaught throw returns JSON instead of Vercel's
+  // default HTML error page (which the frontend can't json-parse).
+  try {
+    return await handle(req);
+  } catch (e) {
+    console.error("[generate] uncaught", e);
+    return NextResponse.json(
+      { error: "uncaught", message: (e as Error)?.message ?? String(e) },
+      { status: 500 },
+    );
+  }
+}
+
+async function handle(req: NextRequest) {
   let body: Body;
   try {
     body = await req.json();

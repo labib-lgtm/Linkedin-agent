@@ -53,20 +53,46 @@ async function callOpenRouter(opts: {
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(60_000),
   });
+  // Read the body once as text so we can fall back to a meaningful error
+  // when OpenRouter returns a non-JSON response (auth pages, gateway HTML).
+  const raw = await res.text().catch(() => "");
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
     throw new OpenRouterError(
       `OpenRouter ${res.status}`,
       res.status,
-      text.slice(0, 800),
+      raw.slice(0, 800),
     );
   }
-  const json = (await res.json().catch(() => ({}))) as {
+
+  let json: {
     choices?: Array<{ message?: { content?: string } }>;
+    error?: { message?: string; code?: string | number };
   };
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    throw new OpenRouterError(
+      "OpenRouter returned non-JSON body",
+      502,
+      raw.slice(0, 800),
+    );
+  }
+
+  // OpenRouter sometimes returns 200 with an `error` field instead of choices
+  // (model unavailable, insufficient credits, prompt rejected, rate limit).
+  if (json.error) {
+    const msg = json.error.message ?? "unknown error";
+    const code = json.error.code != null ? ` (${json.error.code})` : "";
+    throw new OpenRouterError(`OpenRouter error: ${msg}${code}`, 502, raw.slice(0, 800));
+  }
+
   const content = json.choices?.[0]?.message?.content;
   if (typeof content !== "string") {
-    throw new OpenRouterError("OpenRouter response missing content", 502, JSON.stringify(json).slice(0, 800));
+    throw new OpenRouterError(
+      "OpenRouter response missing content",
+      502,
+      raw.slice(0, 800),
+    );
   }
   return content;
 }
