@@ -32,29 +32,41 @@ DEFAULT_FOLDER_NAME = "lynx-lead-magnets"
 
 
 def _build_drive_service():
-    """Build a Drive v3 client using the gspread-cached OAuth token."""
+    """Build a Drive v3 client by loading the cached OAuth token directly.
+
+    We don't go through gspread's Client because its internals shift between
+    versions. Instead read ~/.config/gspread/authorized_user.json (or whatever
+    GOOGLE_OAUTH_TOKEN_PATH points at) and construct google.oauth2 Credentials.
+    The token was minted with both Sheets + Drive scopes by gspread.oauth(),
+    so it works for Drive API calls without re-auth.
+    """
     try:
-        import gspread
         from googleapiclient.discovery import build
+        from google.oauth2.credentials import Credentials
     except ImportError:
         sys.exit(
             "Missing deps. Run: pip3 install --user -r tools/requirements.txt"
         )
 
-    # gspread.oauth() returns a Client whose .auth is a Credentials object
-    # with both Sheets and Drive scopes by default.
-    from sheets_client import client as sheets_oauth_client
-    sheets_client_obj = sheets_oauth_client()
-    creds = getattr(sheets_client_obj, "auth", None) or getattr(sheets_client_obj, "session", None)
-    # gspread v6 stores the underlying Credentials at sheets_client_obj.session.credentials
-    if creds is None or not hasattr(creds, "token"):
-        creds = getattr(sheets_client_obj.session, "credentials", None)
-    if creds is None:
+    from sheets_client import env as sheets_env, DEFAULT_TOKEN_PATH
+    token_path = Path(os.path.expanduser(
+        sheets_env("GOOGLE_OAUTH_TOKEN_PATH", str(DEFAULT_TOKEN_PATH))
+    )).resolve()
+
+    if not token_path.exists():
         sys.exit(
-            "Could not locate OAuth credentials on the gspread client. "
-            "Try deleting GOOGLE_OAUTH_TOKEN_PATH and re-running so the OAuth "
-            "flow re-grants Drive scopes."
+            f"OAuth token not found at {token_path}. "
+            f"Run any sheets_*.py tool once to trigger the OAuth flow first."
         )
+
+    # Drive scope is requested by gspread.oauth() by default. If the cached
+    # token only has Sheets scope, Drive calls will 403 — delete the token
+    # and re-auth.
+    scopes = [
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/spreadsheets",
+    ]
+    creds = Credentials.from_authorized_user_file(str(token_path), scopes=scopes)
 
     return build("drive", "v3", credentials=creds, cache_discovery=False)
 
