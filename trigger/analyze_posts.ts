@@ -1,6 +1,6 @@
 import { logger, schedules } from "@trigger.dev/sdk/v3";
 import { getServiceClient } from "./lib/supabase.js";
-import { generateJson, generateEmbedding, cosine, meanVector } from "./lib/openrouter.js";
+import { generateJson, generateEmbedding, cosine } from "./lib/openrouter.js";
 
 /**
  * Daily post analysis — Phase 4 of Compare v2.
@@ -17,7 +17,17 @@ import { generateJson, generateEmbedding, cosine, meanVector } from "./lib/openr
  *   OPENROUTER_API_KEY
  */
 
-const CLUSTER_THRESHOLD = 0.78;        // Cosine similarity to join an existing theme
+// text-embedding-3-small puts on-topic posts at ~0.55-0.75 cosine, with
+// duplicates near 0.85. The first run with threshold 0.78 produced 77
+// themes from 106 posts (every post was its own cluster). Loosening to
+// 0.62 — still strict enough to keep "Amazon PPC" separate from
+// "TikTok ads", but loose enough that two posts on the same topic land
+// together.
+const CLUSTER_THRESHOLD = 0.62;
+// Two themes whose centroids land within MERGE_THRESHOLD after clustering
+// are folded into one (post-hoc cleanup pass below). Slightly higher than
+// the join threshold so we only merge themes that *should have been* one.
+const MERGE_THRESHOLD = 0.70;
 const HOOK_SYSTEM = `You are an analyst extracting reusable LinkedIn hook templates from post first lines.
 
 Given the first line of a post, return JSON:
@@ -212,15 +222,88 @@ async function analyzeAccount(
     await new Promise((r) => setTimeout(r, 200));
   }
 
+  // Post-hoc merge pass — fold together themes whose centroids drifted
+  // close after the greedy single-link assignment. Solves the "every
+  // post becomes its own theme" failure mode that produced 77 themes
+  // from 106 posts on the first run.
+  const merged = await mergeCloseThemes(client, account.id);
+
   // Refresh hook_patterns aggregates: group competitor_post_analysis by
   // hook_normalized for this account, upsert into hook_patterns.
   await refreshHookPatterns(client, account.id);
 
-  // Name newly-created themes via LLM. We pick top-3 unnamed themes by
-  // post_count and ask the model to summarize from sample posts.
+  // Name unnamed themes via LLM. Bumped to top-10 (was 3) so a typical
+  // run with several new clusters surfaces real names rather than a sea
+  // of "Untitled cluster".
   await nameUntitledThemes(client, account.id);
 
-  return { analyzed, new_themes: newThemes, errors };
+  return { analyzed, new_themes: newThemes - merged, errors };
+}
+
+// Merge themes whose centroids are >= MERGE_THRESHOLD similar. The
+// smaller theme (fewer posts) merges into the larger one. Repeats until
+// no more merges are possible.
+async function mergeCloseThemes(
+  client: ReturnType<typeof supabase>,
+  accountId: string,
+): Promise<number> {
+  let mergedCount = 0;
+  for (let iter = 0; iter < 20; iter++) {
+    const { data: themes } = await client
+      .from("themes")
+      .select("id, centroid, post_count")
+      .eq("account_id", accountId);
+    const ts = ((themes ?? []) as Array<{ id: string; centroid: number[] | null; post_count: number }>).filter(
+      (t) => Array.isArray(t.centroid),
+    );
+    if (ts.length < 2) break;
+
+    let bestPair: { a: string; b: string; sim: number } | null = null;
+    for (let i = 0; i < ts.length; i++) {
+      for (let j = i + 1; j < ts.length; j++) {
+        const sim = cosine(ts[i].centroid as number[], ts[j].centroid as number[]);
+        if (sim >= MERGE_THRESHOLD && (!bestPair || sim > bestPair.sim)) {
+          bestPair = { a: ts[i].id, b: ts[j].id, sim };
+        }
+      }
+    }
+    if (!bestPair) break;
+
+    const aTheme = ts.find((t) => t.id === bestPair!.a)!;
+    const bTheme = ts.find((t) => t.id === bestPair!.b)!;
+    // Bigger of the two absorbs the other.
+    const survivor = aTheme.post_count >= bTheme.post_count ? aTheme : bTheme;
+    const victim = survivor === aTheme ? bTheme : aTheme;
+
+    // Re-point analysis rows from victim → survivor.
+    await client
+      .from("competitor_post_analysis")
+      .update({ theme_id: survivor.id })
+      .eq("account_id", accountId)
+      .eq("theme_id", victim.id);
+
+    // New centroid: weighted mean of the two.
+    const total = survivor.post_count + victim.post_count;
+    const newCentroid = (survivor.centroid as number[]).map((v, i) => {
+      const sw = (v * survivor.post_count + (victim.centroid as number[])[i] * victim.post_count) / total;
+      return sw;
+    });
+    await client
+      .from("themes")
+      .update({
+        centroid: newCentroid,
+        post_count: total,
+        last_clustered_at: new Date().toISOString(),
+      })
+      .eq("id", survivor.id);
+
+    // Remove victim. Surviving rows will have their leader recomputed
+    // on the next /api/accounts/[id]/insights read; we don't denormalize
+    // leader_competitor_id on themes here.
+    await client.from("themes").delete().eq("id", victim.id);
+    mergedCount += 1;
+  }
+  return mergedCount;
 }
 
 async function refreshHookPatterns(client: ReturnType<typeof supabase>, accountId: string) {
@@ -293,7 +376,7 @@ async function nameUntitledThemes(
     .eq("account_id", accountId)
     .eq("name", "Untitled cluster")
     .order("post_count", { ascending: false })
-    .limit(3);
+    .limit(10);
   if (!untitled || untitled.length === 0) return;
 
   for (const t of untitled) {
