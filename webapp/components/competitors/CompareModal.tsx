@@ -183,16 +183,24 @@ function CompareRow({
       }`}
       style={{ gridTemplateColumns: "200px 240px 1fr 200px" }}
     >
-      {/* Cover */}
+      {/* Cover — show the full LinkedIn banner without cropping. The
+          actual asset is wide (≈4:1), so we render it as an <img> with
+          object-contain inside a tinted container so the whole banner is
+          visible end-to-end. */}
       <div
         className="rounded-lg min-h-[130px] relative overflow-hidden flex items-center justify-center text-white/50 text-[10px] uppercase tracking-widest"
-        style={
-          coverUrl
-            ? { backgroundImage: `url(${coverUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-            : { background: `linear-gradient(135deg, ${tint}88, ${tint})` }
-        }
+        style={{ background: `linear-gradient(135deg, ${tint}88, ${tint})` }}
       >
-        {!coverUrl ? row.identifier : null}
+        {coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={coverUrl}
+            alt={`${row.display_name || row.identifier} cover`}
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <span>{row.identifier}</span>
+        )}
         {row.recent_events.find((e) => e.kind === "cover") ? (
           <span className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
             new cover
