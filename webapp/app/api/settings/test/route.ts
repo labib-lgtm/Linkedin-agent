@@ -44,11 +44,18 @@ async function testUnipile() {
   const trimmed = dsnRaw.trim().replace(/\/$/, "");
   const dsn = trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
   const url = `${dsn}/api/v1/accounts/${encodeURIComponent(accountId.trim())}`;
+  // Manual abort timer (auto-unref'd) so the function terminates cleanly
+  // when fetch returns early. AbortSignal.timeout would keep the lambda
+  // alive until the 8s timer fires.
+  const controller = new AbortController();
+  const abortTimer = setTimeout(() => controller.abort(), 8000);
+  abortTimer.unref?.();
   try {
     const res = await fetch(url, {
       headers: { "X-API-KEY": apiKey.trim(), accept: "application/json" },
-      signal: AbortSignal.timeout(8000),
+      signal: controller.signal,
     });
+    clearTimeout(abortTimer);
     if (res.ok) {
       const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
       const provider = String(data.provider ?? "linkedin");
@@ -59,6 +66,7 @@ async function testUnipile() {
       message: `Unipile returned ${res.status}: ${(await res.text()).slice(0, 200)}`,
     };
   } catch (e) {
+    clearTimeout(abortTimer);
     // Node fetch throws TypeError("fetch failed") and stashes the real
     // cause (ENOTFOUND, ECONNREFUSED, certificate errors, etc) on .cause.
     // Surface it so debugging doesn't require server logs.
@@ -72,11 +80,15 @@ async function testUnipile() {
 async function testOpenRouter() {
   const apiKey = await getSetting("openrouter.api_key");
   if (!apiKey) return { ok: false, message: "Set api_key first" };
+  const controller = new AbortController();
+  const abortTimer = setTimeout(() => controller.abort(), 8000);
+  abortTimer.unref?.();
   try {
     const res = await fetch("https://openrouter.ai/api/v1/key", {
       headers: { Authorization: `Bearer ${apiKey}`, accept: "application/json" },
-      signal: AbortSignal.timeout(8000),
+      signal: controller.signal,
     });
+    clearTimeout(abortTimer);
     if (res.ok) {
       const data = (await res.json().catch(() => ({}))) as { data?: { label?: string; usage?: number } };
       const label = data.data?.label ?? "unnamed key";
@@ -87,6 +99,7 @@ async function testOpenRouter() {
       message: `OpenRouter returned ${res.status}`,
     };
   } catch (e) {
+    clearTimeout(abortTimer);
     return { ok: false, message: `Network: ${(e as Error).message}` };
   }
 }

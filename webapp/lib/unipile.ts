@@ -43,6 +43,14 @@ async function unipileFetch<T>(
       if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
     }
   }
+  // Manual timer + AbortController. AbortSignal.timeout() schedules a Node
+  // timer that's NOT auto-unref'd, so when fetch completes early the
+  // pending timer keeps the lambda alive until either it fires or
+  // maxDuration kicks in. Burned the entire 10s budget on a 1.2s call.
+  const controller = new AbortController();
+  const abortTimer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 12_000);
+  abortTimer.unref?.();
+
   let res: Response;
   try {
     res = await fetch(url.toString(), {
@@ -53,9 +61,10 @@ async function unipileFetch<T>(
         ...(opts.body ? { "Content-Type": "application/json" } : {}),
       },
       body: opts.body ? JSON.stringify(opts.body) : undefined,
-      signal: AbortSignal.timeout(opts.timeoutMs ?? 12_000),
+      signal: controller.signal,
     });
   } catch (e) {
+    clearTimeout(abortTimer);
     const err = e as Error & { cause?: { code?: string; message?: string } };
     const causeMsg = err.cause?.code || err.cause?.message;
     const detail = causeMsg ? `${err.message} (${causeMsg})` : err.message;
@@ -65,6 +74,7 @@ async function unipileFetch<T>(
       `tried ${url.toString()}`,
     );
   }
+  clearTimeout(abortTimer);
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new UnipileError(

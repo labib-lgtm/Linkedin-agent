@@ -42,20 +42,36 @@ async function callOpenRouter(opts: {
   };
   if (opts.jsonMode) body.response_format = { type: "json_object" };
 
-  const res = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://lynxmedia.co",
-      "X-Title": "LinkedIn Agent",
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(60_000),
-  });
-  // Read the body once as text so we can fall back to a meaningful error
-  // when OpenRouter returns a non-JSON response (auth pages, gateway HTML).
-  const raw = await res.text().catch(() => "");
+  // Manual timer + AbortController instead of AbortSignal.timeout. The
+  // built-in helper schedules a Node timer that is NOT auto-unref'd; when
+  // fetch completes early the timer keeps the event loop alive and Vercel
+  // waits for it to fire before terminating the function. Result: a fast
+  // OpenRouter call (~1.2s) was burning the rest of the 10s budget for no
+  // reason. unref + clearTimeout on success fixes the hang.
+  const controller = new AbortController();
+  const abortTimer = setTimeout(() => controller.abort(), 8_000);
+  abortTimer.unref?.();
+
+  let raw = "";
+  let res: Response;
+  try {
+    res = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://lynxmedia.co",
+        "X-Title": "LinkedIn Agent",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    // Read the body once as text so we can fall back to a meaningful error
+    // when OpenRouter returns a non-JSON response (auth pages, gateway HTML).
+    raw = await res.text().catch(() => "");
+  } finally {
+    clearTimeout(abortTimer);
+  }
   if (!res.ok) {
     throw new OpenRouterError(
       `OpenRouter ${res.status}`,
