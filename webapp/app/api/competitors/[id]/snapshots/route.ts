@@ -11,7 +11,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   const since = new Date(Date.now() - 90 * 86_400_000).toISOString();
   const { data, error } = await supabase
     .from("competitor_snapshots")
-    .select("captured_at, headline, cover_url, cover_thumb_path, followers_count, connections_count")
+    .select("captured_at, headline, cover_url, cover_thumb_path, picture_url, followers_count, connections_count")
     .eq("competitor_id", id)
     .gte("captured_at", since)
     .order("captured_at", { ascending: false });

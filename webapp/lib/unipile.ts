@@ -202,6 +202,7 @@ export type ProfileSnapshot = {
   display_name: string | null;
   headline: string | null;
   cover_url: string | null;
+  picture_url: string | null;
   followers_count: number | null;
   connections_count: number | null;
   raw: UnipileUserProfile;
@@ -230,6 +231,7 @@ export async function fetchUserProfile(handleOrId: string): Promise<ProfileSnaps
     display_name: extractDisplayName(profile),
     headline: extractHeadline(profile),
     cover_url: extractCoverUrl(profile),
+    picture_url: extractPictureUrl(profile),
     followers_count: extractFollowersCount(profile),
     connections_count: extractConnectionsCount(profile),
     raw: profile,
@@ -268,6 +270,7 @@ function extractDisplayName(p: UnipileUserProfile): string | null {
 
 function extractCoverUrl(p: UnipileUserProfile): string | null {
   const candidates = [
+    (p as Record<string, unknown>).background_picture_url,
     p.cover_image_url, p.background_image_url, p.cover_url,
     p.background_url, p.header_image, p.cover, p.background_image,
   ];
@@ -296,6 +299,28 @@ function extractCoverUrl(p: UnipileUserProfile): string | null {
           }
         }
       }
+    }
+  }
+  return null;
+}
+
+function extractPictureUrl(p: UnipileUserProfile): string | null {
+  const candidates = [
+    (p as Record<string, unknown>).profile_picture_url,
+    (p as Record<string, unknown>).profile_picture_url_large,
+    (p as Record<string, unknown>).picture_url,
+    (p as Record<string, unknown>).image_url,
+    (p as Record<string, unknown>).avatar_url,
+    (p as Record<string, unknown>).profile_image,
+    (p as Record<string, unknown>).avatar,
+    (p as Record<string, unknown>).picture,
+    (p as Record<string, unknown>).profile_photo,
+  ];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.startsWith("http")) return c;
+    if (c && typeof c === "object" && "url" in c) {
+      const url = (c as { url?: unknown }).url;
+      if (typeof url === "string" && url.startsWith("http")) return url;
     }
   }
   return null;

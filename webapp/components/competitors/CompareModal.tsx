@@ -10,6 +10,7 @@ export type SnapshotRow = {
   headline: string | null;
   cover_url: string | null;
   cover_thumb_path: string | null;
+  picture_url: string | null;
   followers_count: number | null;
   connections_count: number | null;
 };
@@ -38,6 +39,14 @@ const STORAGE_BUCKET = "competitor-covers";
 function publicCoverUrl(thumbPath: string | null): string | null {
   if (!thumbPath || !SUPABASE_URL) return null;
   return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${thumbPath}`;
+}
+
+// Pick the best available cover image URL — prefer the Storage thumbnail
+// (stable, our origin), then fall back to LinkedIn's CDN URL on the snapshot
+// (rotates eventually but renders today). Returns null if neither is set.
+function bestCoverUrl(snap: SnapshotRow | null): string | null {
+  if (!snap) return null;
+  return publicCoverUrl(snap.cover_thumb_path) ?? snap.cover_url ?? null;
 }
 
 function daysAgo(iso: string): number {
@@ -155,7 +164,8 @@ function CompareRow({
   const snap = row.latest_snapshot;
   const prior = row.snapshot_history[1] ?? null; // second-most-recent
   const tint = anchored ? "#0e0e0e" : colorFor(colorIndex);
-  const coverUrl = publicCoverUrl(snap?.cover_thumb_path ?? null);
+  const coverUrl = bestCoverUrl(snap);
+  const pictureUrl = snap?.picture_url ?? null;
   const initials = (row.display_name || row.identifier).slice(0, 2).toUpperCase();
 
   // Detect a recent headline change; show prior headline strikethrough.
@@ -194,12 +204,21 @@ function CompareRow({
       <div className="flex flex-col justify-between gap-2">
         <div>
           <div className="flex items-center gap-2">
-            <span
-              className="inline-flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-semibold text-white"
-              style={{ background: tint }}
-            >
-              {initials}
-            </span>
+            {pictureUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={pictureUrl}
+                alt={row.display_name || row.identifier}
+                className="w-7 h-7 rounded-full object-cover border border-border"
+              />
+            ) : (
+              <span
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-semibold text-white"
+                style={{ background: tint }}
+              >
+                {initials}
+              </span>
+            )}
             <span className="font-semibold">{row.display_name || row.identifier}</span>
           </div>
         </div>

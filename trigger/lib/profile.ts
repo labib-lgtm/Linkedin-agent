@@ -68,6 +68,7 @@ export type ProfileFields = {
   display_name: string | null;
   headline: string | null;
   cover_url: string | null;
+  picture_url: string | null;
   followers_count: number | null;
   connections_count: number | null;
   raw: RawProfile;
@@ -88,6 +89,7 @@ export async function fetchProfile(handleOrId: string): Promise<ProfileFields> {
     display_name: pickDisplayName(profile),
     headline: pickHeadline(profile),
     cover_url: pickCoverUrl(profile),
+    picture_url: pickPictureUrl(profile),
     followers_count: pickFollowersCount(profile),
     connections_count: pickConnectionsCount(profile),
     raw: profile,
@@ -128,7 +130,50 @@ function pickHeadline(p: RawProfile): string | null {
 }
 
 function pickCoverUrl(p: RawProfile): string | null {
-  for (const k of ["cover_image_url", "background_image_url", "cover_url", "background_url", "header_image", "cover", "background_image"]) {
+  // Pass 1 — known keys (fast path).
+  for (const k of [
+    "background_picture_url",
+    "cover_image_url",
+    "background_image_url",
+    "cover_url",
+    "background_url",
+    "header_image",
+    "cover",
+    "background_image",
+  ]) {
+    const v = p[k];
+    if (typeof v === "string" && v.startsWith("http")) return v;
+    if (v && typeof v === "object" && "url" in v) {
+      const url = (v as { url?: unknown }).url;
+      if (typeof url === "string" && url.startsWith("http")) return url;
+    }
+  }
+  // Pass 2 — pattern fallback. LinkedIn's CDN encodes cover assets at
+  // `profile-displaybackgroundimage-shrink_*` (vs. headshots at
+  // `profile-displayphoto-shrink_*`). Iterate every top-level string and
+  // grab the first one matching that path so a rename of the wrapping
+  // key doesn't break us again.
+  for (const k of Object.keys(p)) {
+    const v = p[k];
+    if (typeof v === "string" && v.includes("profile-displaybackgroundimage")) return v;
+  }
+  return null;
+}
+
+function pickPictureUrl(p: RawProfile): string | null {
+  // Unipile profile picture / avatar. Pulls from the same defensive set
+  // of keys their LinkedIn endpoint returns across account types.
+  for (const k of [
+    "profile_picture_url",
+    "profile_picture_url_large",
+    "picture_url",
+    "image_url",
+    "avatar_url",
+    "profile_image",
+    "avatar",
+    "picture",
+    "profile_photo",
+  ]) {
     const v = p[k];
     if (typeof v === "string" && v.startsWith("http")) return v;
     if (v && typeof v === "object" && "url" in v) {

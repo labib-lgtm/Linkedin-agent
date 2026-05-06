@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
   // distinct-on isn't available via PostgREST.
   const { data: snapshotsData } = await supabase
     .from("competitor_snapshots")
-    .select("competitor_id, captured_at, headline, cover_url, cover_thumb_path, followers_count, connections_count")
+    .select("competitor_id, captured_at, headline, cover_url, cover_thumb_path, picture_url, followers_count, connections_count")
     .in("competitor_id", ids)
     .gte("captured_at", new Date(Date.now() - 90 * 86_400_000).toISOString())
     .order("captured_at", { ascending: false });
@@ -118,6 +118,7 @@ export async function GET(req: NextRequest) {
     headline: string | null;
     cover_url: string | null;
     cover_thumb_path: string | null;
+    picture_url: string | null;
     followers_count: number | null;
     connections_count: number | null;
   };

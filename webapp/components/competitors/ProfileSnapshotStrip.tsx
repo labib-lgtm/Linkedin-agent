@@ -25,6 +25,12 @@ function publicCoverUrl(thumbPath: string | null): string | null {
   return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${thumbPath}`;
 }
 
+// Prefer the Storage thumbnail (stable), then the original LinkedIn CDN URL.
+function bestCoverUrl(snap: SnapshotRow | null): string | null {
+  if (!snap) return null;
+  return publicCoverUrl(snap.cover_thumb_path) ?? snap.cover_url ?? null;
+}
+
 function daysAgo(iso: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
 }
@@ -79,7 +85,8 @@ export function ProfileSnapshotStrip({ rows }: { rows: ProfileRow[] }) {
             const snap = r.latest_snapshot;
             const tagline = changeAge(r.recent_events, "headline");
             const cover = changeAge(r.recent_events, "cover");
-            const coverUrl = publicCoverUrl(snap?.cover_thumb_path ?? null);
+            const coverUrl = bestCoverUrl(snap);
+            const pictureUrl = snap?.picture_url ?? null;
             const initials = (r.display_name || r.identifier).slice(0, 2).toUpperCase();
             const tint = r.is_self ? "#0e0e0e" : colorFor(i);
             return (
@@ -104,12 +111,21 @@ export function ProfileSnapshotStrip({ rows }: { rows: ProfileRow[] }) {
                 </div>
                 <div className="p-3 flex-1 flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <span
-                      className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-semibold text-white shrink-0"
-                      style={{ background: tint }}
-                    >
-                      {initials}
-                    </span>
+                    {pictureUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={pictureUrl}
+                        alt={r.display_name || r.identifier}
+                        className="w-5 h-5 rounded-full object-cover shrink-0 border border-border"
+                      />
+                    ) : (
+                      <span
+                        className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-semibold text-white shrink-0"
+                        style={{ background: tint }}
+                      >
+                        {initials}
+                      </span>
+                    )}
                     <span className="text-xs font-semibold truncate">
                       {r.display_name || r.identifier}
                     </span>

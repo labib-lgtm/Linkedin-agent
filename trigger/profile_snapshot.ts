@@ -123,6 +123,7 @@ async function processCompetitor(
     cover_url: profile.cover_url,
     cover_blockhash: coverHash,
     cover_thumb_path: coverThumbPath,
+    picture_url: profile.picture_url,
     followers_count: profile.followers_count,
     connections_count: profile.connections_count,
     raw_profile: profile.raw,
