@@ -25,10 +25,9 @@ export async function POST(
 
   let raw;
   try {
-    // 1 page of 50 posts → fits inside the Hobby 10s budget after the
-    // resolveProviderId lookup (~2s) and DB upsert (~0.5s). The daily cron
-    // tops up successive pages over multiple days.
-    raw = await fetchUserPosts(competitor.identifier, { maxPosts: 50, pageSize: 50 });
+    // 10 posts per click on Hobby — the Unipile lookup itself can take
+    // 3-4s, leaving little budget. Click again to backfill; upserts dedupe.
+    raw = await fetchUserPosts(competitor.identifier, { maxPosts: 10, pageSize: 10 });
   } catch (e) {
     if (e instanceof UnipileError) {
       return NextResponse.json(
