@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { runDigest, DigestError } from "@/lib/digest";
+import { prepareDigest, DigestError } from "@/lib/digest";
 import { OpenRouterError } from "@/lib/openrouter";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,10 @@ async function handle(req: NextRequest) {
   }
 
   try {
-    const digest = await runDigest(body.week_start);
+    // Phase 1 only: read + LLM, no DB write. The client follows up with
+    // POST /api/digest/save to persist (split so each call fits Hobby's
+    // 10s function ceiling on its own).
+    const digest = await prepareDigest(body.week_start);
     return NextResponse.json({ digest });
   } catch (e) {
     if (e instanceof DigestError) {

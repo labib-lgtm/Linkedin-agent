@@ -79,7 +79,27 @@ function withTimeout<T>(p: PromiseLike<T>, ms: number, label: string): Promise<T
   ]);
 }
 
-export async function runDigest(weekStart?: string) {
+export type DigestPayloadOut = {
+  week_start: string;
+  top_posts: Array<{
+    post_id: string;
+    competitor_id: string;
+    creator: string | undefined;
+    role: string | undefined;
+    score: number;
+    reactions: number | null;
+    comments: number | null;
+    reposts: number | null;
+    posted_at: string | null;
+    excerpt: string;
+  }>;
+  pattern_summary: DigestPayload;
+  generated_at: string;
+};
+
+// Phase 1: read + LLM, NO database write. Lets the heavy LLM call have
+// its own 10s budget separate from the upsert phase.
+export async function prepareDigest(weekStart?: string): Promise<DigestPayloadOut> {
   const supabase = createServiceClient();
   const target = weekStart || isoWeekStart(new Date());
 
@@ -169,31 +189,43 @@ export async function runDigest(weekStart?: string) {
     };
   });
 
-  // Upsert with a hard timeout. Skip .select() since we don't need the
-  // round-trip — the route returns the in-memory shape we just built.
-  const tUpsert = Date.now();
-  const { error: upErr } = await withTimeout(
-    supabase
-      .from("creator_digests")
-      .upsert(
-        {
-          week_start: target,
-          top_posts: topPostsJson,
-          pattern_summary: summary,
-          generated_at: new Date().toISOString(),
-        },
-        { onConflict: "week_start" },
-      ),
-    3_000,
-    "creator_digests upsert",
-  );
-  if (upErr) throw new DigestError("supabase", upErr.message, 500);
-  console.info("[digest] upsert done", { ms: Date.now() - tUpsert, total: Date.now() - t0 });
-
   return {
     week_start: target,
     top_posts: topPostsJson,
     pattern_summary: summary,
     generated_at: new Date().toISOString(),
   };
+}
+
+// Cron path: combine both phases. The cron route has its own
+// invocation lifetime separate from interactive use, so the upsert can
+// piggyback on the same call.
+export async function runDigest(weekStart?: string) {
+  const payload = await prepareDigest(weekStart);
+  await saveDigest(payload);
+  return payload;
+}
+
+// Phase 2: just the upsert. Trivially fits in 10s on its own.
+export async function saveDigest(payload: DigestPayloadOut) {
+  const supabase = createServiceClient();
+  const t0 = Date.now();
+  const { error } = await withTimeout(
+    supabase
+      .from("creator_digests")
+      .upsert(
+        {
+          week_start: payload.week_start,
+          top_posts: payload.top_posts,
+          pattern_summary: payload.pattern_summary,
+          generated_at: payload.generated_at,
+        },
+        { onConflict: "week_start" },
+      ),
+    8_000,
+    "creator_digests upsert",
+  );
+  if (error) throw new DigestError("supabase", error.message, 500);
+  console.info("[digest] saved", { ms: Date.now() - t0 });
+  return { week_start: payload.week_start };
 }
