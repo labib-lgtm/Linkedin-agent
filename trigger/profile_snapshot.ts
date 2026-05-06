@@ -116,23 +116,24 @@ async function processCompetitor(
     .limit(1)
     .maybeSingle<SnapshotRow>();
 
-  // Insert / upsert the new snapshot.
+  // Insert the new snapshot. We don't enforce one-per-day at the schema
+  // layer (Postgres can't index a timestamptz::date cast — STABLE not
+  // IMMUTABLE) so the worker just inserts. Multiple rows per day are
+  // tolerable; queries pick the most recent via ORDER BY captured_at
+  // DESC LIMIT 1.
   const today = new Date().toISOString();
-  const { error: snapErr } = await client.from("competitor_snapshots").upsert(
-    {
-      competitor_id: c.id,
-      account_id: c.account_id,
-      captured_at: today,
-      headline: profile.headline,
-      cover_url: profile.cover_url,
-      cover_blockhash: coverHash,
-      cover_thumb_path: coverThumbPath,
-      followers_count: profile.followers_count,
-      connections_count: profile.connections_count,
-      raw_profile: profile.raw,
-    },
-    { onConflict: "competitor_id,(captured_at::date)" as never },
-  );
+  const { error: snapErr } = await client.from("competitor_snapshots").insert({
+    competitor_id: c.id,
+    account_id: c.account_id,
+    captured_at: today,
+    headline: profile.headline,
+    cover_url: profile.cover_url,
+    cover_blockhash: coverHash,
+    cover_thumb_path: coverThumbPath,
+    followers_count: profile.followers_count,
+    connections_count: profile.connections_count,
+    raw_profile: profile.raw,
+  });
   if (snapErr) {
     return { ok: false, events: 0, reason: `snapshot insert: ${snapErr.message}` };
   }

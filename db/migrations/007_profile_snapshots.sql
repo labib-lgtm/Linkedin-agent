@@ -28,11 +28,10 @@ create table if not exists public.competitor_snapshots (
   raw_profile jsonb                -- Full Unipile response for debugging
 );
 
--- One snapshot per competitor per day. ::date cast keeps the unique
--- enforcement at calendar-day granularity, so re-running the snapshot
--- task within the same day upserts rather than duplicates.
-create unique index if not exists competitor_snapshots_per_day_idx
-  on public.competitor_snapshots (competitor_id, (captured_at::date));
+-- Multiple snapshots per competitor per day are tolerable; queries pick
+-- the most recent via ORDER BY captured_at DESC LIMIT 1. We can't index
+-- a (captured_at::date) expression because timestamptz->date is STABLE,
+-- not IMMUTABLE, and Postgres requires immutable functions in index keys.
 
 create index if not exists competitor_snapshots_competitor_idx
   on public.competitor_snapshots (competitor_id, captured_at desc);
