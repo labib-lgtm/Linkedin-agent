@@ -67,7 +67,7 @@ export function DigestViewer({
       {topics.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>Amazon-niche topics getting traction</CardTitle>
+            <CardTitle>In-niche topics getting traction</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="list-disc list-inside text-sm space-y-1">

@@ -2,31 +2,8 @@ import "server-only";
 import { createServiceClient } from "@/lib/supabase/server";
 import { generateJson } from "@/lib/openrouter";
 import { isoWeekStart } from "@/lib/week";
-
-const SYSTEM = `You are a pattern-extraction analyst for Lynx Media's LinkedIn growth system. Given the top-performing posts from a set of tracked LinkedIn creators this week, extract reusable HOOK + FORMAT patterns we can adapt to Amazon PPC topics.
-
-Important: extract STRUCTURE (hook formula, post format, CTA pattern) — not topics. Topics belong to those creators' niches. We want abstractions we can apply to our own.
-
-Return strict JSON:
-{
-  "patterns": [
-    {
-      "name": "Short pattern name (3-6 words)",
-      "description": "One sentence: how the pattern works structurally. Operator-grade language.",
-      "example_post_url": "URL of the example post (must be one we sent you).",
-      "applies_to_format": "text" | "carousel" | "image" | "video" | "poll"
-    }
-  ],
-  "topics_in_niche": [
-    "Bullet of an Amazon-niche topic getting traction this week (only include if a sender's role was 'direct')."
-  ]
-}
-
-Rules:
-- 3 to 6 patterns. Distinct, not rephrased duplicates.
-- Names are punchy and reusable.
-- description must be replicable, not just descriptive.
-- No em-dashes, asterisks, or hash characters in any string.`;
+import { getBusinessProfile } from "@/lib/business";
+import { digestSystemPrompt } from "@/lib/prompts";
 
 type Pattern = {
   name?: string;
@@ -221,8 +198,9 @@ export async function prepareDigest(weekStart?: string): Promise<DigestReadOut> 
 // on the model.
 export async function summarizeDigest(read: DigestReadOut): Promise<DigestPatternSummary> {
   const t0 = Date.now();
+  const business = await getBusinessProfile();
   const summary = await generateJson<DigestPatternSummary>({
-    system: SYSTEM,
+    system: digestSystemPrompt(business),
     user: read.llm_input,
     temperature: 0.4,
     maxTokens: 700,

@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { generateJson, OpenRouterError } from "@/lib/openrouter";
 import { PILLAR_VALUES, FORMAT_VALUES } from "@/lib/constants";
+import { getBusinessProfile } from "@/lib/business";
+import { anglesSystemPrompt } from "@/lib/prompts";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 10;
@@ -11,26 +13,6 @@ type Body = {
   format?: string;
   count?: number;
 };
-
-const SYSTEM_PROMPT = `You are an angle generator for Lynx Media's LinkedIn presence (Amazon PPC agency, $29M+ managed for sellers and brands). The audience is operators — Amazon brand owners, agency founders, in-house PPC managers — not students.
-
-Output strict JSON in this shape:
-{
-  "angles": [
-    {
-      "hook_seed": "Specific opener (1 sentence). Must be operator-grade — concrete numbers, named tactics, no fluff. NEVER use em-dashes, asterisks (* or **), or hash characters.",
-      "cta_keyword": "ONE WORD in caps, the keyword commenters reply with to get the lead magnet (e.g. AUDIT, TEMPLATE, BIDS, SOP).",
-      "gap_filled": "One sentence: what knowledge gap this angle fills for the operator audience."
-    }
-  ]
-}
-
-Style rules:
-- Lynx Media voice: contrarian, specifics over platitudes, operator-grade language.
-- Hook seeds must be SPECIFIC (numbers, named tactics, named tools). Reject generic LinkedIn-bait.
-- No em-dashes, asterisks, or hash characters in any string output.
-- cta_keyword must be a single ALL-CAPS word relevant to what they'd download.
-- Each angle should be distinct in framing — don't generate three rephrasings of the same insight.`;
 
 function buildUserPrompt(topic: string, pillar: string, fmt: string, count: number): string {
   return [
@@ -83,8 +65,9 @@ async function handle(req: NextRequest) {
   }
 
   try {
+    const business = await getBusinessProfile();
     const result = await generateJson<Generated>({
-      system: SYSTEM_PROMPT,
+      system: anglesSystemPrompt(business),
       user: buildUserPrompt(topic, pillar, fmt, count),
       temperature: 0.8,
       maxTokens: 1200,

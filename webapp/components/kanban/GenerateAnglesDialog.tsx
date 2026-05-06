@@ -151,7 +151,7 @@ export function GenerateAnglesDialog({
                 <Textarea
                   id="topic"
                   rows={3}
-                  placeholder="e.g. Amazon PPC bid optimization for branded vs non-branded keywords"
+                  placeholder="e.g. 'How my best client cut ACoS 40% in 30 days' or 'Why TikTok ads beat PPC for new launches'"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                 />

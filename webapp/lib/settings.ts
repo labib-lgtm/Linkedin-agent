@@ -17,6 +17,14 @@ export const SETTING_KEYS = {
 
   "google.client_id":          { env: "GOOGLE_CLIENT_ID",          secret: false, service: "google" as const,     label: "OAuth client ID" },
   "google.client_secret":      { env: "GOOGLE_CLIENT_SECRET",      secret: true,  service: "google" as const,     label: "OAuth client secret" },
+
+  // Business profile — drives the framing in every LLM system prompt
+  // (digest, angles). Defaults seeded in lib/business.ts so the app
+  // works out of the box without any config.
+  "business.name":             { env: "BUSINESS_NAME",             secret: false, service: "business" as const,   label: "Business name" },
+  "business.description":      { env: "BUSINESS_DESCRIPTION",      secret: false, service: "business" as const,   label: "What you do" },
+  "business.audience":         { env: "BUSINESS_AUDIENCE",         secret: false, service: "business" as const,   label: "Audience" },
+  "business.voice":            { env: "BUSINESS_VOICE",            secret: false, service: "business" as const,   label: "Voice / tone rules" },
 } as const;
 
 export type SettingKey = keyof typeof SETTING_KEYS;
@@ -98,7 +106,7 @@ export async function describeSettings() {
       readOnly: boolean;
       secret: boolean;
     }>
-  > = { unipile: [], openrouter: [], supabase: [], google: [] };
+  > = { unipile: [], openrouter: [], supabase: [], google: [], business: [] };
 
   for (const k of Object.keys(SETTING_KEYS) as SettingKey[]) {
     const meta = SETTING_KEYS[k];

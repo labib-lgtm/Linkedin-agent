@@ -10,11 +10,15 @@ import { SupabaseEditDialog } from "./SupabaseEditDialog";
 import type { SettingsPayload } from "./SettingsTabs";
 import type { SettingService, SettingKey } from "@/lib/settings";
 
+// Maps cover every SettingService for type-safety. The `services` array
+// below decides which actually render here; `business` is rendered in
+// BusinessPanel under its own tab.
 const SERVICE_LABELS: Record<SettingService, string> = {
   unipile: "Unipile",
   openrouter: "OpenRouter",
   supabase: "Supabase",
   google: "Google",
+  business: "Business",
 };
 
 const SERVICE_DESCRIPTIONS: Record<SettingService, string> = {
@@ -23,6 +27,7 @@ const SERVICE_DESCRIPTIONS: Record<SettingService, string> = {
   supabase:
     "Database. Editing service-role key disconnects the app — confirmation required, redeploy after save.",
   google: "OAuth client for Drive / Sheets (placeholder for now).",
+  business: "Business profile — see the Business tab.",
 };
 
 export function IntegrationsPanel({

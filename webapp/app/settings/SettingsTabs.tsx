@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IntegrationsPanel } from "./IntegrationsPanel";
 import { AccountPanel } from "./AccountPanel";
+import { BusinessPanel } from "./BusinessPanel";
 import type { SettingService, SettingKey } from "@/lib/settings";
 
 export type SettingsPayload = {
@@ -29,12 +30,17 @@ export function SettingsTabs({ initial }: { initial: SettingsPayload }) {
     <Tabs defaultValue="integrations" className="w-full">
       <TabsList>
         <TabsTrigger value="integrations">Integrations</TabsTrigger>
+        <TabsTrigger value="business">Business</TabsTrigger>
         <TabsTrigger value="account">Account</TabsTrigger>
         <TabsTrigger value="preferences">Preferences</TabsTrigger>
       </TabsList>
 
       <TabsContent value="integrations">
         <IntegrationsPanel data={data} onChange={setData} />
+      </TabsContent>
+
+      <TabsContent value="business">
+        <BusinessPanel data={data} onChange={setData} />
       </TabsContent>
 
       <TabsContent value="account">
