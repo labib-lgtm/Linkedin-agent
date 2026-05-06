@@ -64,6 +64,21 @@ export class DigestError extends Error {
   }
 }
 
+// Race a thenable against a timeout so a hung Supabase call can't push the
+// whole route past Vercel's 10s function ceiling. Supabase builders are
+// thenable but not formally Promise<T>, so accept PromiseLike here.
+function withTimeout<T>(p: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  return Promise.race<T>([
+    Promise.resolve(p),
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new DigestError("timeout", `${label} timed out after ${ms}ms`, 504)),
+        ms,
+      ),
+    ),
+  ]);
+}
+
 export async function runDigest(weekStart?: string) {
   const supabase = createServiceClient();
   const target = weekStart || isoWeekStart(new Date());
@@ -71,10 +86,16 @@ export async function runDigest(weekStart?: string) {
   const since = new Date(target + "T00:00:00Z");
   since.setUTCDate(since.getUTCDate() - 7);
 
-  const { data: comps, error: cErr } = await supabase
-    .from("competitors")
-    .select("id, identifier, display_name, role")
-    .eq("active", true);
+  const t0 = Date.now();
+
+  const { data: comps, error: cErr } = await withTimeout(
+    supabase
+      .from("competitors")
+      .select("id, identifier, display_name, role")
+      .eq("active", true),
+    2_000,
+    "competitors read",
+  );
   if (cErr) throw new DigestError("supabase", cErr.message, 500);
   if (!comps || comps.length === 0) {
     throw new DigestError("no_active_competitors", "Add at least one competitor first", 400);
@@ -83,14 +104,22 @@ export async function runDigest(weekStart?: string) {
     (comps as CompetitorRow[]).map((c) => [c.id, c]),
   );
 
-  const { data: posts, error: pErr } = await supabase
-    .from("competitor_posts")
-    .select("competitor_id, post_id, posted_at, text, engagement_score, reactions, comments, reposts")
-    .gte("posted_at", since.toISOString())
-    .order("engagement_score", { ascending: false });
+  const { data: posts, error: pErr } = await withTimeout(
+    supabase
+      .from("competitor_posts")
+      .select(
+        "competitor_id, post_id, posted_at, text, engagement_score, reactions, comments, reposts",
+      )
+      .gte("posted_at", since.toISOString())
+      .order("engagement_score", { ascending: false }),
+    2_500,
+    "posts read",
+  );
   if (pErr) throw new DigestError("supabase", pErr.message, 500);
 
-  const top = ((posts as PostRow[] | null) ?? []).slice(0, 30);
+  // Cap the LLM input at 15 posts and 600-char excerpts. With Hobby's 10s
+  // ceiling and a slow upsert, fewer tokens = faster model = more headroom.
+  const top = ((posts as PostRow[] | null) ?? []).slice(0, 15);
   if (top.length === 0) {
     throw new DigestError(
       "no_posts_in_window",
@@ -99,18 +128,20 @@ export async function runDigest(weekStart?: string) {
     );
   }
 
+  console.info("[digest] fetched", { comps: comps.length, top: top.length, ms: Date.now() - t0 });
+
   const lines = top.map((p, i) => {
     const c = compById[p.competitor_id];
-    const url = `https://www.linkedin.com/feed/update/${p.post_id}/`;
     return [
       `--- Post ${i + 1} ---`,
       `Creator: ${c?.display_name || c?.identifier || "unknown"} (role: ${c?.role || "n/a"})`,
-      `URL: ${url}`,
+      `URL: https://www.linkedin.com/feed/update/${p.post_id}/`,
       `Score: ${Math.round(Number(p.engagement_score ?? 0))} (likes ${p.reactions ?? 0}, comments ${p.comments ?? 0}, reposts ${p.reposts ?? 0})`,
-      `Text: ${(p.text ?? "").slice(0, 1200)}`,
+      `Text: ${(p.text ?? "").slice(0, 600)}`,
     ].join("\n");
   });
 
+  const tLLM = Date.now();
   const summary = await generateJson<DigestPayload>({
     system: SYSTEM,
     user:
@@ -118,8 +149,9 @@ export async function runDigest(weekStart?: string) {
       lines.join("\n\n") +
       "\n\nReturn ONLY the JSON object.",
     temperature: 0.4,
-    maxTokens: 2000,
+    maxTokens: 1200,
   });
+  console.info("[digest] llm done", { ms: Date.now() - tLLM, total: Date.now() - t0 });
 
   const topPostsJson = top.map((p) => {
     const c = compById[p.competitor_id];
@@ -133,23 +165,35 @@ export async function runDigest(weekStart?: string) {
       comments: p.comments,
       reposts: p.reposts,
       posted_at: p.posted_at,
-      excerpt: (p.text ?? "").slice(0, 280),
+      excerpt: (p.text ?? "").slice(0, 200),
     };
   });
 
-  const { data: digest, error: upErr } = await supabase
-    .from("creator_digests")
-    .upsert(
-      {
-        week_start: target,
-        top_posts: topPostsJson,
-        pattern_summary: summary,
-        generated_at: new Date().toISOString(),
-      },
-      { onConflict: "week_start" },
-    )
-    .select()
-    .single();
+  // Upsert with a hard timeout. Skip .select() since we don't need the
+  // round-trip — the route returns the in-memory shape we just built.
+  const tUpsert = Date.now();
+  const { error: upErr } = await withTimeout(
+    supabase
+      .from("creator_digests")
+      .upsert(
+        {
+          week_start: target,
+          top_posts: topPostsJson,
+          pattern_summary: summary,
+          generated_at: new Date().toISOString(),
+        },
+        { onConflict: "week_start" },
+      ),
+    3_000,
+    "creator_digests upsert",
+  );
   if (upErr) throw new DigestError("supabase", upErr.message, 500);
-  return digest;
+  console.info("[digest] upsert done", { ms: Date.now() - tUpsert, total: Date.now() - t0 });
+
+  return {
+    week_start: target,
+    top_posts: topPostsJson,
+    pattern_summary: summary,
+    generated_at: new Date().toISOString(),
+  };
 }
