@@ -75,6 +75,7 @@ export function CompareModal({
   rows: Row[];
 }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [lightbox, setLightbox] = useState<{ url: string; alt: string } | null>(null);
 
   const self = rows.find((r) => r.is_self);
   const others = rows.filter((r) => !r.is_self);
@@ -138,17 +139,79 @@ export function CompareModal({
 
         <div className="p-6 space-y-3">
           {filtered.map((r, i) => (
-            <CompareRow key={r.id} row={r} colorIndex={i} anchored={false} />
+            <CompareRow
+              key={r.id}
+              row={r}
+              colorIndex={i}
+              anchored={false}
+              onViewCover={(url, alt) => setLightbox({ url, alt })}
+            />
           ))}
-          {self ? <CompareRow row={self} colorIndex={-1} anchored /> : null}
+          {self ? (
+            <CompareRow
+              row={self}
+              colorIndex={-1}
+              anchored
+              onViewCover={(url, alt) => setLightbox({ url, alt })}
+            />
+          ) : null}
           {filtered.length === 0 && !self ? (
             <p className="text-sm text-muted-foreground text-center py-6">
               No competitors match this filter.
             </p>
           ) : null}
         </div>
+
+        {lightbox ? (
+          <ImageLightbox
+            url={lightbox.url}
+            alt={lightbox.alt}
+            onClose={() => setLightbox(null)}
+          />
+        ) : null}
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Full-size cover preview. Renders a fixed overlay above the modal,
+// click backdrop or the X button to close. Esc handled via Dialog's
+// outer wrapper isn't available here, so we attach a keydown listener.
+function ImageLightbox({
+  url,
+  alt,
+  onClose,
+}: {
+  url: string;
+  alt: string;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+      className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-8 cursor-zoom-out"
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white text-lg flex items-center justify-center"
+        aria-label="Close preview"
+      >
+        ×
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt={alt}
+        onClick={(e) => e.stopPropagation()}
+        className="max-w-[95vw] max-h-[90vh] object-contain rounded-lg shadow-2xl cursor-default"
+      />
+    </div>
   );
 }
 
@@ -156,10 +219,12 @@ function CompareRow({
   row,
   colorIndex,
   anchored,
+  onViewCover,
 }: {
   row: Row;
   colorIndex: number;
   anchored: boolean;
+  onViewCover: (url: string, alt: string) => void;
 }) {
   const snap = row.latest_snapshot;
   const prior = row.snapshot_history[1] ?? null; // second-most-recent
@@ -183,30 +248,46 @@ function CompareRow({
       }`}
       style={{ gridTemplateColumns: "200px 240px 1fr 200px" }}
     >
-      {/* Cover — show the full LinkedIn banner without cropping. The
-          actual asset is wide (≈4:1), so we render it as an <img> with
-          object-contain inside a tinted container so the whole banner is
-          visible end-to-end. */}
-      <div
-        className="rounded-lg min-h-[130px] relative overflow-hidden flex items-center justify-center text-white/50 text-[10px] uppercase tracking-widest"
-        style={{ background: `linear-gradient(135deg, ${tint}88, ${tint})` }}
-      >
-        {coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
+      {/* Cover — full LinkedIn banner without cropping. Click to enlarge. */}
+      {coverUrl ? (
+        <button
+          type="button"
+          onClick={() => onViewCover(coverUrl, `${row.display_name || row.identifier} cover`)}
+          className="group rounded-lg min-h-[130px] relative overflow-hidden flex items-center justify-center text-left p-0 border-0 cursor-zoom-in"
+          style={{ background: `linear-gradient(135deg, ${tint}88, ${tint})` }}
+          aria-label="View full cover"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={coverUrl}
             alt={`${row.display_name || row.identifier} cover`}
             className="w-full h-full object-contain"
           />
-        ) : (
-          <span>{row.identifier}</span>
-        )}
-        {row.recent_events.find((e) => e.kind === "cover") ? (
-          <span className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-            new cover
+          <span className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-white text-foreground text-[10px] font-semibold px-2 py-1 rounded shadow-lg flex items-center gap-1">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <line x1="11" y1="8" x2="11" y2="14" />
+                <line x1="8" y1="11" x2="14" y2="11" />
+              </svg>
+              View image
+            </span>
           </span>
-        ) : null}
-      </div>
+          {row.recent_events.find((e) => e.kind === "cover") ? (
+            <span className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+              new cover
+            </span>
+          ) : null}
+        </button>
+      ) : (
+        <div
+          className="rounded-lg min-h-[130px] relative overflow-hidden flex items-center justify-center text-white/50 text-[10px] uppercase tracking-widest"
+          style={{ background: `linear-gradient(135deg, ${tint}88, ${tint})` }}
+        >
+          <span>{row.identifier}</span>
+        </div>
+      )}
 
       {/* Identity + audience + activity */}
       <div className="flex flex-col justify-between gap-2">
