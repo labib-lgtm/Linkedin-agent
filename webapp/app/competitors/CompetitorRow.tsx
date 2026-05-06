@@ -43,7 +43,10 @@ export function CompetitorRow({ competitor }: { competitor: Competitor }) {
         method: "POST",
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      if (!res.ok) {
+        const detail = [data?.error, data?.body, data?.message].filter(Boolean).join(" — ");
+        throw new Error(detail || `HTTP ${res.status}`);
+      }
       toast.success(`Fetched ${data.fetched} posts`);
       router.refresh();
     } catch (e) {

@@ -39,11 +39,14 @@ async function testUnipile() {
   if (!apiKey || !dsnRaw || !accountId) {
     return { ok: false, message: "Set api_key, dsn, account_id first" };
   }
-  const dsn = dsnRaw.replace(/\/$/, "");
-  const url = `${dsn}/api/v1/accounts/${encodeURIComponent(accountId)}`;
+  // Normalize the DSN the same way lib/unipile.ts does — accept either
+  // bare host:port ("apiX.unipile.com:1234") or full URL.
+  const trimmed = dsnRaw.trim().replace(/\/$/, "");
+  const dsn = trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
+  const url = `${dsn}/api/v1/accounts/${encodeURIComponent(accountId.trim())}`;
   try {
     const res = await fetch(url, {
-      headers: { "X-API-KEY": apiKey, accept: "application/json" },
+      headers: { "X-API-KEY": apiKey.trim(), accept: "application/json" },
       signal: AbortSignal.timeout(8000),
     });
     if (res.ok) {
@@ -56,7 +59,13 @@ async function testUnipile() {
       message: `Unipile returned ${res.status}: ${(await res.text()).slice(0, 200)}`,
     };
   } catch (e) {
-    return { ok: false, message: `Network: ${(e as Error).message}` };
+    // Node fetch throws TypeError("fetch failed") and stashes the real
+    // cause (ENOTFOUND, ECONNREFUSED, certificate errors, etc) on .cause.
+    // Surface it so debugging doesn't require server logs.
+    const err = e as Error & { cause?: { code?: string; message?: string } };
+    const causeMsg = err.cause?.code || err.cause?.message;
+    const detail = causeMsg ? `${err.message} (${causeMsg})` : err.message;
+    return { ok: false, message: `Network: ${detail} — tried ${dsn}` };
   }
 }
 

@@ -17,9 +17,9 @@ export class UnipileError extends Error {
 }
 
 async function loadCreds() {
-  const apiKey = await getSetting("unipile.api_key");
-  const dsnRaw = await getSetting("unipile.dsn");
-  const accountId = await getSetting("unipile.account_id");
+  const apiKey = (await getSetting("unipile.api_key"))?.trim() || null;
+  const dsnRaw = (await getSetting("unipile.dsn"))?.trim() || null;
+  const accountId = (await getSetting("unipile.account_id"))?.trim() || null;
   if (!apiKey || !dsnRaw || !accountId) {
     throw new UnipileError(
       "Unipile credentials missing. Set api_key, dsn, account_id in /settings.",
@@ -43,16 +43,28 @@ async function unipileFetch<T>(
       if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
     }
   }
-  const res = await fetch(url.toString(), {
-    method,
-    headers: {
-      "X-API-KEY": apiKey,
-      accept: "application/json",
-      ...(opts.body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-    signal: AbortSignal.timeout(opts.timeoutMs ?? 12_000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), {
+      method,
+      headers: {
+        "X-API-KEY": apiKey,
+        accept: "application/json",
+        ...(opts.body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 12_000),
+    });
+  } catch (e) {
+    const err = e as Error & { cause?: { code?: string; message?: string } };
+    const causeMsg = err.cause?.code || err.cause?.message;
+    const detail = causeMsg ? `${err.message} (${causeMsg})` : err.message;
+    throw new UnipileError(
+      `Unipile ${method} ${path} network failure: ${detail}`,
+      0,
+      `tried ${url.toString()}`,
+    );
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new UnipileError(
