@@ -22,6 +22,7 @@ async function callOpenRouter(opts: {
   jsonMode?: boolean;
   temperature?: number;
   maxTokens?: number;
+  timeoutMs?: number;
 }): Promise<string> {
   const apiKey = await getSetting("openrouter.api_key");
   if (!apiKey) {
@@ -31,8 +32,11 @@ async function callOpenRouter(opts: {
       "",
     );
   }
+  // Default to haiku — sonnet's per-token latency is fine on a long
+  // budget but routinely pushes the digest LLM call past 9s on Hobby.
+  // Users can override in /settings (openrouter.text_model).
   const model =
-    opts.model ?? (await getSetting("openrouter.text_model")) ?? "anthropic/claude-3.5-sonnet";
+    opts.model ?? (await getSetting("openrouter.text_model")) ?? "anthropic/claude-3.5-haiku";
 
   const body: Record<string, unknown> = {
     model,
@@ -48,8 +52,13 @@ async function callOpenRouter(opts: {
   // waits for it to fire before terminating the function. Result: a fast
   // OpenRouter call (~1.2s) was burning the rest of the 10s budget for no
   // reason. unref + clearTimeout on success fixes the hang.
+  // OpenRouter holds the connection open until the model finishes
+  // generating for non-streaming requests, so the timeout has to be
+  // generous enough for the slowest reasonable model. Caller can override
+  // (summarize uses ~9s since it has the full 10s budget to itself).
+  const timeoutMs = opts.timeoutMs ?? 9_000;
   const controller = new AbortController();
-  const abortTimer = setTimeout(() => controller.abort(), 8_000);
+  const abortTimer = setTimeout(() => controller.abort(), timeoutMs);
   abortTimer.unref?.();
 
   let raw = "";
@@ -68,14 +77,25 @@ async function callOpenRouter(opts: {
       signal: controller.signal,
     });
     console.info("[openrouter] headers", { ms: Date.now() - tStart, status: res.status, model });
-    // Read the body once as text so we can fall back to a meaningful error
-    // when OpenRouter returns a non-JSON response (auth pages, gateway HTML).
+    // Read the body. Don't swallow errors here — if the abort fired
+    // mid-read we want the AbortError surfaced, not a misleading
+    // "non-JSON body" message with an empty body field.
     const tBody = Date.now();
-    raw = await res.text().catch(() => "");
+    raw = await res.text();
     console.info("[openrouter] body", { ms: Date.now() - tBody, bytes: raw.length });
-  } finally {
+  } catch (e) {
     clearTimeout(abortTimer);
+    const err = e as Error;
+    if (err.name === "AbortError" || /aborted/i.test(err.message)) {
+      throw new OpenRouterError(
+        `OpenRouter call exceeded ${timeoutMs}ms (model: ${model}). The model took too long to generate. Switch to a faster model in /settings (claude-3.5-haiku, gpt-4o-mini, gemini-flash) or reduce maxTokens.`,
+        504,
+        "",
+      );
+    }
+    throw new OpenRouterError(`OpenRouter network error: ${err.message}`, 502, "");
   }
+  clearTimeout(abortTimer);
   if (!res.ok) {
     throw new OpenRouterError(
       `OpenRouter ${res.status}`,
@@ -148,6 +168,7 @@ export async function generateJson<T>(opts: {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  timeoutMs?: number;
 }): Promise<T> {
   const messages: Message[] = [
     {
@@ -165,6 +186,7 @@ export async function generateJson<T>(opts: {
     temperature: opts.temperature,
     maxTokens: opts.maxTokens,
     jsonMode: true,
+    timeoutMs: opts.timeoutMs,
   });
 
   const candidate = extractJson(raw);

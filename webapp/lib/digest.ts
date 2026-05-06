@@ -163,7 +163,7 @@ export async function prepareDigest(weekStart?: string): Promise<DigestReadOut> 
   );
   if (pErr) throw new DigestError("supabase", pErr.message, 500);
 
-  const top = ((posts as PostRow[] | null) ?? []).slice(0, 12);
+  const top = ((posts as PostRow[] | null) ?? []).slice(0, 8);
   if (top.length === 0) {
     throw new DigestError(
       "no_posts_in_window",
@@ -181,7 +181,7 @@ export async function prepareDigest(weekStart?: string): Promise<DigestReadOut> 
       `Creator: ${c?.display_name || c?.identifier || "unknown"} (role: ${c?.role || "n/a"})`,
       `URL: https://www.linkedin.com/feed/update/${p.post_id}/`,
       `Score: ${Math.round(Number(p.engagement_score ?? 0))} (likes ${p.reactions ?? 0}, comments ${p.comments ?? 0}, reposts ${p.reposts ?? 0})`,
-      `Text: ${(p.text ?? "").slice(0, 500)}`,
+      `Text: ${(p.text ?? "").slice(0, 350)}`,
     ].join("\n");
   });
 
@@ -225,7 +225,8 @@ export async function summarizeDigest(read: DigestReadOut): Promise<DigestPatter
     system: SYSTEM,
     user: read.llm_input,
     temperature: 0.4,
-    maxTokens: 900,
+    maxTokens: 700,
+    timeoutMs: 9_000,
   });
   console.info("[digest] summarized", { ms: Date.now() - t0 });
   return summary;
