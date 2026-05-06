@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { STATUS_VALUES } from "@/lib/constants";
+import { getActiveAccountId } from "@/lib/active-account";
 
 const ALLOWED_FIELDS = new Set([
   "angle_id",
@@ -38,9 +39,10 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServiceClient();
+  const accountId = await getActiveAccountId();
   const { data, error } = await supabase
     .from("angles")
-    .insert(insert)
+    .insert({ ...insert, account_id: accountId })
     .select()
     .single();
 

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prepareDigest, DigestError } from "@/lib/digest";
+import { getActiveAccountId } from "@/lib/active-account";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 10;
@@ -31,8 +32,9 @@ async function handle(req: NextRequest) {
   }
 
   try {
-    const read = await prepareDigest(body.week_start);
-    return NextResponse.json({ read });
+    const accountId = await getActiveAccountId();
+    const read = await prepareDigest(body.week_start, accountId);
+    return NextResponse.json({ read: { ...read, account_id: accountId } });
   } catch (e) {
     if (e instanceof DigestError) {
       console.error("[digest/run] DigestError", e.code, e.message);

@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { CompetitorsView } from "./CompetitorsView";
+import { getActiveAccountId } from "@/lib/active-account";
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +18,12 @@ type CompetitorRowData = {
 
 export default async function CompetitorsPage() {
   const supabase = createServiceClient();
+  const accountId = await getActiveAccountId();
 
   const { data: competitors, error } = await supabase
     .from("competitors")
     .select("*")
+    .eq("account_id", accountId)
     .order("added_at", { ascending: false });
 
   // Pull stats in one extra query so the row component doesn't N+1.
@@ -30,6 +33,7 @@ export default async function CompetitorsPage() {
     const { data: posts } = await supabase
       .from("competitor_posts")
       .select("competitor_id, engagement_score")
+      .eq("account_id", accountId)
       .in("competitor_id", ids);
     for (const row of posts ?? []) {
       const id = row.competitor_id as string;

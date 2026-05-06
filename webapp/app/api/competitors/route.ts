@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { identifierFromProfileUrl, resolveProviderId, UnipileError } from "@/lib/unipile";
+import { getActiveAccountId } from "@/lib/active-account";
 
 export const dynamic = "force-dynamic";
 // Add does the Unipile lookup so analyze can skip it. Lookup ~5s + DB
@@ -10,12 +11,15 @@ export const maxDuration = 10;
 const ROLES = new Set(["direct", "format_source", "topic_source"]);
 
 export async function GET() {
+  const accountId = await getActiveAccountId();
   const supabase = createServiceClient();
   // Pull each competitor with its post count + best score so the list view
-  // can render summary stats without N+1 queries.
+  // can render summary stats without N+1 queries. Scoped to the active
+  // account so each Book entry shows only its own peer set.
   const { data: competitors, error } = await supabase
     .from("competitors")
     .select("*")
+    .eq("account_id", accountId)
     .order("added_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -25,6 +29,7 @@ export async function GET() {
     const { data: posts } = await supabase
       .from("competitor_posts")
       .select("competitor_id, engagement_score")
+      .eq("account_id", accountId)
       .in("competitor_id", ids);
     for (const row of posts ?? []) {
       const id = row.competitor_id as string;
@@ -97,6 +102,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServiceClient();
+  const accountId = await getActiveAccountId();
   const { data, error } = await supabase
     .from("competitors")
     .insert({
@@ -106,6 +112,7 @@ export async function POST(req: NextRequest) {
       display_name: body.display_name?.trim() || null,
       role,
       notes: body.notes?.trim() || null,
+      account_id: accountId,
     })
     .select()
     .single();

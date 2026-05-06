@@ -15,6 +15,7 @@ type CompetitorRow = {
   provider_id: string | null;
   active: boolean;
   last_analyzed_at: string | null;
+  account_id: string;
 };
 
 export async function GET(req: NextRequest) {
@@ -37,9 +38,12 @@ async function runRefresh() {
   // Pull most-stale-first (NULL last_analyzed_at counts as oldest) so each
   // daily cron picks up the competitor that's most overdue. Across
   // invocations the whole roster cycles.
+  // Refresh across ALL accounts in one pass; per-account scoping doesn't
+  // matter for cron (no UI context). Order by oldest analysis so each
+  // invocation hits the most-overdue rows first.
   const { data: comps, error } = await supabase
     .from("competitors")
-    .select("id, identifier, provider_id, active, last_analyzed_at")
+    .select("id, identifier, provider_id, active, last_analyzed_at, account_id")
     .eq("active", true)
     .order("last_analyzed_at", { ascending: true, nullsFirst: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -73,6 +77,7 @@ async function runRefresh() {
       for (const p of raw.map(normalizePost)) byPostId.set(p.post_id, p);
       const rows = [...byPostId.values()].map((p) => ({
         competitor_id: c.id,
+        account_id: c.account_id,
         post_id: p.post_id,
         posted_at: p.posted_at,
         text: p.text,

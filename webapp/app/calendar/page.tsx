@@ -4,14 +4,17 @@ import { type Angle } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatDate } from "@/lib/utils";
+import { getActiveAccountId } from "@/lib/active-account";
 
 export const dynamic = "force-dynamic";
 
 export default async function CalendarPage() {
   const supabase = createServiceClient();
+  const accountId = await getActiveAccountId();
   const { data, error } = await supabase
     .from("angles")
     .select("*")
+    .eq("account_id", accountId)
     .not("week_assigned", "is", null)
     .order("week_assigned", { ascending: true })
     .order("date_posted", { ascending: true });

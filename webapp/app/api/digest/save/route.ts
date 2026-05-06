@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { saveDigest, DigestError, type DigestPayloadOut } from "@/lib/digest";
+import { getActiveAccountId } from "@/lib/active-account";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 10;
@@ -33,7 +34,10 @@ async function handle(req: NextRequest) {
   }
 
   try {
-    const result = await saveDigest(payload);
+    // account_id arrives from /digest/run's response, but defend against
+    // older clients by falling back to the active account here.
+    const accountId = payload.account_id || (await getActiveAccountId());
+    const result = await saveDigest({ ...payload, account_id: accountId });
     return NextResponse.json({ saved: true, ...result });
   } catch (e) {
     if (e instanceof DigestError) {

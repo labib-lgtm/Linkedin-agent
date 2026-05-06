@@ -4,6 +4,7 @@ import { type Angle } from "@/lib/types";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { KanbanFilters } from "@/components/kanban/KanbanFilters";
 import { GenerateAnglesButton } from "@/components/kanban/GenerateAnglesButton";
+import { getActiveAccountId } from "@/lib/active-account";
 
 export const dynamic = "force-dynamic";
 
@@ -20,10 +21,15 @@ export default async function KanbanPage({
 }) {
   const sp = await searchParams;
   const supabase = createServiceClient();
+  const accountId = await getActiveAccountId();
 
-  let query = supabase.from("angles").select("*").order("created_at", {
-    ascending: false,
-  });
+  let query = supabase
+    .from("angles")
+    .select("*")
+    .eq("account_id", accountId)
+    .order("created_at", {
+      ascending: false,
+    });
   if (sp.pillar) query = query.eq("pillar", sp.pillar);
   if (sp.format) query = query.eq("format", sp.format);
   if (sp.week) query = query.eq("week_assigned", sp.week);

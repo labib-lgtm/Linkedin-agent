@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
+import { AccountSwitcher } from "@/components/AccountSwitcher";
 
 const NAV = [
+  { href: "/book", label: "Book" },
   { href: "/", label: "Pipeline" },
   { href: "/competitors", label: "Competitors" },
   { href: "/digest", label: "Digest" },
@@ -55,28 +57,34 @@ export function Header() {
           >
             <Lock className="h-4 w-4 inline" />
           </button>
+          <div className="ml-2 pl-2 border-l border-border">
+            <AccountSwitcher />
+          </div>
         </nav>
       </div>
 
       {/* Mobile nav */}
       <nav className="md:hidden border-t border-border">
-        <div className="container-tight flex items-center gap-1 overflow-x-auto py-2">
-          {NAV.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className="shrink-0 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-muted"
+        <div className="container-tight flex items-center justify-between gap-2 py-2">
+          <div className="flex items-center gap-1 overflow-x-auto">
+            {NAV.map((n) => (
+              <Link
+                key={n.href}
+                href={n.href}
+                className="shrink-0 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-muted"
+              >
+                {n.label}
+              </Link>
+            ))}
+            <button
+              type="button"
+              onClick={lock}
+              className="shrink-0 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-muted text-muted-foreground"
             >
-              {n.label}
-            </Link>
-          ))}
-          <button
-            type="button"
-            onClick={lock}
-            className="shrink-0 px-3 py-1.5 rounded-md text-sm font-medium hover:bg-muted text-muted-foreground"
-          >
-            <Lock className="h-4 w-4 inline" />
-          </button>
+              <Lock className="h-4 w-4 inline" />
+            </button>
+          </div>
+          <AccountSwitcher />
         </div>
       </nav>
     </header>

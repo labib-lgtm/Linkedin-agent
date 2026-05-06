@@ -101,6 +101,7 @@ export async function POST(
 
     const rows = dedup.map((p) => ({
       competitor_id: id,
+      account_id: competitor.account_id,
       post_id: p.post_id,
       posted_at: p.posted_at,
       text: p.text,

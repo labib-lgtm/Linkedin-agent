@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { PILLAR_VALUES, FORMAT_VALUES } from "@/lib/constants";
+import { getActiveAccountId } from "@/lib/active-account";
 
 type CommitItem = {
   angle_id?: string;
@@ -30,7 +31,9 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServiceClient();
+  const accountId = await getActiveAccountId();
   const rows = items.map((item) => ({
+    account_id: accountId,
     angle_id: (item.angle_id && item.angle_id.trim()) || newAngleId(),
     status: "Pending" as const,
     pillar: PILLAR_VALUES.includes(item.pillar as never) ? item.pillar : null,

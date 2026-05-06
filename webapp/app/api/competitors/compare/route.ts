@@ -5,6 +5,7 @@ import {
   type AggregatePost,
   type CompetitorAggregate,
 } from "@/lib/competitor-aggregate";
+import { getActiveAccountId } from "@/lib/active-account";
 
 export const dynamic = "force-dynamic";
 
@@ -24,12 +25,16 @@ export async function GET(req: NextRequest) {
     .map((s) => s.trim())
     .filter(Boolean);
 
+  const accountId = await getActiveAccountId();
   const supabase = createServiceClient();
 
-  // Always pull the self competitor so the leaderboard has a baseline.
+  // Always pull the self competitor for the active account so the
+  // leaderboard has a baseline. Per-account is_self is enforced by the
+  // partial unique index from migration 006.
   const { data: selfRow, error: sErr } = await supabase
     .from("competitors")
     .select("id, identifier, display_name, role, last_analyzed_at, is_self")
+    .eq("account_id", accountId)
     .eq("is_self", true)
     .maybeSingle();
   if (sErr) return NextResponse.json({ error: sErr.message }, { status: 500 });
@@ -52,12 +57,14 @@ export async function GET(req: NextRequest) {
     supabase
       .from("competitors")
       .select("id, identifier, display_name, role, last_analyzed_at, is_self")
+      .eq("account_id", accountId)
       .in("id", ids),
     supabase
       .from("competitor_posts")
       .select(
         "competitor_id, post_id, posted_at, reactions, comments, reposts, engagement_score, text, media_type, media_urls",
       )
+      .eq("account_id", accountId)
       .in("competitor_id", ids)
       .gte("posted_at", since)
       .order("posted_at", { ascending: false }),

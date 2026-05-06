@@ -95,6 +95,7 @@ export type DigestPayloadOut = {
   top_posts: DigestTopPost[];
   pattern_summary: DigestPatternSummary;
   generated_at: string;
+  account_id: string;
 };
 
 // Phase 1: DB reads only. No LLM call. Returns the prepared prompt body
@@ -102,7 +103,13 @@ export type DigestPayloadOut = {
 // gives each phase its own 10s budget on Vercel Hobby — the LLM call
 // alone was eating enough budget to break the combined route even after
 // timer fixes.
-export async function prepareDigest(weekStart?: string): Promise<DigestReadOut> {
+export async function prepareDigest(
+  weekStart?: string,
+  accountId?: string,
+): Promise<DigestReadOut> {
+  if (!accountId) {
+    throw new DigestError("missing_account", "accountId is required", 400);
+  }
   const supabase = createServiceClient();
   const target = weekStart || isoWeekStart(new Date());
 
@@ -115,6 +122,7 @@ export async function prepareDigest(weekStart?: string): Promise<DigestReadOut> 
     supabase
       .from("competitors")
       .select("id, identifier, display_name, role")
+      .eq("account_id", accountId)
       .eq("active", true),
     2_000,
     "competitors read",
@@ -133,6 +141,7 @@ export async function prepareDigest(weekStart?: string): Promise<DigestReadOut> 
       .select(
         "competitor_id, post_id, posted_at, text, engagement_score, reactions, comments, reposts",
       )
+      .eq("account_id", accountId)
       .gte("posted_at", since.toISOString())
       .order("engagement_score", { ascending: false }),
     2_500,
@@ -210,22 +219,24 @@ export async function summarizeDigest(read: DigestReadOut): Promise<DigestPatter
   return summary;
 }
 
-// Cron path: combine all three phases. The cron invocation has the same
-// 10s ceiling, but cron is allowed to fail and retry — UI flow can't.
-export async function runDigest(weekStart?: string) {
-  const read = await prepareDigest(weekStart);
+// Cron path: combine all three phases for one account. Caller iterates
+// over accounts. Each account invocation has the 10s budget to itself.
+export async function runDigest(accountId: string, weekStart?: string) {
+  const read = await prepareDigest(weekStart, accountId);
   const summary = await summarizeDigest(read);
   const payload: DigestPayloadOut = {
     week_start: read.week_start,
     top_posts: read.top_posts,
     pattern_summary: summary,
     generated_at: read.generated_at,
+    account_id: accountId,
   };
   await saveDigest(payload);
   return payload;
 }
 
-// Phase 3: just the upsert. Trivially fits in 10s on its own.
+// Phase 3: just the upsert. Trivially fits in 10s on its own. Per-account
+// digests are unique on (account_id, week_start) — see migration 006.
 export async function saveDigest(payload: DigestPayloadOut) {
   const supabase = createServiceClient();
   const t0 = Date.now();
@@ -234,12 +245,13 @@ export async function saveDigest(payload: DigestPayloadOut) {
       .from("creator_digests")
       .upsert(
         {
+          account_id: payload.account_id,
           week_start: payload.week_start,
           top_posts: payload.top_posts,
           pattern_summary: payload.pattern_summary,
           generated_at: payload.generated_at,
         },
-        { onConflict: "week_start" },
+        { onConflict: "account_id,week_start" },
       ),
     8_000,
     "creator_digests upsert",

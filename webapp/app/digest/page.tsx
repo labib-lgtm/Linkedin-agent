@@ -4,6 +4,7 @@ import { RunDigestButton } from "./RunDigestButton";
 import { DigestViewer } from "./DigestViewer";
 import { isoWeekStart, weekKeyFromStart } from "@/lib/week";
 import { formatDate } from "@/lib/utils";
+import { getActiveAccountId } from "@/lib/active-account";
 
 export const dynamic = "force-dynamic";
 
@@ -22,16 +23,19 @@ export default async function DigestPage({
 }) {
   const sp = await searchParams;
   const supabase = createServiceClient();
+  const accountId = await getActiveAccountId();
 
   const { data: weeks } = await supabase
     .from("creator_digests")
     .select("id, week_start, generated_at")
+    .eq("account_id", accountId)
     .order("week_start", { ascending: false });
 
   const selectedWeek = sp.week || weeks?.[0]?.week_start || isoWeekStart(new Date());
   const { data: digest } = await supabase
     .from("creator_digests")
     .select("*")
+    .eq("account_id", accountId)
     .eq("week_start", selectedWeek)
     .maybeSingle();
 
