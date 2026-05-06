@@ -2,7 +2,8 @@ import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ReanalyzeButton } from "./ReanalyzeButton";
-import { shortDate, formatDate } from "@/lib/utils";
+import { PostsTable } from "./PostsTable";
+import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,9 @@ export default async function CompetitorDetailPage({
 
   const { data: posts } = await supabase
     .from("competitor_posts")
-    .select("*")
+    .select(
+      "id, post_id, posted_at, text, reactions, comments, reposts, engagement_score, media_type, media_urls",
+    )
     .eq("competitor_id", id)
     .order("engagement_score", { ascending: false });
 
@@ -81,46 +84,13 @@ export default async function CompetitorDetailPage({
       <Card>
         <CardHeader>
           <CardTitle>Top 10 posts by engagement</CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Click any row to expand — full post text, media preview, and on-demand
+            comments.
+          </p>
         </CardHeader>
         <CardContent className="p-0">
-          {top10.length === 0 ? (
-            <p className="p-6 text-sm text-muted-foreground">
-              No posts yet. Click "Re-analyze" to fetch from Unipile.
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground border-b border-border">
-                  <tr>
-                    <th className="py-3 px-3">Posted</th>
-                    <th className="py-3 px-3 text-right">Score</th>
-                    <th className="py-3 px-3 text-right">Likes</th>
-                    <th className="py-3 px-3 text-right">Comments</th>
-                    <th className="py-3 px-3 text-right">Reposts</th>
-                    <th className="py-3 px-3">Hook</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {top10.map((p) => (
-                    <tr key={p.id} className="border-b border-border last:border-0">
-                      <td className="py-3 px-3 text-xs text-muted-foreground">
-                        {p.posted_at ? shortDate(p.posted_at) : "—"}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono tabular-nums">
-                        {Math.round(Number(p.engagement_score ?? 0))}
-                      </td>
-                      <td className="py-3 px-3 text-right tabular-nums">{p.reactions ?? 0}</td>
-                      <td className="py-3 px-3 text-right tabular-nums">{p.comments ?? 0}</td>
-                      <td className="py-3 px-3 text-right tabular-nums">{p.reposts ?? 0}</td>
-                      <td className="py-3 px-3">
-                        <p className="line-clamp-2 max-w-xl">{(p.text ?? "").slice(0, 280)}</p>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <PostsTable competitorId={id} posts={top10} />
         </CardContent>
       </Card>
 
