@@ -245,16 +245,35 @@ export type NormalizedPost = {
 
 function safeIsoDate(value: unknown): string | null {
   if (value === null || value === undefined || value === "") return null;
-  // Unipile sometimes returns Unix timestamps (seconds or ms) as numbers,
-  // sometimes ISO strings, sometimes locale-formatted strings. Guard
-  // against all of them — toISOString() throws "Invalid time value" if
-  // the Date is NaN.
+  // Unipile sometimes returns numeric Unix timestamps (seconds or ms),
+  // sometimes ISO strings, and frequently relative strings like "13h",
+  // "1d", "2mo" — that's how the LinkedIn UI labels them. Convert each
+  // to an absolute ISO timestamp; return null only when truly unparseable.
   if (typeof value === "number") {
-    const ms = value > 1e12 ? value : value * 1000; // 13+ digits = ms
+    const ms = value > 1e12 ? value : value * 1000;
     const d = new Date(ms);
     return Number.isNaN(d.getTime()) ? null : d.toISOString();
   }
-  const d = new Date(String(value));
+  const s = String(value).trim();
+  // Relative-time formats: "5m", "13h", "1d", "2w", "3mo", "1y".
+  const rel = /^(\d+)\s*(s|m|h|d|w|mo|y)$/i.exec(s);
+  if (rel) {
+    const n = Number(rel[1]);
+    const unit = rel[2].toLowerCase();
+    const ms: Record<string, number> = {
+      s: 1_000,
+      m: 60_000,
+      h: 3_600_000,
+      d: 86_400_000,
+      w: 604_800_000,
+      mo: 2_592_000_000, // ~30 days
+      y: 31_536_000_000, // ~365 days
+    };
+    if (Number.isFinite(n) && ms[unit]) {
+      return new Date(Date.now() - n * ms[unit]).toISOString();
+    }
+  }
+  const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 

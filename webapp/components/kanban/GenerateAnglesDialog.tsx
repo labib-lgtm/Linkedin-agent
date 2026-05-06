@@ -82,7 +82,12 @@ export function GenerateAnglesDialog({
         body: JSON.stringify({ topic, pillar, format, count }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      if (!res.ok) {
+        const detail = [data?.error, data?.message, data?.body]
+          .filter(Boolean)
+          .join(" — ");
+        throw new Error(detail || `HTTP ${res.status}`);
+      }
       const list: Draft[] = data.drafts ?? [];
       if (list.length === 0) {
         toast.error("Model returned no drafts. Try a more specific topic.");
