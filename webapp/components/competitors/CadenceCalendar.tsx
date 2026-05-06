@@ -2,6 +2,42 @@
 
 import { cadenceCells, type AggregatePost } from "@/lib/competitor-aggregate";
 
+// Same bucketing as cadenceCells, but keeps the posts so we can show them
+// on hover instead of just a count.
+function postsByCell(posts: AggregatePost[], days: number): AggregatePost[][] {
+  const buckets: AggregatePost[][] = Array.from({ length: days }, () => []);
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  for (const p of posts) {
+    if (!p.posted_at) continue;
+    const d = new Date(p.posted_at);
+    if (Number.isNaN(d.getTime())) continue;
+    const dUTC = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    const ago = Math.floor((todayUTC - dUTC) / 86_400_000);
+    if (ago < 0 || ago >= days) continue;
+    buckets[days - 1 - ago].push(p);
+  }
+  return buckets;
+}
+
+function cellTooltip(date: Date, posts: AggregatePost[]): string {
+  const head = `${fullDate(date)} — ${posts.length} post${posts.length === 1 ? "" : "s"}`;
+  if (posts.length === 0) return head;
+  // Sort by score desc so the strongest post leads.
+  const sorted = [...posts].sort(
+    (a, b) => Number(b.engagement_score ?? 0) - Number(a.engagement_score ?? 0),
+  );
+  const lines = sorted.slice(0, 3).map((p) => {
+    const score = Math.round(Number(p.engagement_score ?? 0));
+    const text = (p.text ?? "").replace(/\s+/g, " ").trim().slice(0, 90);
+    const truncated = (p.text ?? "").length > 90 ? "…" : "";
+    const media = p.media_type && p.media_type !== "text" ? ` · ${p.media_type}` : "";
+    return `• "${text}${truncated}" · score ${score}${media}`;
+  });
+  const more = posts.length > 3 ? `\n…and ${posts.length - 3} more` : "";
+  return `${head}\n${lines.join("\n")}${more}`;
+}
+
 type Row = {
   id: string;
   display_name: string | null;
@@ -82,6 +118,7 @@ export function CadenceCalendar({ rows }: { rows: Row[] }) {
       <div className="space-y-1">
         {rows.map((r) => {
           const cells = cadenceCells(r.recent_posts, DAYS);
+          const buckets = postsByCell(r.recent_posts, DAYS);
           const totalPosts = cells.reduce((a, b) => a + b, 0);
           const perWeek = Math.round((totalPosts / 4) * 10) / 10;
           return (
@@ -107,8 +144,8 @@ export function CadenceCalendar({ rows }: { rows: Row[] }) {
                       key={i}
                       className={`aspect-square rounded-[2px] ${cellClass(count)} ${
                         isToday ? "ring-1 ring-foreground/40 ring-offset-[1px] ring-offset-background" : ""
-                      } ${isWeekBoundary ? "ml-[2px]" : ""}`}
-                      title={`${fullDate(dates[i])} — ${count} post${count === 1 ? "" : "s"}`}
+                      } ${isWeekBoundary ? "ml-[2px]" : ""} ${count > 0 ? "cursor-help" : ""}`}
+                      title={cellTooltip(dates[i], buckets[i])}
                     />
                   );
                 })}
