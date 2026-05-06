@@ -97,12 +97,31 @@ async function callOpenRouter(opts: {
   return content;
 }
 
-// Strip ``` fences if the model wrapped JSON in markdown.
-function stripFences(s: string): string {
-  return s.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+// Strip ``` fences and any prose around the JSON object.
+function extractJson(s: string): string {
+  const trimmed = s.trim();
+  // Drop ```json ... ``` fences if present.
+  const fenceStripped = trimmed
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/i, "")
+    .trim();
+  // If the model added prose around the JSON, find the outermost
+  // {...} or [...] and use that.
+  const firstBrace = fenceStripped.search(/[{\[]/);
+  const lastBrace = Math.max(
+    fenceStripped.lastIndexOf("}"),
+    fenceStripped.lastIndexOf("]"),
+  );
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    return fenceStripped.slice(firstBrace, lastBrace + 1);
+  }
+  return fenceStripped;
 }
 
-// Generate JSON. One retry with the malformed body fed back to the model.
+// Generate JSON. NO retry — the retry path on Hobby's 10s budget can't
+// fit a second LLM call. Instead: strip fences and prose aggressively,
+// and if parse still fails, surface the malformed content so the user
+// sees what the model actually returned.
 export async function generateJson<T>(opts: {
   system: string;
   user: string;
@@ -111,11 +130,16 @@ export async function generateJson<T>(opts: {
   maxTokens?: number;
 }): Promise<T> {
   const messages: Message[] = [
-    { role: "system", content: opts.system },
+    {
+      role: "system",
+      content:
+        opts.system +
+        "\n\nCRITICAL: Output ONLY a single valid JSON object. No prose before or after. No markdown code fences. No commentary. Start your response with { and end with }.",
+    },
     { role: "user", content: opts.user },
   ];
 
-  const first = await callOpenRouter({
+  const raw = await callOpenRouter({
     messages,
     model: opts.model,
     temperature: opts.temperature,
@@ -123,27 +147,15 @@ export async function generateJson<T>(opts: {
     jsonMode: true,
   });
 
+  const candidate = extractJson(raw);
   try {
-    return JSON.parse(stripFences(first)) as T;
-  } catch {
-    // re-prompt with the malformed body so the model can self-correct
-    const retryMessages: Message[] = [
-      ...messages,
-      { role: "assistant", content: first },
-      {
-        role: "user",
-        content:
-          "Your previous response was not valid JSON. Reply again with ONLY valid JSON, no prose, no code fences.",
-      },
-    ];
-    const second = await callOpenRouter({
-      messages: retryMessages,
-      model: opts.model,
-      temperature: opts.temperature,
-      maxTokens: opts.maxTokens,
-      jsonMode: true,
-    });
-    return JSON.parse(stripFences(second)) as T;
+    return JSON.parse(candidate) as T;
+  } catch (e) {
+    throw new OpenRouterError(
+      `Model returned non-JSON content: ${(e as Error).message}`,
+      502,
+      raw.slice(0, 600),
+    );
   }
 }
 
