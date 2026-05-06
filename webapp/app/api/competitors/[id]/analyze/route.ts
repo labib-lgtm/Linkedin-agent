@@ -3,7 +3,9 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { fetchUserPosts, normalizePost, scorePost, UnipileError } from "@/lib/unipile";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+// Vercel Hobby caps functions at 10s. Stay well under so a slow Unipile
+// page doesn't tip us over and return an empty body.
+export const maxDuration = 10;
 
 export async function POST(
   _req: NextRequest,
@@ -23,7 +25,10 @@ export async function POST(
 
   let raw;
   try {
-    raw = await fetchUserPosts(competitor.identifier, { maxPosts: 200, pageSize: 50 });
+    // 1 page of 50 posts → fits inside the Hobby 10s budget after the
+    // resolveProviderId lookup (~2s) and DB upsert (~0.5s). The daily cron
+    // tops up successive pages over multiple days.
+    raw = await fetchUserPosts(competitor.identifier, { maxPosts: 50, pageSize: 50 });
   } catch (e) {
     if (e instanceof UnipileError) {
       return NextResponse.json(

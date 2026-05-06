@@ -3,7 +3,7 @@ import { generateJson, OpenRouterError } from "@/lib/openrouter";
 import { PILLAR_VALUES, FORMAT_VALUES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 10;
 
 type Body = {
   topic?: string;

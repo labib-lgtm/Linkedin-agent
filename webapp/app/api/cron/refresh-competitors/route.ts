@@ -4,7 +4,10 @@ import { fetchUserPosts, normalizePost, UnipileError } from "@/lib/unipile";
 import { isAuthorizedCron } from "@/lib/cron";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // give the daily refresh up to 5 min
+// Hobby plan caps functions at 10s. Per-competitor budget is ~5s, so this
+// invocation will refresh whichever competitor is most-overdue and stop
+// before Vercel kills it. Across daily invocations, the whole list cycles.
+export const maxDuration = 10;
 
 type CompetitorRow = {
   id: string;
@@ -29,16 +32,28 @@ export async function POST(req: NextRequest) {
 
 async function runRefresh() {
   const supabase = createServiceClient();
+  // Pull most-stale-first (NULL last_analyzed_at counts as oldest) so each
+  // daily cron picks up the competitor that's most overdue. Across
+  // invocations the whole roster cycles.
   const { data: comps, error } = await supabase
     .from("competitors")
-    .select("id, identifier, active")
-    .eq("active", true);
+    .select("id, identifier, active, last_analyzed_at")
+    .eq("active", true)
+    .order("last_analyzed_at", { ascending: true, nullsFirst: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  const start = Date.now();
+  const BUDGET_MS = 8_500; // leave ~1.5s headroom under Hobby's 10s cap
   const results: Array<{ id: string; ok: boolean; fetched?: number; error?: string }> = [];
+  const skipped: string[] = [];
+
   for (const c of (comps as CompetitorRow[] | null) ?? []) {
+    if (Date.now() - start > BUDGET_MS) {
+      skipped.push(c.id);
+      continue;
+    }
     try {
-      const raw = await fetchUserPosts(c.identifier, { maxPosts: 100, pageSize: 50 });
+      const raw = await fetchUserPosts(c.identifier, { maxPosts: 50, pageSize: 50 });
       const rows = raw.map(normalizePost).map((p) => ({
         competitor_id: c.id,
         post_id: p.post_id,
@@ -67,5 +82,5 @@ async function runRefresh() {
     }
   }
 
-  return NextResponse.json({ refreshed: results });
+  return NextResponse.json({ refreshed: results, skipped, took_ms: Date.now() - start });
 }

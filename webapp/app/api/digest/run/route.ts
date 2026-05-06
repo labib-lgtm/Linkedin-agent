@@ -3,7 +3,7 @@ import { runDigest, DigestError } from "@/lib/digest";
 import { OpenRouterError } from "@/lib/openrouter";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 10;
 
 export async function POST(req: NextRequest) {
   let body: { week_start?: string } = {};

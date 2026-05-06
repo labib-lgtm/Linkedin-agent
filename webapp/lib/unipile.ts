@@ -176,7 +176,7 @@ export async function resolveProviderId(handleOrId: string): Promise<{
   const profile = await unipileFetch<UnipileUserProfile>(
     "GET",
     `/api/v1/users/${encodeURIComponent(trimmed)}`,
-    { params: { account_id: accountId, linkedin_sections: "*" }, timeoutMs: 12_000 },
+    { params: { account_id: accountId, linkedin_sections: "*" }, timeoutMs: 4_500 },
   );
   const id =
     (typeof profile.provider_id === "string" && profile.provider_id) ||
@@ -216,7 +216,7 @@ export async function fetchUserPosts(
     const resp = await unipileFetch<PostsPage>(
       "GET",
       `/api/v1/users/${encodeURIComponent(providerId)}/posts`,
-      { params, timeoutMs: 8_000 },
+      { params, timeoutMs: 4_000 },
     );
     const items = resp.items ?? resp.data ?? [];
     out.push(...items);

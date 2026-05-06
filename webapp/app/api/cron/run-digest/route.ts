@@ -3,7 +3,7 @@ import { isAuthorizedCron } from "@/lib/cron";
 import { runDigest, DigestError } from "@/lib/digest";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 10;
 
 async function handle() {
   try {
