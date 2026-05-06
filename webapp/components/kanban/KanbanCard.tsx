@@ -20,10 +20,15 @@ export function KanbanCard({ angle }: { angle: Angle }) {
     angle.hook_chosen?.trim() || angle.hook_seed?.trim() || angle.angle_id;
   const formatLabel = angle.format ? angle.format.toUpperCase() : null;
 
+  // Composable statuses open the Post Studio. Posted / Reviewed angles
+  // route to the existing detail page since you analyze those, not edit.
+  const composable = angle.status === "Approved" || angle.status === "Drafting" || angle.status === "Drafted";
+  const href = composable ? `/posts/${angle.angle_id}` : `/angles/${angle.angle_id}`;
+
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <Link
-        href={`/angles/${angle.angle_id}`}
+        href={href}
         className="block rounded-lg border border-border bg-background p-3 hover:bg-muted/50 transition-colors cursor-grab active:cursor-grabbing"
         draggable={false}
       >

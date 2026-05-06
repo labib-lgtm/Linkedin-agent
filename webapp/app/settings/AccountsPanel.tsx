@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type Account = {
   id: string;
@@ -15,6 +16,7 @@ type Account = {
   brand_color: string | null;
   logo_url: string | null;
   niche_tag: string | null;
+  seed_voice_samples: string | null;
   competitor_count: number;
   recent_post_count: number;
 };
@@ -164,6 +166,7 @@ function AccountCard({ account, onChanged }: { account: Account; onChanged: () =
   const [nicheTag, setNicheTag] = useState(account.niche_tag ?? "");
   const [brandColor, setBrandColor] = useState(account.brand_color ?? "#C6F21F");
   const [logoUrl, setLogoUrl] = useState(account.logo_url ?? "");
+  const [seedVoiceSamples, setSeedVoiceSamples] = useState(account.seed_voice_samples ?? "");
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -177,6 +180,7 @@ function AccountCard({ account, onChanged }: { account: Account; onChanged: () =
           niche_tag: nicheTag.trim() || null,
           brand_color: brandColor,
           logo_url: logoUrl.trim() || null,
+          seed_voice_samples: seedVoiceSamples.trim() || null,
         }),
       });
       const data = await res.json();
@@ -250,6 +254,20 @@ function AccountCard({ account, onChanged }: { account: Account; onChanged: () =
                 <Label className="text-[10px] uppercase">Logo URL</Label>
                 <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
               </div>
+            </div>
+            <div>
+              <Label className="text-[10px] uppercase">Seed voice samples</Label>
+              <Textarea
+                value={seedVoiceSamples}
+                onChange={(e) => setSeedVoiceSamples(e.target.value)}
+                rows={6}
+                placeholder={"Paste 3–5 representative LinkedIn posts (one per blank-line-separated block). Used for voice grounding until this account has 5+ posts under the system."}
+                className="font-sans text-xs"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground leading-snug">
+                Cold-start fix. Once 5+ angles for this account hit Posted, the studio
+                auto-pulls voice samples from those instead.
+              </p>
             </div>
             <div className="flex gap-2 pt-1">
               <Button size="sm" onClick={save} disabled={saving}>
