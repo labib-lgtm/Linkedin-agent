@@ -159,11 +159,27 @@ Cinematic editorial scene with mixed-media composition. Photorealistic product /
 
 // [PALETTE] block — appended to every prompt regardless of whether the
 // operator wrote a custom brand_prompt_prefix. Separates style/medium
-// (handled by the prefix) from color compliance (handled here). Image
-// models like gpt-image-1 follow hex codes reasonably; flux-1.1-pro
-// follows them very well. Models that ignore hex still pick up the
-// descriptive role labels ("background," "accent").
-function paletteBlock(p: Palette): string {
+// (handled by the prefix) from color compliance (handled here).
+//
+// Two strictness levels:
+// - "strict"  carousel slides: hard-lock to the 5 hex values. Visual
+//             consistency across 6-8 sibling slides matters more than
+//             scene richness.
+// - "loose"   single-image posts: brand colors are the PRIMARY palette
+//             (focal element, accents, key surfaces) but real-world
+//             natural colors and textures are allowed everywhere else.
+//             This is how to get cinematic Amazon-listing-style
+//             compositions instead of flat editorial illustrations.
+function paletteBlock(p: Palette, strictness: "strict" | "loose" = "strict"): string {
+  if (strictness === "loose") {
+    return `[PALETTE — primary brand preference, not a hard lock]
+Background / paper:        ${p.paper}
+Ink / line work / type:    ${p.ink}
+Primary accent (focal):    ${p.primary}
+Secondary tone:            ${p.secondary}
+Editorial highlight:       ${p.accent}
+The focal subject and primary accents should lean toward these brand colors. Real-world natural colors and textures (wood grain, metal sheen, dust, paper yellowing, cobweb gray, glass transparency, photographic skin tones, real product packaging colors) are ALLOWED and encouraged for cinematic depth. The brand palette is the orchestra's lead voice, not the only one.`;
+  }
   return `[PALETTE — use ONLY these colors]
 Background / paper:        ${p.paper}
 Ink / line work / type:    ${p.ink}
@@ -261,7 +277,7 @@ export function assembleDrafterlessPrompt(opts: {
     );
   }
   if (opts.mood && opts.mood.trim()) parts.push(`[MOOD]\n${opts.mood.trim()}`);
-  if (opts.palette) parts.push(paletteBlock(opts.palette));
+  if (opts.palette) parts.push(paletteBlock(opts.palette, isSingle ? "loose" : "strict"));
   parts.push(isSingle ? SINGLE_IMAGE_NEGATIVE_BLOCK : CAROUSEL_NEGATIVE_BLOCK);
   return parts.join("\n\n");
 }
@@ -305,7 +321,7 @@ export function assembleImagePrompt(
     );
   }
   if (options.mood && options.mood.trim()) parts.push(`[MOOD]\n${options.mood.trim()}`);
-  if (palette) parts.push(paletteBlock(palette));
+  if (palette) parts.push(paletteBlock(palette, isSingle ? "loose" : "strict"));
   parts.push(isSingle ? SINGLE_IMAGE_NEGATIVE_BLOCK : CAROUSEL_NEGATIVE_BLOCK);
   return parts.join("\n\n");
 }
