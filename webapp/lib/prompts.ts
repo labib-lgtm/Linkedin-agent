@@ -134,8 +134,17 @@ Output strict JSON (no preamble, no markdown):
   ],
   "cta_archetype": "follow|comment|dm|click|demo",
   "cta_text": "string",
-  "pin_comment": "string"
+  "pin_comment": "string",
+  "dm_response_template": "string OR null"
 }
+
+dm_response_template is REQUIRED when cta_archetype is "dm" — it's the 2–4 sentence DM the auto-responder sends to commenters who reply with the keyword. Must:
+- Acknowledge the commenter's reply naturally
+- Include the placeholder {{lead_magnet_url}} where the link goes
+- Match voice rules
+- Avoid AI tells (em-dashes, asterisks)
+
+For other archetypes, set dm_response_template to null.
 
 hook_variants always returns exactly 5. voice_match_score is 0.0–1.0 (your honest estimate vs the voice samples). model_self_estimate is your own gut (0–100) — operators are warned this is a self-report, not engagement prediction. The first paragraph of body_paragraphs has role "hook" and its text equals hook_variants[selected_hook_index].text. The last paragraph has role "cta" and its text equals cta_text.`;
 }

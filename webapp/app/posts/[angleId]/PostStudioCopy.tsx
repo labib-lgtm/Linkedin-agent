@@ -56,6 +56,11 @@ export function PostStudioCopy({
   const [localPin, setLocalPin] = useState(angle.pin_comment ?? "");
   useEffect(() => setLocalPin(angle.pin_comment ?? ""), [angle.pin_comment]);
 
+  const [localDmTemplate, setLocalDmTemplate] = useState(angle.dm_response_template ?? "");
+  useEffect(() => setLocalDmTemplate(angle.dm_response_template ?? ""), [angle.dm_response_template]);
+  const [localDmIncludesLink, setLocalDmIncludesLink] = useState(angle.dm_response_includes_link ?? true);
+  useEffect(() => setLocalDmIncludesLink(angle.dm_response_includes_link ?? true), [angle.dm_response_includes_link]);
+
   const wordCount = paragraphs.reduce(
     (n, p) => n + (p.text.match(/\S+/g)?.length ?? 0),
     0,
@@ -92,6 +97,26 @@ export function PostStudioCopy({
     try {
       await onPatch({ pin_comment: localPin });
     } catch (e) {
+      toast.error(`Save failed: ${(e as Error).message}`);
+    }
+  }
+
+  async function saveDmTemplate() {
+    if (localDmTemplate === (angle.dm_response_template ?? "")) return;
+    try {
+      await onPatch({ dm_response_template: localDmTemplate });
+    } catch (e) {
+      toast.error(`Save failed: ${(e as Error).message}`);
+    }
+  }
+
+  async function toggleDmLink() {
+    const next = !localDmIncludesLink;
+    setLocalDmIncludesLink(next);
+    try {
+      await onPatch({ dm_response_includes_link: next });
+    } catch (e) {
+      setLocalDmIncludesLink(!next);
       toast.error(`Save failed: ${(e as Error).message}`);
     }
   }
@@ -272,6 +297,41 @@ export function PostStudioCopy({
           className="w-full text-sm leading-relaxed bg-background border border-border border-l-[3px] border-l-lynx-green rounded-lg px-3.5 py-2.5 resize-none focus:outline-none focus:ring-1 focus:ring-lynx-green"
         />
       </section>
+
+      {/* DM auto-reply (only when CTA archetype = dm) */}
+      {angle.cta_archetype === "dm" ? (
+        <section>
+          <SectionHeader
+            title="DM auto-reply · sent when commenters reply with the keyword"
+            actionLabel={generating ? "…" : "↻ Regenerate template"}
+            actionDisabled={generating}
+            onAction={() => onGenerate({ ctaOnly: true, ctaArchetype: "dm" })}
+          />
+          <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 space-y-2">
+            <textarea
+              value={localDmTemplate}
+              onChange={(e) => setLocalDmTemplate(e.target.value)}
+              onBlur={saveDmTemplate}
+              rows={4}
+              placeholder="The DM the bot sends to commenters who reply with your CTA keyword. Use {{lead_magnet_url}} as a placeholder for the link."
+              className="w-full text-sm leading-relaxed bg-background border border-border rounded px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-amber-500"
+            />
+            <label className="flex items-center gap-2 text-xs text-foreground/80">
+              <input
+                type="checkbox"
+                checked={localDmIncludesLink}
+                onChange={toggleDmLink}
+                className="w-3.5 h-3.5"
+              />
+              Auto-substitute the lead magnet link into <code className="text-[10px] bg-background px-1 py-0.5 rounded">{"{{lead_magnet_url}}"}</code>
+            </label>
+            <p className="text-[10px] text-amber-800 leading-snug">
+              Sent by the existing Trigger.dev cta-comment-response task when a commenter posts the cta_keyword.
+              Placeholders: <code>{"{{commenter_name}}"}</code>, <code>{"{{lead_magnet_url}}"}</code>.
+            </p>
+          </div>
+        </section>
+      ) : null}
 
       {/* Pin comment */}
       <section>

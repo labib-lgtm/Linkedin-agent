@@ -43,6 +43,8 @@ const ALLOWED_FIELDS = new Set<string>([
   "pin_comment",
   "status",
   "hook_chosen",
+  "dm_response_template",
+  "dm_response_includes_link",
 ]);
 
 const CTA_ARCHETYPES = new Set(["follow", "comment", "dm", "click", "demo"]);

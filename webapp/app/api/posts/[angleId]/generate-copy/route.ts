@@ -29,6 +29,7 @@ type GeneratedCopy = {
   cta_archetype?: string;
   cta_text?: string;
   pin_comment?: string;
+  dm_response_template?: string | null;
 };
 
 function buildUserPrompt(angle: Record<string, unknown>, ctaArchetype: CtaArchetype): string {
@@ -182,6 +183,12 @@ async function handle(
     patch.cta_archetype = ctaArchetype;
     patch.cta_text = (copy.cta_text ?? "").trim() || null;
     patch.pin_comment = (copy.pin_comment ?? "").trim() || null;
+    if (ctaArchetype === "dm") {
+      patch.dm_response_template = (copy.dm_response_template ?? "").trim() || null;
+      patch.dm_template_generated_at = new Date().toISOString();
+    } else {
+      patch.dm_response_template = null;
+    }
   } else if (body.hookOnly) {
     patch.hook_variants = hookVariants;
     patch.selected_hook_index = selectedIndex;
@@ -203,6 +210,12 @@ async function handle(
       .filter((_, i) => i !== selectedIndex)
       .map((h) => h.text)
       .join("\n");
+    if (ctaArchetype === "dm") {
+      patch.dm_response_template = (copy.dm_response_template ?? "").trim() || null;
+      patch.dm_template_generated_at = new Date().toISOString();
+    } else {
+      patch.dm_response_template = null;
+    }
   }
 
   // Auto-advance Approved → Drafting on first generation.

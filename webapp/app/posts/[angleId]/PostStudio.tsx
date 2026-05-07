@@ -52,6 +52,9 @@ export type StudioAngle = {
   carousel_rendered_at: string | null;
   publish_run_id: string | null;
   published_media_urn: string | null;
+  dm_response_template: string | null;
+  dm_response_includes_link: boolean | null;
+  dm_template_generated_at: string | null;
 };
 
 // The studio's frame — split-pane Copy / Visual + two FAB overlays

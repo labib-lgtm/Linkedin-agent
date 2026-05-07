@@ -1,6 +1,6 @@
 import { logger, task, wait } from "@trigger.dev/sdk/v3";
 import { postComment, sendDm } from "./lib/unipile.js";
-import { patchRecipientRow } from "./lib/supabase.js";
+import { getServiceClient, patchRecipientRow } from "./lib/supabase.js";
 
 /**
  * CTA comment response — the engagement-loop sequencer.
@@ -36,10 +36,49 @@ interface CtaPayload {
 const T0_REPLY_TEXT = "Sharing soon, sit tight.";
 const T3_FOLLOWUP_TEXT = "Just sent it to your DMs.";
 
-const dmText = (p: CtaPayload) =>
-  `Hey ${p.commenter_name || "there"} — here's the ${p.cta_keyword.toLowerCase()} ` +
+// Default DM if the angle has no per-angle dm_response_template
+// configured via the studio. Phase F let the operator author a
+// per-post template in /posts/[angleId] when CTA archetype = dm.
+const defaultDmText = (p: CtaPayload) =>
+  `Hey ${p.commenter_name || "there"} - here's the ${p.cta_keyword.toLowerCase()} ` +
   `deliverable you asked for:\n\n${p.lead_magnet_url}\n\n` +
   `Reply here if you want me to run it on one of your campaigns.`;
+
+// Substitute {{commenter_name}} and {{lead_magnet_url}} into the
+// per-angle template authored in the studio.
+function applyDmTemplate(
+  template: string,
+  p: CtaPayload,
+  includeLink: boolean,
+): string {
+  let out = template;
+  out = out.replace(/{{\s*commenter_name\s*}}/g, p.commenter_name || "there");
+  if (includeLink) {
+    out = out.replace(/{{\s*lead_magnet_url\s*}}/g, p.lead_magnet_url);
+  } else {
+    out = out.replace(/{{\s*lead_magnet_url\s*}}/g, "");
+  }
+  return out.trim();
+}
+
+async function loadAngleDmTemplate(
+  angleId: string,
+): Promise<{ template: string | null; includeLink: boolean }> {
+  try {
+    const client = getServiceClient();
+    const { data } = await client
+      .from("angles")
+      .select("dm_response_template, dm_response_includes_link")
+      .eq("angle_id", angleId)
+      .maybeSingle();
+    return {
+      template: (data?.dm_response_template as string | null) ?? null,
+      includeLink: (data?.dm_response_includes_link as boolean | null) ?? true,
+    };
+  } catch {
+    return { template: null, includeLink: true };
+  }
+}
 
 const nowIso = () => new Date().toISOString();
 
@@ -100,10 +139,16 @@ export const ctaCommentResponse = task({
     await wait.for({ hours: 3 });
 
     // ─── T+3h — DM with the lead-magnet link ──────────────────────
+    // Phase F: prefer per-angle dm_response_template when set in the
+    // studio; fall back to the default copy.
+    const dmCfg = await loadAngleDmTemplate(payload.angle_id);
+    const dmFinal = dmCfg.template
+      ? applyDmTemplate(dmCfg.template, payload, dmCfg.includeLink)
+      : defaultDmText(payload);
     try {
       await sendDm({
         recipientId: payload.commenter_id,
-        text: dmText(payload),
+        text: dmFinal,
       });
       logger.info("T+3h DM sent", {
         commenter_id: payload.commenter_id,
