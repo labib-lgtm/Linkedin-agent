@@ -2,6 +2,27 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { STATUS_VALUES } from "@/lib/constants";
 
+export const dynamic = "force-dynamic";
+
+// GET /api/posts/[angleId] — fetch the latest angle row. Used by the
+// studio's polling loop after firing async tasks (render-carousel-pdf,
+// generate-image) so the UI re-renders once the worker writes back.
+export async function GET(
+  _req: NextRequest,
+  ctx: { params: Promise<{ angleId: string }> },
+) {
+  const { angleId } = await ctx.params;
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("angles")
+    .select("*")
+    .eq("angle_id", angleId)
+    .maybeSingle();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!data) return NextResponse.json({ error: "angle_not_found" }, { status: 404 });
+  return NextResponse.json({ angle: data });
+}
+
 // Studio-side PATCH for inline edits to a Post Studio angle.
 //
 // Whitelisted fields cover everything the studio editor exposes plus the

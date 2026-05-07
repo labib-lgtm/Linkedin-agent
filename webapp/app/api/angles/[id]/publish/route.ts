@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { publishTextPost, UnipileError } from "@/lib/unipile";
+import { publishMediaPost, publishTextPost, UnipileError } from "@/lib/unipile";
 
 const PUBLISHABLE_STATUSES = new Set(["Visual Ready", "Drafted", "Scheduled"]);
+const STORAGE_BUCKET = "post-assets";
 
 export async function POST(
   _request: NextRequest,
@@ -42,22 +43,81 @@ export async function POST(
   }
 
   const fmt = String(angle.format ?? "text").toLowerCase();
-  if (fmt !== "text") {
-    return NextResponse.json(
-      {
-        error: "media_publish_not_supported",
-        message: `${fmt} posts must be published from the CLI (asset is local). Run: python3 tools/unipile_publish.py --angle-id ${id}`,
-      },
-      { status: 422 },
-    );
-  }
 
+  // Phase E: pull the right media bytes out of Storage and ship via
+  // Unipile's multipart endpoint.
+  //   carousel  → angles.carousel_pdf_path (rendered PDF, one page per slide)
+  //   image     → first picked variant from slide_image_paths
+  //   text/poll → no attachment, plain text post
   let postId: string;
   let postUrl: string;
+  let mediaUrn: string | null = null;
   try {
-    const result = await publishTextPost(body);
-    postId = result.postId;
-    postUrl = result.postUrl;
+    if (fmt === "carousel") {
+      const path = angle.carousel_pdf_path as string | null;
+      if (!path) {
+        return NextResponse.json(
+          { error: "no_pdf", message: "Render the carousel PDF first (studio → Render & publish)." },
+          { status: 400 },
+        );
+      }
+      const { data: file, error: dlErr } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .download(path);
+      if (dlErr || !file) {
+        return NextResponse.json(
+          { error: "download_failed", message: dlErr?.message ?? "PDF not in Storage" },
+          { status: 500 },
+        );
+      }
+      const arr = new Uint8Array(await file.arrayBuffer());
+      const result = await publishMediaPost(body, [
+        { bytes: arr, mime: "application/pdf", filename: `${id}-carousel.pdf` },
+      ]);
+      postId = result.postId;
+      postUrl = result.postUrl;
+      mediaUrn = (result.raw.media_urn as string | undefined) ?? null;
+    } else if (fmt === "image") {
+      const paths = (angle.slide_image_paths as Record<string, string> | null) ?? {};
+      const firstPath = paths["1"] ?? Object.values(paths)[0] ?? null;
+      if (!firstPath) {
+        return NextResponse.json(
+          { error: "no_image", message: "Generate + pick an image variant first." },
+          { status: 400 },
+        );
+      }
+      const { data: file, error: dlErr } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .download(firstPath);
+      if (dlErr || !file) {
+        return NextResponse.json(
+          { error: "download_failed", message: dlErr?.message ?? "image not in Storage" },
+          { status: 500 },
+        );
+      }
+      const arr = new Uint8Array(await file.arrayBuffer());
+      const mime =
+        firstPath.endsWith(".png") ? "image/png" :
+        firstPath.endsWith(".webp") ? "image/webp" : "image/jpeg";
+      const result = await publishMediaPost(body, [
+        { bytes: arr, mime, filename: `${id}.${mime.split("/")[1]}` },
+      ]);
+      postId = result.postId;
+      postUrl = result.postUrl;
+      mediaUrn = (result.raw.media_urn as string | undefined) ?? null;
+    } else if (fmt === "text" || fmt === "poll") {
+      const result = await publishTextPost(body);
+      postId = result.postId;
+      postUrl = result.postUrl;
+    } else {
+      return NextResponse.json(
+        {
+          error: "format_not_supported",
+          message: `${fmt} posts aren't auto-publishable yet. Use the CLI: python3 tools/unipile_publish.py --angle-id ${id}`,
+        },
+        { status: 422 },
+      );
+    }
   } catch (e) {
     if (e instanceof UnipileError) {
       return NextResponse.json(
@@ -77,6 +137,7 @@ export async function POST(
       status: "Posted",
       date_posted: new Date().toISOString(),
       post_url: postUrl,
+      published_media_urn: mediaUrn,
     })
     .eq("angle_id", id);
 

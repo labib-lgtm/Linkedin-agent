@@ -734,6 +734,72 @@ export function scorePost(p: NormalizedPost): number {
   return p.reactions + p.comments * 3 + p.reposts * 5;
 }
 
+// Publish a post with attached media (PDF for carousel, image for image
+// posts). Unipile accepts multipart/form-data on the same /posts
+// endpoint with the file under `attachments`. Phase E uses this to ship
+// the rendered carousel.pdf alongside the joined body text.
+export async function publishMediaPost(
+  text: string,
+  media: { bytes: Uint8Array; mime: string; filename: string }[],
+): Promise<{ postId: string; postUrl: string; raw: Record<string, unknown> }> {
+  const { apiKey, baseUrl, accountId } = await loadCreds();
+  const form = new FormData();
+  form.set("account_id", accountId);
+  form.set("text", text);
+  for (const m of media) {
+    form.append(
+      "attachments",
+      new Blob([m.bytes as BlobPart], { type: m.mime }),
+      m.filename,
+    );
+  }
+
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 30_000);
+  t.unref?.();
+
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}/api/v1/posts`, {
+      method: "POST",
+      headers: { "X-API-KEY": apiKey, accept: "application/json" },
+      body: form,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(t);
+  }
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new UnipileError(
+      `Unipile media publish returned ${res.status}`,
+      res.status,
+      errText.slice(0, 800),
+    );
+  }
+  const payload = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  const postId =
+    (payload.post_id as string | undefined) ??
+    (payload.id as string | undefined) ??
+    (payload.social_id as string | undefined) ??
+    (payload.urn as string | undefined);
+  if (!postId) {
+    throw new UnipileError(
+      "Unipile response missing post_id",
+      502,
+      JSON.stringify(payload).slice(0, 800),
+    );
+  }
+  const postUrl =
+    (payload.share_url as string | undefined) ??
+    (payload.url as string | undefined) ??
+    (payload.post_url as string | undefined) ??
+    (payload.public_url as string | undefined) ??
+    `https://www.linkedin.com/feed/update/${postId}/`;
+  return { postId, postUrl, raw: payload };
+}
+
 // Publish a text post. Used by the publish route — keeps Unipile API
 // surface in one place.
 export async function publishTextPost(text: string): Promise<{

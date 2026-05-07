@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PostStudioCopy } from "./PostStudioCopy";
 import { MarkDraftedButton } from "./MarkDraftedButton";
 import { MarkVisualReadyButton } from "./MarkVisualReadyButton";
+import { RenderAndPublishButton } from "./RenderAndPublishButton";
 import { SlideStudio } from "@/components/posts/SlideStudio";
 import { CoherencePanel, type CoherenceScores } from "@/components/posts/CoherencePanel";
 import { LinkedInPreview } from "@/components/posts/LinkedInPreview";
@@ -47,6 +48,10 @@ export type StudioAngle = {
   slide_image_paths: Record<string, string> | null;
   coherence_scores: CoherenceScores | null;
   coherence_checked_at: string | null;
+  carousel_pdf_path: string | null;
+  carousel_rendered_at: string | null;
+  publish_run_id: string | null;
+  published_media_urn: string | null;
 };
 
 // The studio's frame — split-pane Copy / Visual + two FAB overlays
@@ -154,10 +159,16 @@ export function PostStudio({
                 onMarked={(updated) => setAngle(updated)}
               />
             ) : null}
-            {visualReady ? (
+            {visualReady && angle.status !== "Visual Ready" ? (
               <MarkVisualReadyButton
                 angleId={angle.angle_id}
                 onMarked={(updated) => setAngle(updated)}
+              />
+            ) : null}
+            {angle.status === "Visual Ready" || angle.status === "Drafted" ? (
+              <RenderAndPublishButton
+                angle={angle}
+                onUpdated={(updated) => setAngle(updated)}
               />
             ) : null}
             <Button
