@@ -6,15 +6,17 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { StudioAngle } from "./PostStudio";
 
-// Two-step ship: render PDF → confirm preview → publish.
-// Per the roast: "Render succeeds, publish fails → PDF stranded in
-// Storage. Make it two-step: render → preview the PDF inline →
-// confirm publish."
+// Format-aware ship flow.
 //
-// Step 1: POST /render-carousel-pdf — fires Trigger.dev task, polls
-//         the angle row for carousel_pdf_path. Once present, move to
-//         step 2.
-// Step 2: POST /publish — Unipile multipart upload of the PDF.
+//   carousel → render PDF → preview → publish (multipart with PDF)
+//   image    → publish directly (multipart with picked image)
+//   text     → publish directly (text only)
+//   poll     → publish directly (text only)
+//
+// For carousel only: per the roast, this is two-step (render →
+// preview → confirm) so a render-success-then-publish-failure leaves
+// the PDF in Storage but doesn't surprise-publish on retry.
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const STORAGE_BUCKET = "post-assets";
 
@@ -26,8 +28,9 @@ export function RenderAndPublishButton({
   onUpdated?: (a: StudioAngle) => void;
 }) {
   const router = useRouter();
+  const isCarousel = angle.format === "carousel";
   const [phase, setPhase] = useState<"idle" | "rendering" | "preview" | "publishing" | "posted">(
-    angle.carousel_pdf_path ? "preview" : "idle",
+    isCarousel && angle.carousel_pdf_path ? "preview" : "idle",
   );
   const [pdfPath, setPdfPath] = useState<string | null>(angle.carousel_pdf_path);
   const [, startTransition] = useTransition();
@@ -38,7 +41,6 @@ export function RenderAndPublishButton({
       const res = await fetch(`/api/posts/${angle.angle_id}/render-carousel-pdf`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message ?? data?.error ?? `HTTP ${res.status}`);
-      // Poll the angle row for carousel_pdf_path to land.
       const start = Date.now();
       const poll = setInterval(async () => {
         if (Date.now() - start > 180_000) {
@@ -82,10 +84,25 @@ export function RenderAndPublishButton({
       startTransition(() => router.push("/"));
     } catch (e) {
       toast.error(`Publish failed: ${(e as Error).message}`);
-      setPhase("preview");
+      setPhase(isCarousel ? "preview" : "idle");
     }
   }
 
+  // Non-carousel: single button straight to publish (no PDF step).
+  if (!isCarousel) {
+    return (
+      <Button
+        size="sm"
+        onClick={publish}
+        disabled={phase === "publishing"}
+        className="bg-lynx-green text-lynx-charcoal hover:bg-lynx-green/90"
+      >
+        {phase === "publishing" ? "Publishing…" : "↗ Publish to LinkedIn"}
+      </Button>
+    );
+  }
+
+  // Carousel: two-step.
   const url = pdfPath ? `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${pdfPath}` : null;
 
   return (
