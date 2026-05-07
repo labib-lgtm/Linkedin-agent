@@ -1,10 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { SlideCard, type Palette, type Slide } from "./SlideCard";
 import { SlideEditDrawer } from "./SlideEditDrawer";
+import { SlideVariantPicker } from "./SlideVariantPicker";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const STORAGE_BUCKET = "post-assets";
+
+function publicAssetUrl(path: string | null | undefined): string | null {
+  if (!path || !SUPABASE_URL) return null;
+  return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${path}`;
+}
 
 type Template = "story" | "list" | "compare" | "framework";
 
@@ -69,6 +78,7 @@ export function SlideStudio({
   format,
   carouselTemplate,
   carouselSlides,
+  slideImagePaths,
   brandPalette,
   onUpdate,
 }: {
@@ -76,15 +86,42 @@ export function SlideStudio({
   format: string | null;
   carouselTemplate: string | null;
   carouselSlides: Slide[] | null;
+  slideImagePaths: Record<string, string> | null;
   brandPalette: Palette;
-  onUpdate: (next: { carousel_template?: string | null; carousel_slides?: Slide[] | null } & Record<string, unknown>) => void;
+  onUpdate: (next: { carousel_template?: string | null; carousel_slides?: Slide[] | null; slide_image_paths?: Record<string, string> | null } & Record<string, unknown>) => void;
 }) {
   const [generating, setGenerating] = useState(false);
-  const [pickedSlide, setPickedSlide] = useState<Slide | null>(null);
+  const [editingSlide, setEditingSlide] = useState<Slide | null>(null);
+  const [variantSlide, setVariantSlide] = useState<Slide | null>(null);
+  const [recentPicked, setRecentPicked] = useState<string[]>([]);
 
   const isCarousel = format === "carousel";
   const slides = useMemo(() => carouselSlides ?? [], [carouselSlides]);
   const template = (carouselTemplate ?? "list") as Template;
+  const paths = slideImagePaths ?? {};
+
+  // Brand references row — last 5 picked variants for the active angle.
+  // Pulled from /assets so it auto-refreshes when a new pick lands.
+  useEffect(() => {
+    if (!isCarousel) return;
+    let cancelled = false;
+    fetch(`/api/posts/${angleId}/assets`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const all = (data.assets ?? []) as Array<{ storage_path: string; picked_at: string | null }>;
+        const picked = all
+          .filter((a) => a.picked_at)
+          .sort((a, b) => (a.picked_at! < b.picked_at! ? 1 : -1))
+          .slice(0, 5)
+          .map((a) => a.storage_path);
+        setRecentPicked(picked);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [angleId, isCarousel, slideImagePaths]);
 
   async function generateSlides(t: Template) {
     setGenerating(true);
@@ -201,48 +238,90 @@ export function SlideStudio({
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {slides.map((s) => (
-                <SlideCard
-                  key={s.n}
-                  slide={s}
-                  palette={brandPalette}
-                  total={slides.length}
-                  onClick={() => setPickedSlide(s)}
-                />
-              ))}
+              {slides.map((s) => {
+                const pickedPath = paths[String(s.n)] ?? null;
+                const hasImagePrompt = !!s.image_gen_prompt?.trim();
+                return (
+                  <div key={s.n} className="space-y-1.5">
+                    <SlideCard
+                      slide={s}
+                      palette={brandPalette}
+                      total={slides.length}
+                      pickedImagePath={pickedPath}
+                      onClick={() => setEditingSlide(s)}
+                    />
+                    {hasImagePrompt ? (
+                      <button
+                        type="button"
+                        onClick={() => setVariantSlide(s)}
+                        className={`w-full text-[10px] font-semibold py-1 rounded border transition-colors ${
+                          pickedPath
+                            ? "border-lynx-green bg-lynx-green/10 text-lynx-charcoal hover:bg-lynx-green/20"
+                            : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                        }`}
+                      >
+                        {pickedPath ? "✓ Image picked · view variants" : "Generate 4 image variants"}
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>
 
-        {/* Brand references row — Phase B stub. Phase C fills this from
-            post_assets where picked_at is not null. */}
+        {/* Brand references row — last 5 picked illustrations for the
+            active angle. Useful sanity check that picked variants share
+            a visual language; Phase C's vision check lands per-variant
+            but the human eye is still the final judge. */}
         <section>
           <h3 className="text-[10px] uppercase tracking-[0.16em] font-bold text-muted-foreground mb-2">
-            Brand references · last 5 visuals
+            Brand references · last 5 picked
           </h3>
           <div className="grid grid-cols-5 gap-1.5">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="aspect-square rounded border border-dashed border-border bg-muted/30"
-              />
-            ))}
+            {[0, 1, 2, 3, 4].map((i) => {
+              const url = publicAssetUrl(recentPicked[i]);
+              return (
+                <div
+                  key={i}
+                  className="aspect-square rounded border border-border bg-muted/30 overflow-hidden"
+                >
+                  {url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={url}
+                      alt={`Picked ${i + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
           <p className="mt-1.5 text-[10px] text-muted-foreground">
-            Populated by Phase C once you pick illustration variants per slide.
+            {recentPicked.length === 0
+              ? "Pick illustration variants per slide to populate this row."
+              : `${recentPicked.length} picked illustration${recentPicked.length === 1 ? "" : "s"} for this angle.`}
           </p>
         </section>
       </div>
 
       <SlideEditDrawer
-        open={pickedSlide !== null}
-        slide={pickedSlide}
+        open={editingSlide !== null}
+        slide={editingSlide}
         angleId={angleId}
-        onClose={() => setPickedSlide(null)}
+        onClose={() => setEditingSlide(null)}
         onSaved={(updated) => {
           onUpdate(updated);
-          setPickedSlide(null);
+          setEditingSlide(null);
         }}
+      />
+      <SlideVariantPicker
+        open={variantSlide !== null}
+        slide={variantSlide}
+        angleId={angleId}
+        onClose={() => setVariantSlide(null)}
+        onPicked={(updated) => onUpdate(updated)}
       />
     </div>
   );

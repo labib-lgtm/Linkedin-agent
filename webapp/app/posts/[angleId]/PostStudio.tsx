@@ -41,6 +41,7 @@ export type StudioAngle = {
   carousel_template: string | null;
   carousel_slides: Slide[] | null;
   slides_generated_at: string | null;
+  slide_image_paths: Record<string, string> | null;
 };
 
 // The studio's frame — split-pane Copy / Visual.
@@ -146,6 +147,7 @@ export function PostStudio({
         format={angle.format}
         carouselTemplate={angle.carousel_template}
         carouselSlides={angle.carousel_slides}
+        slideImagePaths={angle.slide_image_paths}
         brandPalette={brandPalette}
         onUpdate={(next) => setAngle((cur) => ({ ...cur, ...next }))}
       />

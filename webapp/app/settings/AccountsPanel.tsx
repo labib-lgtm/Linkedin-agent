@@ -27,6 +27,7 @@ type Account = {
   seed_voice_samples: string | null;
   brand_palette: BrandPalette | null;
   brand_typography: string | null;
+  brand_prompt_prefix: string | null;
   competitor_count: number;
   recent_post_count: number;
 };
@@ -190,6 +191,7 @@ function AccountCard({ account, onChanged }: { account: Account; onChanged: () =
     ...(account.brand_palette ?? {}),
   });
   const [typography, setTypography] = useState(account.brand_typography ?? "");
+  const [brandPromptPrefix, setBrandPromptPrefix] = useState(account.brand_prompt_prefix ?? "");
   const [saving, setSaving] = useState(false);
 
   function updatePalette(key: keyof BrandPalette, value: string) {
@@ -210,6 +212,7 @@ function AccountCard({ account, onChanged }: { account: Account; onChanged: () =
           seed_voice_samples: seedVoiceSamples.trim() || null,
           brand_palette: palette,
           brand_typography: typography.trim() || null,
+          brand_prompt_prefix: brandPromptPrefix.trim() || null,
         }),
       });
       const data = await res.json();
@@ -317,6 +320,20 @@ function AccountCard({ account, onChanged }: { account: Account; onChanged: () =
               <p className="mt-1 text-[10px] text-muted-foreground leading-snug">
                 Cold-start fix. Once 5+ angles for this account hit Posted, the studio
                 auto-pulls voice samples from those instead.
+              </p>
+            </div>
+            <div>
+              <Label className="text-[10px] uppercase">Brand prompt prefix · image gen</Label>
+              <Textarea
+                value={brandPromptPrefix}
+                onChange={(e) => setBrandPromptPrefix(e.target.value)}
+                rows={6}
+                placeholder={`[STYLE BLOCK]\nEditorial illustration in {brand} style.\nCream paper texture #f3eee2 background, rust accent #b8543c.\nHand-drawn line art layered over geometric blocks. Slight grain overlay.\nNo photorealism. No people's faces. No corporate stock vibes.`}
+                className="font-mono text-[11px]"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground leading-snug">
+                Phase C prepends this to every image gen call so visuals compound into a
+                recognizable brand style instead of looking like 100 different AI generations.
               </p>
             </div>
             <div className="flex gap-2 pt-1">

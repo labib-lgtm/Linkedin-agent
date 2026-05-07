@@ -22,6 +22,14 @@ export type Palette = {
   paper: string;
 };
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const STORAGE_BUCKET = "post-assets";
+
+function publicAssetUrl(path: string | null | undefined): string | null {
+  if (!path || !SUPABASE_URL) return null;
+  return `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/${path}`;
+}
+
 const ROLE_LABEL: Record<string, string> = {
   cover: "Cover",
   "list-item": "List",
@@ -62,18 +70,21 @@ export function SlideCard({
   total,
   onClick,
   selected,
+  pickedImagePath,
 }: {
   slide: Slide;
   palette: Palette;
   total: number;
   onClick?: () => void;
   selected?: boolean;
+  pickedImagePath?: string | null;
 }) {
   const style = emphasisStyle(slide.color_emphasis, palette);
   const accent = accentText(slide.color_emphasis, palette);
   const isCover = slide.role === "cover";
   const isCta = slide.role === "cta";
   const isListItem = slide.role === "list-item" || slide.layout === "big-number";
+  const pickedUrl = publicAssetUrl(pickedImagePath);
 
   const Wrapper = onClick ? "button" : "div";
 
@@ -86,6 +97,25 @@ export function SlideCard({
       } ${selected ? "ring-2 ring-lynx-green" : "ring-1 ring-border"}`}
       style={style}
     >
+      {pickedUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={pickedUrl}
+          alt={`Slide ${slide.n} illustration`}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      ) : null}
+      {pickedUrl ? (
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              slide.color_emphasis === "inverted"
+                ? "linear-gradient(180deg, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.85) 100%)"
+                : "linear-gradient(180deg, rgba(255,255,255,0.05) 30%, rgba(255,255,255,0.9) 100%)",
+          }}
+        />
+      ) : null}
       <span
         className="absolute top-2 left-2 text-[9px] font-bold tracking-[0.08em] opacity-60"
         style={{ color: style.color as string }}
