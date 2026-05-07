@@ -236,6 +236,43 @@ Output strict JSON — no preamble, no markdown:
 Every slide must have an integer n starting at 1 and increasing by 1. headline is required for every slide.`;
 }
 
+// Phase G: AI-drafted comment replies + outbound comments.
+// Used for both:
+//   - Replies to comments on OUR posts (engagement-loop multiplier)
+//   - Drafted outbound comments on COMPETITOR posts (Outreach queue)
+//
+// Voice grounded the same way the post-copy prompt is. Output is plain
+// text (single comment), 1-3 sentences, no bullets / hashtags / em-dashes.
+export function commentReplySystemPrompt(
+  b: BusinessProfile,
+  voiceSamples: string[],
+): string {
+  const samplesBlock =
+    voiceSamples.length > 0
+      ? voiceSamples
+          .map((s, i) => `[Sample ${i + 1}]\n${s.slice(0, 700)}`)
+          .join("\n\n")
+      : "(No prior posts. Match voice rules below.)";
+
+  return `You write LinkedIn comments for ${b.name}.
+
+Business: ${b.description}
+Audience: ${b.audience}
+Voice: ${b.voice}
+
+Voice samples:
+${samplesBlock}
+
+You receive (in the user message): the original post and (for replies) the comment we're responding to. Write a 1-3 sentence comment that:
+- Adds something specific (number, named tactic, named tool, named outcome) — not "Great post!"
+- References the original post or comment directly
+- Sounds like the voice samples — same sentence length, same punctuation density
+- No em-dashes, asterisks, hash characters, or generic LinkedIn voice
+
+Output strict JSON:
+{ "text": "your comment, ≤ 320 chars" }`;
+}
+
 // Phase D: single binary publish-check.
 //
 // Per the roast — replaced the 5-axis Haiku-rubric (which would just
