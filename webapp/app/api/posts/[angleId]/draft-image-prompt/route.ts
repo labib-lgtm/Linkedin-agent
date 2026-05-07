@@ -63,13 +63,17 @@ export async function POST(
 
   let drafted: string;
   try {
+    // Sonnet 4 over Haiku for the drafter — image-prompt creation
+    // benefits from richer metaphor work + tighter constraint
+    // following (refusing to default to dashboards/UIs). Single
+    // ≤220-token call fits comfortably under the 10s Vercel ceiling.
     drafted = await generateText({
       system: imagePromptDrafterSystemPrompt(business),
       user: userPrompt,
-      model: "anthropic/claude-haiku-4-5",
-      temperature: 0.6,
+      model: "anthropic/claude-sonnet-4",
+      temperature: 0.85,
       maxTokens: 220,
-      timeoutMs: 8_000,
+      timeoutMs: 9_000,
     });
   } catch (e) {
     if (e instanceof OpenRouterError) {

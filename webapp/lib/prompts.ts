@@ -239,26 +239,45 @@ Every slide must have an integer n starting at 1 and increasing by 1. headline i
 // Image-prompt drafter — turns an angle/post body into a concrete
 // visual brief that an image model can render literally. Solves the
 // "make an image about X" failure mode where the model just renders
-// the words "X" as text in the picture.
+// the words "X" as text in the picture, AND the "show a dashboard"
+// failure where image models render screens with chart labels and
+// percentages baked in as image text.
 //
 // Output is plain text (a single editorial brief), not JSON. The
 // Brand Prompt Prefix is added by the trigger task at gen time, so
 // the brief should NOT include style/palette wording.
 export function imagePromptDrafterSystemPrompt(b: BusinessProfile): string {
-  return `You translate a LinkedIn post angle into a single concrete visual brief for an image-generation model.
+  return `You translate a LinkedIn post into a single concrete visual brief for an image-generation model. The brief becomes an editorial illustration — think New Yorker cover, not stock photo, not UI screenshot.
 
 Business: ${b.name}. Audience: ${b.audience}.
 
 Rules — non-negotiable:
 
-1. Describe what the PICTURE LITERALLY SHOWS. A subject. An object. A scene. A chart. A diagram. NOT "an image about X" or "an illustration related to X."
-2. Pick the strongest single metaphor from the post and visualize it. If the post is about "5 paid social mistakes leaking $4–47k/mo," the picture might be: "A bar chart showing 5 leaks of varying sizes, dollar bills draining from each bar."
-3. NEVER ask for text on the image. No words, no labels, no captions, no headlines, no logos. The post copy carries the words. The image carries the picture.
-4. Single strong subject, centered. Generous negative space. Editorial newsroom aesthetic.
-5. Concrete and specific. "A magnifying glass hovering over an Amazon product listing" beats "tools for analysis." "A funnel narrowing from many people to one" beats "conversion concept."
-6. ≤ 60 words.
+1. Describe what the PICTURE LITERALLY SHOWS. A subject, an object, a scene, a physical metaphor. NOT "an image about X" or "an illustration related to X."
 
-Output: a single line of plain text, the visual brief itself. No preamble, no JSON, no quotes. The brand style + palette is added separately, so omit any color or style language.`;
+2. Pick the strongest SINGLE metaphor from the post and physicalize it. If the post is about "5 paid social mistakes leaking $4–47k/mo," the picture might be: "A bucket with five distinct holes of varying sizes, water (representing money) streaming out at different rates onto the ground."
+
+3. PROHIBITED subjects — these always come back as text-heavy AI slop:
+   - Dashboards, monitors, screens, UI mockups, charts with labels
+   - Bar charts / line graphs unless drawn by hand on paper
+   - Magnifying glasses on listing pages with stat overlays
+   - People's faces, headshots, professional portraits
+   - Stock-photo office scenes (laptops on desks, sticky notes, coffee)
+   - Anything with KPI labels, percentages, or stat callouts baked into the picture
+
+4. PREFERRED subjects — physical metaphors that translate cleanly to illustration:
+   - Real-world objects standing in for abstract concepts (a leaking bucket = wasted spend; a maze = funnel; a tangled knot = complexity; a tightrope walker = balance; a key + lock = unlock; a door ajar = opportunity; gears meshing or grinding = process)
+   - Natural scenes (a single tree on a hill, a path forking, water flowing, fire spreading)
+   - Hand-drawn / etched / printed feel (woodcut, scratchboard, ink wash) over photorealism
+   - Architecture, vessels, instruments, tools — solid physical things
+
+5. NEVER ask for text on the image. No words, no labels, no captions, no headlines, no logos, no numbers, no percentages. The post copy carries the words. The image carries the picture.
+
+6. Concrete and specific. "A bucket with five holes" beats "leaking money concept." "A single match lighting a row of dominoes" beats "chain reaction visual."
+
+7. ≤ 50 words. Single line. Subject + composition only.
+
+Output: one line of plain text, the visual brief itself. No preamble, no JSON, no quotes, no "the image shows" preface. The brand style + palette is added separately, so omit color/style/medium language entirely — just describe the subject and composition.`;
 }
 
 // Phase G: AI-drafted comment replies + outbound comments.

@@ -21,7 +21,11 @@
  */
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = "google/gemini-2.5-flash-image-preview";
+// gpt-image-1 follows negative constraints and "no text in image"
+// rules better than gemini-flash-image-preview, which tended to
+// render text labels on dashboards regardless of NEGATIVE blocks.
+// Override per-account via the openrouter.image_model setting.
+const DEFAULT_MODEL = "openai/gpt-image-1";
 
 export type GeneratedVariant = {
   bytes: Uint8Array;
@@ -134,6 +138,27 @@ export async function generatePostImages(
   return variants;
 }
 
+// Built-in baseline style fired when an account has no
+// brand_prompt_prefix set. Without it the image model defaults to
+// stock-photo / dashboard-y output. Operators override per-account
+// via Settings → Accounts → Edit.
+const DEFAULT_STYLE_BLOCK = `[STYLE BLOCK]
+Editorial illustration in the style of a New Yorker cover or a hand-drawn newsroom diagram. Solid physical objects, real-world metaphors, natural scenes. Hand-drawn line work over flat color blocks. Slight grain texture. Limited palette: cream paper, ink, one rust accent, one olive accent.`;
+
+// [NEGATIVE] block — repeats the constraints from the drafter prompt
+// directly to the image model, since some image models (gpt-image-1,
+// gemini-flash-image) over-index on the most concrete-sounding noun
+// in the prompt (e.g. "dashboard") even when the system prompt
+// forbids it. Putting the prohibitions inside the literal image
+// prompt shifts attention.
+const NEGATIVE_BLOCK = `[ABSOLUTELY DO NOT INCLUDE]
+- No text, words, letters, numbers, percentages, captions, labels, logos, or watermarks anywhere in the image.
+- No dashboards, monitors, phone screens, laptop screens, UI mockups, app interfaces, or charts with labels baked in.
+- No people's faces, headshots, professional portraits, or stock-photo office scenes (laptops on desks, sticky notes, coffee cups).
+- No magnifying glasses on listings, no rising-arrow charts, no bar/line graphs unless hand-drawn on paper.
+- No corporate stock photography vibes. No tech product renders.
+If the subject brief implies any of the above, render the underlying physical metaphor instead (a leaking bucket, a maze, a tangled knot, a tightrope, gears, dominoes, an unlocked door).`;
+
 // Build the final prompt the image model receives. Brand prefix lives on
 // accounts.brand_prompt_prefix (Settings → Accounts → Edit). The slide's
 // own image_gen_prompt is the [SUBJECT] block.
@@ -144,15 +169,16 @@ export function assembleImagePrompt(
   mood?: string,
 ): string {
   const parts: string[] = [];
-  if (brandPrefix.trim()) parts.push(brandPrefix.trim());
+  parts.push(brandPrefix.trim() || DEFAULT_STYLE_BLOCK);
   parts.push(`[SUBJECT]\n${subject.trim()}`);
   if (composition && composition.trim()) {
     parts.push(`[COMPOSITION]\n${composition.trim()}`);
   } else {
     parts.push(
-      "[COMPOSITION]\nCentered subject. Generous negative space. 1.6:1 visual hierarchy. Editorial newsroom aesthetic. Square 1:1 aspect ratio.",
+      "[COMPOSITION]\nSingle strong subject, centered. Generous negative space (60% of canvas empty). Square 1:1 aspect ratio. Editorial newsroom aesthetic — illustrated, not photographed.",
     );
   }
   if (mood && mood.trim()) parts.push(`[MOOD]\n${mood.trim()}`);
+  parts.push(NEGATIVE_BLOCK);
   return parts.join("\n\n");
 }
