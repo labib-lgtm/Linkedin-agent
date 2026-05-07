@@ -146,12 +146,16 @@ export type Palette = {
   paper: string;
 };
 
-// Built-in baseline style fired when an account has no
-// brand_prompt_prefix set. Without it the image model defaults to
-// stock-photo / dashboard-y output. Operators override per-account
-// via Settings → Accounts → Edit.
-const DEFAULT_STYLE_BLOCK = `[STYLE BLOCK]
+// Carousel slides need visual consistency across 6-8 frames →
+// editorial illustration baseline. Single-image posts carry the whole
+// narrative weight → cinematic scene baseline (more like a film still
+// or magazine cover). Operators can override per-account via the
+// brand_prompt_prefix setting.
+const CAROUSEL_DEFAULT_STYLE_BLOCK = `[STYLE BLOCK]
 Editorial illustration in the style of a New Yorker cover or a hand-drawn newsroom diagram. Solid physical objects, real-world metaphors, natural scenes. Hand-drawn line work over flat color blocks. Slight grain texture.`;
+
+const SINGLE_IMAGE_DEFAULT_STYLE_BLOCK = `[STYLE BLOCK]
+Cinematic editorial scene with mixed-media composition. Photorealistic product / UI / interface elements where the post topic calls for them, with hand-drawn or illustrated supporting elements. Dramatic lighting, layered detail, real readable text where it serves the metaphor. Magazine-cover or film-still aesthetic — scroll-stopping, narrative-driven.`;
 
 // [PALETTE] block — appended to every prompt regardless of whether the
 // operator wrote a custom brand_prompt_prefix. Separates style/medium
@@ -169,45 +173,64 @@ Editorial highlight:       ${p.accent}
 No other colors. Treat the background and ink as the dominant pair (>80% of canvas). Reserve accents for the single focal element.`;
 }
 
-// [NEGATIVE] block — repeats the constraints from the drafter prompt
-// directly to the image model, since some image models (gpt-image-1,
-// gemini-flash-image) over-index on the most concrete-sounding noun
-// in the prompt (e.g. "dashboard") even when the system prompt
-// forbids it. Putting the prohibitions inside the literal image
-// prompt shifts attention.
-const NEGATIVE_BLOCK = `[ABSOLUTELY DO NOT INCLUDE]
+// Two negative profiles — carousel slides keep the strict editorial-
+// illustration constraints (consistency across 6-8 slides matters);
+// single-image posts get a much looser set since the one image
+// carries the narrative.
+const CAROUSEL_NEGATIVE_BLOCK = `[ABSOLUTELY DO NOT INCLUDE]
 - No text, words, letters, numbers, percentages, captions, labels, logos, or watermarks anywhere in the image.
 - No dashboards, monitors, phone screens, laptop screens, UI mockups, app interfaces, or charts with labels baked in.
 - No people's faces, headshots, professional portraits, or stock-photo office scenes (laptops on desks, sticky notes, coffee cups).
-- No magnifying glasses on listings, no rising-arrow charts, no bar/line graphs unless hand-drawn on paper.
 - No corporate stock photography vibes. No tech product renders.
 - No colors outside the palette block above.
-If the subject brief implies any of the above, render the underlying physical metaphor instead (a leaking bucket, a maze, a tangled knot, a tightrope, gears, dominoes, an unlocked door).`;
+If the subject brief implies any of the above, render the underlying physical metaphor instead.`;
+
+const SINGLE_IMAGE_NEGATIVE_BLOCK = `[CONSTRAINTS]
+- No people's faces or headshots.
+- No generic stock-photo office scenes (a laptop on a desk as the focal subject is forbidden — but a laptop INSIDE a richer scene is fine).
+- Do NOT render the LinkedIn post hook, headline, or post copy as image text. Other text (real UI labels, button text, product names, metric values) IS allowed when it serves the metaphor.
+- The palette block above is a strong preference — accent colors should come from there. Real-world textures (wood, metal, dust, cobweb, paper, glass) are allowed and encouraged for cinematic depth.`;
 
 // Build the final prompt the image model receives. Brand prefix lives on
 // accounts.brand_prompt_prefix (Settings → Accounts → Edit). The slide's
 // own image_gen_prompt is the [SUBJECT] block. Palette is loaded from
 // accounts.brand_palette and ALWAYS appended so color compliance
 // doesn't depend on whether the operator wrote it into the prefix.
+//
+// `mode` tunes the constraints: "carousel" stays strict editorial
+// illustration (visual consistency across 6-8 slides); "single-image"
+// allows cinematic scenes with text/UI/dual-state compositions.
 export function assembleImagePrompt(
   brandPrefix: string,
   subject: string,
   palette?: Palette,
-  composition?: string,
-  mood?: string,
+  options: {
+    mode?: "carousel" | "single-image";
+    composition?: string;
+    mood?: string;
+  } = {},
 ): string {
+  const mode = options.mode ?? "carousel";
+  const isSingle = mode === "single-image";
   const parts: string[] = [];
-  parts.push(brandPrefix.trim() || DEFAULT_STYLE_BLOCK);
+  parts.push(
+    brandPrefix.trim() ||
+      (isSingle ? SINGLE_IMAGE_DEFAULT_STYLE_BLOCK : CAROUSEL_DEFAULT_STYLE_BLOCK),
+  );
   parts.push(`[SUBJECT]\n${subject.trim()}`);
-  if (composition && composition.trim()) {
-    parts.push(`[COMPOSITION]\n${composition.trim()}`);
-  } else {
+  if (options.composition && options.composition.trim()) {
+    parts.push(`[COMPOSITION]\n${options.composition.trim()}`);
+  } else if (!isSingle) {
     parts.push(
       "[COMPOSITION]\nSingle strong subject, centered. Generous negative space (60% of canvas empty). Square 1:1 aspect ratio. Editorial newsroom aesthetic — illustrated, not photographed.",
     );
+  } else {
+    parts.push(
+      "[COMPOSITION]\nSquare 1:1 aspect ratio. Cinematic, layered, scroll-stopping. Compose for the post's narrative — single dramatic scene or dual-state contrast as the brief specifies.",
+    );
   }
-  if (mood && mood.trim()) parts.push(`[MOOD]\n${mood.trim()}`);
+  if (options.mood && options.mood.trim()) parts.push(`[MOOD]\n${options.mood.trim()}`);
   if (palette) parts.push(paletteBlock(palette));
-  parts.push(NEGATIVE_BLOCK);
+  parts.push(isSingle ? SINGLE_IMAGE_NEGATIVE_BLOCK : CAROUSEL_NEGATIVE_BLOCK);
   return parts.join("\n\n");
 }

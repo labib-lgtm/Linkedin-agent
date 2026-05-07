@@ -51,7 +51,7 @@ export const generateSlideImages = task({
 
     const { data: angle, error: aErr } = await client
       .from("angles")
-      .select("account_id, carousel_slides")
+      .select("account_id, carousel_slides, format")
       .eq("angle_id", angleId)
       .maybeSingle();
     if (aErr || !angle) {
@@ -85,11 +85,15 @@ export const generateSlideImages = task({
     };
     if (!acct?.brand_palette && acct?.brand_color) palette.primary = acct.brand_color as string;
 
-    // Pass the palette through so the [PALETTE] block lands in the
-    // prompt regardless of whether the operator wrote colors into the
-    // brand_prompt_prefix. Color compliance shouldn't depend on the
-    // operator remembering to mention them.
-    const finalPrompt = assembleImagePrompt(brandPrefix, slide.image_gen_prompt, palette);
+    // Pass the palette + format-aware mode. Carousel slides stay
+    // strict editorial illustration; single-image posts get the
+    // cinematic / mixed-media baseline that allows text + UI + dual-
+    // state compositions.
+    const mode: "carousel" | "single-image" =
+      angle.format === "carousel" ? "carousel" : "single-image";
+    const finalPrompt = assembleImagePrompt(brandPrefix, slide.image_gen_prompt, palette, {
+      mode,
+    });
 
     // Image model from app_settings (openrouter.image_model). Fall back
     // to the lib's default when unset.

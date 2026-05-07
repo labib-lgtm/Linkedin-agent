@@ -169,26 +169,27 @@ export function ImageStudio({
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            rows={4}
+            rows={8}
             placeholder={
-              "Describe what the picture LITERALLY SHOWS — one subject, one scene. " +
-              "Example: 'A bucket with five holes of varying sizes, water streaming out at different rates.' " +
-              "Keep under 300 chars. Brand style + palette is added automatically."
+              "Single-image posts get cinematic scene briefs — describe the full picture in 80–200 words. " +
+              "Allowed: real product UI / dashboards / dual-state compositions / hands in frame / readable text inside the image. " +
+              "Example: 'Horizontal split frame. Left: a pristine Amazon product page rendered with full UI. Right: the same page covered in cobwebs and dust...' " +
+              "Click ↺ Draft from post body for the LLM-generated brief."
             }
-            className="text-sm"
+            className="text-sm font-mono leading-relaxed"
           />
           <div className="flex items-center justify-between gap-2">
             <span
               className={`text-[10px] tabular-nums ${
-                prompt.length > 300
+                prompt.length > 1500
                   ? "text-rose-700 font-semibold"
-                  : prompt.length > 200
+                  : prompt.length > 1200
                     ? "text-amber-700"
                     : "text-muted-foreground"
               }`}
             >
-              {prompt.length} / 300 chars
-              {prompt.length > 300 ? " · too long, image model will pick random visuals" : ""}
+              {prompt.length} / 1500 chars
+              {prompt.length > 1500 ? " · too long, model may truncate" : ""}
             </span>
             <div className="flex gap-1.5">
               {prompt ? (

@@ -246,8 +246,65 @@ Every slide must have an integer n starting at 1 and increasing by 1. headline i
 // Output is plain text (a single editorial brief), not JSON. The
 // Brand Prompt Prefix is added by the trigger task at gen time, so
 // the brief should NOT include style/palette wording.
-export function imagePromptDrafterSystemPrompt(b: BusinessProfile): string {
-  return `You translate a LinkedIn post into a single concrete visual brief for an image-generation model. The brief becomes an editorial illustration — think New Yorker cover, not stock photo, not UI screenshot.
+// Two modes: "single-image" produces rich cinematic scenes for posts
+// where the one image carries everything (dual-state contrasts, real
+// UI, layered detail). "carousel" produces tight editorial-illustration
+// briefs that stay consistent across 6-8 slides at the brand palette.
+export function imagePromptDrafterSystemPrompt(
+  b: BusinessProfile,
+  format: "image" | "carousel" | "text" | "video" | "poll" | string | null = "image",
+): string {
+  const isCarousel = format === "carousel";
+  if (isCarousel) return carouselSlideDrafterPrompt(b);
+  return singleImageDrafterPrompt(b);
+}
+
+function singleImageDrafterPrompt(b: BusinessProfile): string {
+  return `You translate a LinkedIn post into a CINEMATIC visual brief for an image-generation model (gpt-image-1 / gpt-5-image-mini). The image carries the whole narrative — this is a scroll-stopping single image, not an abstract editorial sketch.
+
+Business: ${b.name}. Audience: ${b.audience}.
+
+PROCESS — follow internally before writing the brief:
+
+Step 1: Read the post. Extract every CONCRETE NOUN: real products, named platforms, real screens, real tools, real systems, real objects.
+
+Step 2: Identify the post's STRUCTURE.
+   - "X is actually Y" / "X is a Y problem" / "stop X, start Y"  →  dual-state composition (left side = wrong/ignored, right side = obsessed-over). Use literal cobwebs / dust / fade on the ignored half, bright / fresh / hands-working on the obsessed half.
+   - "Before / after" / "we tested X and got Y"  →  two-frame composition.
+   - "N things"  →  multi-element layout (grid of N items, one highlighted).
+   - "We saved X by doing Y"  →  single dramatic scene with one focal action.
+
+Step 3: Compose the scene. RICH detail. Multiple elements allowed. Photorealistic OR mixed-media (real product + analog control panel + dashboard) is encouraged when it serves the metaphor.
+
+ALLOWED in single-image posts (different from carousel slides):
+   - Real UI / screens / web pages / apps with actual readable text (gpt-5-image-mini renders this cleanly)
+   - Dashboards, control panels, knobs, dials, levers — when they ARE the metaphor
+   - Multiple subjects in dual-state composition (same item shown clean vs neglected, before vs after)
+   - Real readable copy (product names, button labels, headers, metric values) baked into the scene
+   - Hands in frame, physical interaction
+   - Cinematic lighting, dramatic shadows, mixed surfaces (glossy product + dusty cobweb + glowing button)
+
+STILL FORBIDDEN:
+   - People's faces / headshots
+   - Generic stock-photo office scenes (laptops on desks as the focal subject)
+   - The post's hook text or any LinkedIn copy rendered as image text (the post copy carries that)
+
+GROUNDED examples:
+
+Post: "If your CVR is below 8%, your ad problem is a listing problem. Stop touching bids."
+   ✅ Scene: "A horizontal split frame. Left half: a pristine Amazon product page rendered with full UI — search bar, product photos, 4.6 stars, $24.99 price, prime badge, bullet points, Amazon's Choice badge — clean and well-lit. Right half: the EXACT SAME product page beside it covered in thick cobwebs and dust, the second product itself dusty and forgotten. Below both, an analog control panel labeled with green-glowing dials for ROAS, CTR, CVR, ACOS, and an oversized 'ADS ON' button with hands frantically twisting bid-adjustment knobs. Cinematic, mixed-media."
+
+Post: "5 paid social mistakes killing your CAC."
+   ✅ Scene: "A pinboard with 5 large advertising flyers, each pinned at a slight angle, each with a coin-shaped hole drilled through the center. Coins of different denominations spilling from each hole into 5 separate piles below, the largest pile under the biggest hole. Cinematic angle from below, warm overhead light, single shadow."
+
+Post: "We tested 47 hooks last quarter."
+   ✅ Scene: "A vintage card catalog drawer pulled fully open, 47 small index cards inside arranged in 6 rows. One card pulled forward at an angle, slightly raised, illuminated by a single overhead spotlight. The other 46 cards in the drawer in soft shadow. Wood-grain texture, brass drawer handle. Single hand reaching toward the highlighted card."
+
+Output: ONE paragraph, 80–200 words, no preamble, no JSON, no quotes. Describe the scene with cinematic specificity. The brand palette + style block is added separately, so omit color/style words like "editorial illustration" or "New Yorker style" — let the brand prefix dictate medium. Just describe the scene as if you were writing a film direction note.`;
+}
+
+function carouselSlideDrafterPrompt(b: BusinessProfile): string {
+  return `You translate a LinkedIn post into a single concrete visual brief for an image-generation model. The brief becomes one slide in a carousel — must visually match the 6-8 sibling slides, so keep it tight, single-subject, palette-compliant editorial illustration. Think New Yorker cover, not stock photo, not UI screenshot.
 
 Business: ${b.name}. Audience: ${b.audience}.
 

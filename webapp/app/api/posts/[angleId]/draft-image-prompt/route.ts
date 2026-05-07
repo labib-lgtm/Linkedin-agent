@@ -61,17 +61,21 @@ export async function POST(
     .filter(Boolean)
     .join("\n");
 
+  // Format-aware drafter: image-format gets rich 80-200 word cinematic
+  // scene briefs (multi-element, dual-state, real UI allowed). Carousel
+  // gets tight ≤50 word editorial illustration briefs that stay
+  // visually consistent across 6-8 slides.
+  const format = (angle.format as string | null) ?? "image";
+  const isCarousel = format === "carousel";
+
   let drafted: string;
   try {
-    // Sonnet 4 with tight max_tokens. Lower than 220 to physically
-    // prevent the model from returning multi-paragraph output —
-    // ~120 tokens forces a single sentence/clause, ~50 words.
     drafted = await generateText({
-      system: imagePromptDrafterSystemPrompt(business),
+      system: imagePromptDrafterSystemPrompt(business, format),
       user: userPrompt,
       model: "anthropic/claude-sonnet-4",
       temperature: 0.85,
-      maxTokens: 120,
+      maxTokens: isCarousel ? 120 : 600,
       timeoutMs: 9_000,
     });
   } catch (e) {
@@ -87,31 +91,39 @@ export async function POST(
     );
   }
 
-  // Aggressive post-processing to make sure the output is a single
-  // visual brief, not the post body in disguise. Catches role labels
-  // ("Hook", "Setup") that operators have pasted in OR that the LLM
-  // echoed back from the user message.
+  // Light post-processing. Strip wrapper quotes, leading filler, and
+  // stray role labels that leaked from the user message. Keep multi-
+  // sentence cinematic scenes intact for image-format; collapse to
+  // single-line ≤300 chars only for carousel.
   let cleaned = drafted.trim();
-  // Strip wrapping quotes
   cleaned = cleaned.replace(/^["'`]+|["'`]+$/g, "").trim();
-  // Strip leading filler
   cleaned = cleaned.replace(
-    /^(the image shows|image:|brief:|visual:|subject:|description:)\s*/i,
+    /^(the image shows|image:|brief:|visual:|subject:|description:|scene:)\s*/i,
     "",
   );
-  // Strip stray role labels mid-text (Hook, Setup, Pivot, List, Payoff,
-  // CTA appearing on their own as section headers)
   cleaned = cleaned.replace(
     /^(?:hook|setup|pivot|list|payoff|cta|body|paragraph)\s*[:.\-]?\s*$/gim,
     "",
   );
-  // Collapse all whitespace to single spaces — single-line output
-  cleaned = cleaned.replace(/\s+/g, " ").trim();
-  // Hard cap at 300 chars; take up to the last sentence-end before that
-  if (cleaned.length > 300) {
-    const truncated = cleaned.slice(0, 300);
-    const lastPeriod = truncated.lastIndexOf(".");
-    cleaned = lastPeriod > 100 ? truncated.slice(0, lastPeriod + 1) : truncated;
+
+  if (isCarousel) {
+    // Tight carousel-slide brief — single line, hard 300-char cap.
+    cleaned = cleaned.replace(/\s+/g, " ").trim();
+    if (cleaned.length > 300) {
+      const truncated = cleaned.slice(0, 300);
+      const lastPeriod = truncated.lastIndexOf(".");
+      cleaned = lastPeriod > 100 ? truncated.slice(0, lastPeriod + 1) : truncated;
+    }
+  } else {
+    // Single-image: keep paragraph structure, but normalize internal
+    // whitespace and cap at 1500 chars (covers the 200-word band
+    // generously without letting the model run away).
+    cleaned = cleaned.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+    if (cleaned.length > 1500) {
+      const truncated = cleaned.slice(0, 1500);
+      const lastPeriod = truncated.lastIndexOf(".");
+      cleaned = lastPeriod > 800 ? truncated.slice(0, lastPeriod + 1) : truncated;
+    }
   }
 
   if (cleaned.length < 20) {
