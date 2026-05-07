@@ -191,6 +191,81 @@ const SINGLE_IMAGE_NEGATIVE_BLOCK = `[CONSTRAINTS]
 - Do NOT render the LinkedIn post hook, headline, or post copy as image text. Other text (real UI labels, button text, product names, metric values) IS allowed when it serves the metaphor.
 - The palette block above is a strong preference — accent colors should come from there. Real-world textures (wood, metal, dust, cobweb, paper, glass) are allowed and encouraged for cinematic depth.`;
 
+// ---------------------------------------------------------------------
+// Body cleaning helpers used by the drafterless path.
+// ---------------------------------------------------------------------
+
+type Paragraph = { role?: string; text?: string };
+
+/** Join role-tagged paragraphs into plain text. Drops paragraphs whose
+ *  text is empty / whitespace-only. */
+export function joinBodyParagraphs(
+  paragraphs: Paragraph[] | null | undefined,
+): string {
+  if (!Array.isArray(paragraphs)) return "";
+  return paragraphs
+    .map((p) => (typeof p?.text === "string" ? p.text.trim() : ""))
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+/** Strip stray role labels (Hook, Setup, Pivot, List, Payoff, CTA, Body,
+ *  Paragraph) that appear alone on a line — they leak from copy-paste
+ *  out of the body editor. */
+export function stripRoleLabels(text: string): string {
+  return text
+    .replace(
+      /^(?:hook|setup|pivot|list|payoff|cta|body|paragraph)\s*[:.\-]?\s*$/gim,
+      "",
+    )
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+// ---------------------------------------------------------------------
+// Drafterless path — single LLM call: post body → image model directly.
+// No Sonnet 4 translation step. The image model interprets the post.
+// ---------------------------------------------------------------------
+
+const DRAFTERLESS_INSTRUCTION = `[POST]
+The image must visualize the following LinkedIn post as a single editorial scene. Pick the strongest single metaphor from the body and render it literally — a real subject, real objects, real composition. Do NOT render the hook, headline, role labels, or any post copy as text inside the image — that's the caption's job. The picture carries the picture.
+
+Post body:
+`;
+
+export function assembleDrafterlessPrompt(opts: {
+  postBody: string;
+  brandPrefix: string;
+  palette?: Palette;
+  mode?: "carousel" | "single-image";
+  composition?: string;
+  mood?: string;
+}): string {
+  const mode = opts.mode ?? "single-image";
+  const isSingle = mode === "single-image";
+  const parts: string[] = [];
+  parts.push(
+    opts.brandPrefix.trim() ||
+      (isSingle ? SINGLE_IMAGE_DEFAULT_STYLE_BLOCK : CAROUSEL_DEFAULT_STYLE_BLOCK),
+  );
+  parts.push(`${DRAFTERLESS_INSTRUCTION}${opts.postBody.trim()}`);
+  if (opts.composition && opts.composition.trim()) {
+    parts.push(`[COMPOSITION]\n${opts.composition.trim()}`);
+  } else if (!isSingle) {
+    parts.push(
+      "[COMPOSITION]\nSingle strong subject, centered. Generous negative space (60% of canvas empty). Square 1:1 aspect ratio. Editorial newsroom aesthetic — illustrated, not photographed.",
+    );
+  } else {
+    parts.push(
+      "[COMPOSITION]\nSquare 1:1 aspect ratio. Cinematic, layered, scroll-stopping. Compose for the post's narrative — single dramatic scene OR dual-state contrast (e.g. clean vs ignored / before vs after) when the post structure calls for it.",
+    );
+  }
+  if (opts.mood && opts.mood.trim()) parts.push(`[MOOD]\n${opts.mood.trim()}`);
+  if (opts.palette) parts.push(paletteBlock(opts.palette));
+  parts.push(isSingle ? SINGLE_IMAGE_NEGATIVE_BLOCK : CAROUSEL_NEGATIVE_BLOCK);
+  return parts.join("\n\n");
+}
+
 // Build the final prompt the image model receives. Brand prefix lives on
 // accounts.brand_prompt_prefix (Settings → Accounts → Edit). The slide's
 // own image_gen_prompt is the [SUBJECT] block. Palette is loaded from

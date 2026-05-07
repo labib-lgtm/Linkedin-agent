@@ -161,8 +161,8 @@ export function SlideVariantPicker({
           </DialogTitle>
           <p className="text-xs text-muted-foreground">
             {hasPrompt
-              ? "Generates 4 variants from the slide's image_gen_prompt + your account's Brand Prompt Prefix. Pick one."
-              : "This slide has no image_gen_prompt. Edit the slide and add one to enable image generation."}
+              ? "Generates 4 variants from your override prompt + brand framing. Pick one."
+              : "Drafterless mode — the post body (or slide content for carousel) goes directly to the image model with brand framing. Pick one."}
           </p>
           {hasPrompt ? (
             <pre className="mt-2 text-[10px] font-mono bg-muted/30 border border-border rounded p-2 whitespace-pre-wrap text-muted-foreground max-h-20 overflow-y-auto">
@@ -179,7 +179,7 @@ export function SlideVariantPicker({
             <Button
               size="sm"
               onClick={generate}
-              disabled={!hasPrompt || generating}
+              disabled={generating}
               className="bg-lynx-green text-lynx-charcoal hover:bg-lynx-green/90"
             >
               {generating ? "Generating…" : assets.length > 0 ? "↻ Regenerate 4 variants" : "Generate 4 variants"}

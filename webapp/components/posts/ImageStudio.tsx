@@ -18,9 +18,14 @@ function publicAssetUrl(path: string | null | undefined): string | null {
 
 // Single-image gen for format = 'image'.
 //
-// Reuses the same Trigger.dev task (generate-slide-images) the carousel
-// studio uses — image-format angles store a 1-element carousel_slides
-// array with n=1 + image_gen_prompt. Picks land in slide_image_paths['1']
+// Default mode: drafterless — the trigger task sends the post body
+// directly to the image model with brand framing, no Sonnet 4 step.
+// Override mode (collapsed disclosure): operator types or drafts the
+// image prompt manually for surgical control.
+//
+// Reuses generate-slide-images Trigger.dev task. Image-format angles
+// store a 1-element carousel_slides array with n=1 so the task has a
+// row to attach post_assets to. Picks land in slide_image_paths['1']
 // which the publish route already reads for image format.
 export function ImageStudio({
   angleId,
@@ -33,13 +38,20 @@ export function ImageStudio({
   carouselSlides: Slide[] | null;
   slideImagePaths: Record<string, string> | null;
   hasBody: boolean;
-  onUpdate: (next: { carousel_slides?: Slide[] | null; slide_image_paths?: Record<string, string> | null } & Record<string, unknown>) => void;
+  onUpdate: (
+    next: { carousel_slides?: Slide[] | null; slide_image_paths?: Record<string, string> | null } & Record<
+      string,
+      unknown
+    >,
+  ) => void;
 }) {
   const slide = (carouselSlides ?? [])[0] ?? null;
+  const [overrideOpen, setOverrideOpen] = useState(!!slide?.image_gen_prompt);
   const [prompt, setPrompt] = useState(slide?.image_gen_prompt ?? "");
   const [saving, setSaving] = useState(false);
   const [drafting, setDrafting] = useState(false);
   const [picker, setPicker] = useState(false);
+  const [ensuringStub, setEnsuringStub] = useState(false);
 
   useEffect(() => {
     setPrompt((carouselSlides ?? [])[0]?.image_gen_prompt ?? "");
@@ -48,14 +60,14 @@ export function ImageStudio({
   const pickedPath = slideImagePaths?.["1"] ?? null;
   const pickedUrl = publicAssetUrl(pickedPath);
 
-  async function savePrompt() {
-    if (!prompt.trim()) return;
-    if (slide && prompt === slide.image_gen_prompt) return;
-    setSaving(true);
+  // Ensure carousel_slides[0] exists. Image gen task requires a slide
+  // row to attach variants to. Drafterless path: stub slide with no
+  // image_gen_prompt; trigger reads angle.body_paragraphs instead.
+  async function ensureStubSlide(): Promise<boolean> {
+    if (slide) return true;
+    setEnsuringStub(true);
     try {
-      // Upsert a single virtual slide so the existing image-gen task
-      // (which reads angle.carousel_slides[n]) works without changes.
-      const updatedSlide: Slide = {
+      const stub: Slide = {
         n: 1,
         role: "image",
         layout: "image",
@@ -64,6 +76,50 @@ export function ImageStudio({
         stat: null,
         visual_element: "illustration",
         color_emphasis: "primary",
+        image_gen_prompt: null,
+      };
+      const res = await fetch(`/api/posts/${angleId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ carousel_slides: [stub] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      onUpdate(data.angle);
+      return true;
+    } catch (e) {
+      toast.error(`Setup failed: ${(e as Error).message}`);
+      return false;
+    } finally {
+      setEnsuringStub(false);
+    }
+  }
+
+  async function openDrafterlessPicker() {
+    if (!hasBody) {
+      toast.error("Generate copy first — drafterless image gen reads your post body.");
+      return;
+    }
+    const ok = await ensureStubSlide();
+    if (ok) setPicker(true);
+  }
+
+  async function savePrompt() {
+    if (!prompt.trim()) return;
+    if (slide && prompt === slide.image_gen_prompt) return;
+    setSaving(true);
+    try {
+      const updatedSlide: Slide = {
+        ...(slide ?? {
+          n: 1,
+          role: "image",
+          layout: "image",
+          headline: "",
+          supporting: null,
+          stat: null,
+          visual_element: "illustration",
+          color_emphasis: "primary",
+        }),
         image_gen_prompt: prompt.trim(),
       };
       const res = await fetch(`/api/posts/${angleId}`, {
@@ -74,7 +130,7 @@ export function ImageStudio({
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
       onUpdate(data.angle);
-      toast.success("Image prompt saved");
+      toast.success("Override prompt saved");
     } catch (e) {
       toast.error(`Save failed: ${(e as Error).message}`);
     } finally {
@@ -82,11 +138,25 @@ export function ImageStudio({
     }
   }
 
-  // Calls Haiku with imagePromptDrafterSystemPrompt to translate the
-  // FULL post body + hook into a concrete visual brief. Solves the
-  // "POST COPY rendered as text on a card" failure where a meta-prompt
-  // produces a meta-image. Brief is only the subject/scene — brand
-  // style + palette get prepended by the trigger task.
+  async function clearOverride() {
+    setPrompt("");
+    if (!slide?.image_gen_prompt) return;
+    try {
+      const updatedSlide: Slide = { ...slide, image_gen_prompt: null };
+      const res = await fetch(`/api/posts/${angleId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ carousel_slides: [updatedSlide] }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      onUpdate(data.angle);
+      toast.success("Override cleared — back to drafterless");
+    } catch (e) {
+      toast.error(`Clear failed: ${(e as Error).message}`);
+    }
+  }
+
   async function draftFromBody() {
     setDrafting(true);
     try {
@@ -102,6 +172,8 @@ export function ImageStudio({
     }
   }
 
+  const hasOverride = !!slide?.image_gen_prompt?.trim();
+
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden flex flex-col">
       <header className="flex items-center justify-between gap-3 px-5 py-3 border-b border-border bg-muted/30">
@@ -109,15 +181,13 @@ export function ImageStudio({
           Visual · single image
         </div>
         <div className="flex items-center gap-2">
-          {slide?.image_gen_prompt ? (
-            <Button
-              size="sm"
-              onClick={() => setPicker(true)}
-              className="bg-lynx-green text-lynx-charcoal hover:bg-lynx-green/90"
-            >
-              {pickedPath ? "✓ View / change variant" : "Generate 4 variants"}
-            </Button>
-          ) : null}
+          <span
+            className={`text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded ${
+              hasOverride ? "bg-amber-100 text-amber-800" : "bg-lynx-green/20 text-lynx-charcoal"
+            }`}
+          >
+            {hasOverride ? "override" : "drafterless"}
+          </span>
         </div>
       </header>
 
@@ -137,87 +207,137 @@ export function ImageStudio({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground p-6 text-center">
-                {slide?.image_gen_prompt
-                  ? "No variant picked yet. Click Generate 4 variants above."
-                  : "Set an image prompt below, save, then generate variants."}
+                No variant picked yet. Click <strong>Generate 4 variants</strong> below.
               </div>
             )}
           </div>
         </section>
 
-        {/* Prompt editor */}
+        {/* Primary CTA — drafterless generation */}
         <section className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-[10px] uppercase tracking-[0.16em] font-bold text-muted-foreground">
-              Image gen prompt
-            </Label>
-            {hasBody ? (
-              <button
-                type="button"
-                onClick={draftFromBody}
-                disabled={drafting}
-                className="text-[11px] text-foreground/70 hover:text-foreground disabled:opacity-60"
-              >
-                {drafting ? "Drafting…" : "↺ Draft from post body"}
-              </button>
-            ) : (
-              <span className="text-[11px] text-muted-foreground italic">
-                Generate copy first to enable auto-draft
-              </span>
-            )}
-          </div>
-          <Textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            rows={8}
-            placeholder={
-              "Single-image posts get cinematic scene briefs — describe the full picture in 80–200 words. " +
-              "Allowed: real product UI / dashboards / dual-state compositions / hands in frame / readable text inside the image. " +
-              "Example: 'Horizontal split frame. Left: a pristine Amazon product page rendered with full UI. Right: the same page covered in cobwebs and dust...' " +
-              "Click ↺ Draft from post body for the LLM-generated brief."
-            }
-            className="text-sm font-mono leading-relaxed"
-          />
-          <div className="flex items-center justify-between gap-2">
-            <span
-              className={`text-[10px] tabular-nums ${
-                prompt.length > 1500
-                  ? "text-rose-700 font-semibold"
-                  : prompt.length > 1200
-                    ? "text-amber-700"
-                    : "text-muted-foreground"
-              }`}
-            >
-              {prompt.length} / 1500 chars
-              {prompt.length > 1500 ? " · too long, model may truncate" : ""}
-            </span>
-            <div className="flex gap-1.5">
-              {prompt ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setPrompt("")}
-                  className="text-muted-foreground"
-                  title="Clear and start over"
-                >
-                  Clear
-                </Button>
-              ) : null}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={savePrompt}
-                disabled={saving || !prompt.trim()}
-              >
-                {saving ? "Saving…" : "Save prompt"}
-              </Button>
+          <div className="rounded-lg border border-border bg-background p-4 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                Generate from post body
+              </h3>
+              <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                Sends your post body directly to the image model ({hasOverride ? "currently overridden" : "active"})
+                wrapped with your brand style + palette + composition rules. No drafter step. One LLM call.
+              </p>
             </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                if (hasOverride) {
+                  // Override path — open picker, trigger task uses slide.image_gen_prompt
+                  setPicker(true);
+                } else {
+                  openDrafterlessPicker();
+                }
+              }}
+              disabled={ensuringStub || (!hasOverride && !hasBody)}
+              className="bg-lynx-green text-lynx-charcoal hover:bg-lynx-green/90 w-full"
+            >
+              {ensuringStub
+                ? "Setting up…"
+                : pickedPath
+                  ? "✓ View / change variant"
+                  : hasOverride
+                    ? "Generate 4 variants (override)"
+                    : "Generate 4 variants from post body"}
+            </Button>
+            {!hasBody && !hasOverride ? (
+              <p className="text-[10px] text-rose-700 italic">
+                Generate copy first — drafterless gen reads angles.body_paragraphs.
+              </p>
+            ) : null}
           </div>
-          <p className="text-[10px] text-muted-foreground leading-snug">
-            <strong className="text-foreground">Tip:</strong> use <em>↺ Draft from post body</em>{" "}
-            for a clean single-visual brief. Pasting the whole post body here gets generic
-            output — the image model can&apos;t pick a single subject from a long passage.
-          </p>
+        </section>
+
+        {/* Override mode — collapsed disclosure */}
+        <section>
+          <button
+            type="button"
+            onClick={() => setOverrideOpen((v) => !v)}
+            className="w-full text-left flex items-center justify-between gap-2 text-[11px] font-semibold text-muted-foreground hover:text-foreground py-1"
+          >
+            <span>
+              {overrideOpen ? "▾" : "▸"} Override prompt manually
+              {hasOverride ? " · active" : ""}
+            </span>
+            <span className="text-[10px] font-normal italic">
+              {hasOverride ? "Drafterless disabled while override is set" : "For surgical control"}
+            </span>
+          </button>
+
+          {overrideOpen ? (
+            <div className="mt-2 space-y-2 rounded-lg border border-border bg-muted/20 p-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] uppercase tracking-[0.16em] font-bold text-muted-foreground">
+                  Image gen prompt (override)
+                </Label>
+                {hasBody ? (
+                  <button
+                    type="button"
+                    onClick={draftFromBody}
+                    disabled={drafting}
+                    className="text-[11px] text-foreground/70 hover:text-foreground disabled:opacity-60"
+                  >
+                    {drafting ? "Drafting…" : "↺ Draft from post body"}
+                  </button>
+                ) : null}
+              </div>
+              <Textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={8}
+                placeholder={
+                  "Cinematic scene brief — describe the full picture in 80–200 words. " +
+                  "Allowed: real product UI, dual-state compositions, hands in frame, readable text in image. " +
+                  "Saving here puts the studio in OVERRIDE mode (drafterless disabled until cleared)."
+                }
+                className="text-sm font-mono leading-relaxed"
+              />
+              <div className="flex items-center justify-between gap-2">
+                <span
+                  className={`text-[10px] tabular-nums ${
+                    prompt.length > 1500
+                      ? "text-rose-700 font-semibold"
+                      : prompt.length > 1200
+                        ? "text-amber-700"
+                        : "text-muted-foreground"
+                  }`}
+                >
+                  {prompt.length} / 1500 chars
+                </span>
+                <div className="flex gap-1.5">
+                  {hasOverride ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={clearOverride}
+                      className="text-muted-foreground"
+                      title="Clear override and return to drafterless"
+                    >
+                      Clear override
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={savePrompt}
+                    disabled={saving || !prompt.trim()}
+                  >
+                    {saving ? "Saving…" : "Save override"}
+                  </Button>
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                Use this when you have a specific scene in mind that the drafterless path
+                doesn&apos;t capture. The override prompt goes verbatim to the image model.
+              </p>
+            </div>
+          ) : null}
         </section>
       </div>
 

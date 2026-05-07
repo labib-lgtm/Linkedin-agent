@@ -1,6 +1,12 @@
 import { logger, task } from "@trigger.dev/sdk/v3";
 import { getServiceClient } from "./lib/supabase.js";
-import { generatePostImages, assembleImagePrompt } from "./lib/imagegen.js";
+import {
+  assembleDrafterlessPrompt,
+  assembleImagePrompt,
+  generatePostImages,
+  joinBodyParagraphs,
+  stripRoleLabels,
+} from "./lib/imagegen.js";
 import { brandConsistencyScore, type Palette } from "./lib/brandcheck.js";
 
 /**
@@ -25,6 +31,8 @@ const STORAGE_BUCKET = "post-assets";
 type Slide = {
   n: number;
   headline: string;
+  supporting: string | null;
+  stat: string | null;
   image_gen_prompt: string | null;
   visual_element: string;
 };
@@ -51,7 +59,7 @@ export const generateSlideImages = task({
 
     const { data: angle, error: aErr } = await client
       .from("angles")
-      .select("account_id, carousel_slides, format")
+      .select("account_id, carousel_slides, format, body_paragraphs, draft_body, hook_chosen, hook_seed")
       .eq("angle_id", angleId)
       .maybeSingle();
     if (aErr || !angle) {
@@ -62,9 +70,6 @@ export const generateSlideImages = task({
     const slide = slides.find((s) => s.n === slideN);
     if (!slide) {
       return { ok: false, angleId, slideN, variants: 0, error: "slide not found" };
-    }
-    if (!slide.image_gen_prompt) {
-      return { ok: false, angleId, slideN, variants: 0, error: "slide has no image_gen_prompt" };
     }
 
     const accountId = angle.account_id as string;
@@ -91,8 +96,54 @@ export const generateSlideImages = task({
     // state compositions.
     const mode: "carousel" | "single-image" =
       angle.format === "carousel" ? "carousel" : "single-image";
-    const finalPrompt = assembleImagePrompt(brandPrefix, slide.image_gen_prompt, palette, {
-      mode,
+
+    // Two paths:
+    //   1. OVERRIDE — slide.image_gen_prompt is set (manually written
+    //      OR drafted via the Sonnet 4 drafter). Use it verbatim.
+    //   2. DRAFTERLESS — image_gen_prompt is empty. Derive the input
+    //      from the post body (image format) or from the slide's
+    //      headline+supporting+stat (carousel format) and send
+    //      directly to the image model with brand framing.
+    const overridePrompt = (slide.image_gen_prompt ?? "").trim();
+    const useOverride = overridePrompt.length > 10;
+
+    let finalPrompt: string;
+    if (useOverride) {
+      finalPrompt = assembleImagePrompt(brandPrefix, overridePrompt, palette, { mode });
+    } else {
+      const postBodyRaw =
+        mode === "carousel"
+          ? // Carousel — use the slide's content as the body fragment
+            // so each slide produces its own targeted image.
+            [slide.headline, slide.supporting, slide.stat]
+              .filter((s): s is string => typeof s === "string" && !!s.trim())
+              .join("\n\n")
+          : // Single image — use the full post body so the image model
+            // picks the strongest metaphor from the whole post.
+            joinBodyParagraphs(
+              angle.body_paragraphs as Array<{ role?: string; text?: string }> | null,
+            ) || (angle.draft_body as string | null) || "";
+      const cleaned = stripRoleLabels(postBodyRaw);
+      if (!cleaned || cleaned.length < 10) {
+        return {
+          ok: false,
+          angleId,
+          slideN,
+          variants: 0,
+          error:
+            "no source text for drafterless image gen — generate copy (or fill the slide) first",
+        };
+      }
+      finalPrompt = assembleDrafterlessPrompt({
+        postBody: cleaned,
+        brandPrefix,
+        palette,
+        mode,
+      });
+    }
+    logger.info("image gen prompt selected", {
+      path: useOverride ? "override" : "drafterless",
+      promptChars: finalPrompt.length,
     });
 
     // Image model from app_settings (openrouter.image_model). Fall back

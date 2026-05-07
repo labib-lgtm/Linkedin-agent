@@ -19,27 +19,43 @@ export async function POST(
     return NextResponse.json({ error: "invalid_slide_n" }, { status: 400 });
   }
 
-  // Validate angle has slides + the picked slide has an image_gen_prompt.
+  // Validate angle has either:
+  //   (a) a slide with image_gen_prompt set (override path), OR
+  //   (b) post body / draft body / slide content the trigger task can
+  //       send drafterless to the image model.
   const supabase = createServiceClient();
   const { data: angle, error } = await supabase
     .from("angles")
-    .select("carousel_slides")
+    .select("carousel_slides, body_paragraphs, draft_body, format")
     .eq("angle_id", angleId)
     .maybeSingle();
-  if (error || !angle?.carousel_slides) {
-    return NextResponse.json({ error: "no_slides_yet" }, { status: 400 });
+  if (error || !angle) {
+    return NextResponse.json({ error: "angle_not_found" }, { status: 404 });
   }
-  const slides = angle.carousel_slides as Array<{ n: number; image_gen_prompt: string | null }>;
+  const slides = (angle.carousel_slides as Array<{
+    n: number;
+    image_gen_prompt: string | null;
+    headline?: string | null;
+    supporting?: string | null;
+    stat?: string | null;
+  }> | null) ?? [];
   const slide = slides.find((s) => s.n === slideIndex);
   if (!slide) {
     return NextResponse.json({ error: "slide_out_of_range" }, { status: 400 });
   }
-  if (!slide.image_gen_prompt) {
+
+  const hasOverridePrompt = (slide.image_gen_prompt ?? "").trim().length > 10;
+  const hasBody =
+    Array.isArray(angle.body_paragraphs) && (angle.body_paragraphs as unknown[]).length > 0;
+  const hasDraftBody = typeof angle.draft_body === "string" && angle.draft_body.trim().length > 10;
+  const hasSlideContent = typeof slide.headline === "string" && slide.headline.trim().length > 0;
+
+  if (!hasOverridePrompt && !hasBody && !hasDraftBody && !hasSlideContent) {
     return NextResponse.json(
       {
-        error: "no_image_prompt",
+        error: "no_source_text",
         message:
-          "This slide has no image_gen_prompt. Edit the slide and add one (or pick a slide with visual_element = illustration).",
+          "Generate copy first (or write a slide headline) — the drafterless image gen needs source text to translate.",
       },
       { status: 400 },
     );
