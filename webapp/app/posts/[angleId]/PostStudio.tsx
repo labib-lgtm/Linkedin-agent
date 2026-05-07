@@ -9,6 +9,7 @@ import { MarkDraftedButton } from "./MarkDraftedButton";
 import { MarkVisualReadyButton } from "./MarkVisualReadyButton";
 import { RenderAndPublishButton } from "./RenderAndPublishButton";
 import { SlideStudio } from "@/components/posts/SlideStudio";
+import { ImageStudio } from "@/components/posts/ImageStudio";
 import { CoherencePanel, type CoherenceScores } from "@/components/posts/CoherencePanel";
 import { LinkedInPreview } from "@/components/posts/LinkedInPreview";
 import type { Palette, Slide } from "@/components/posts/SlideCard";
@@ -79,10 +80,12 @@ export function PostStudio({
     return Array.isArray(angle.body_paragraphs) && angle.body_paragraphs.length > 0;
   }, [angle.body_paragraphs]);
 
-  // Mark Visual Ready gating: copy present AND (text format OR every
-  // slide that requested an illustration has a picked image) AND last
-  // coherence check passed publishable (or hasn't been run — we let
-  // the operator override by running it themselves).
+  // Mark Visual Ready gating:
+  //   text/poll  → copy present
+  //   image      → copy + picked image variant in slide_image_paths['1']
+  //   carousel   → copy + slides + every illustrated slide has a pick
+  //   video      → copy (video script lands later)
+  // Plus the coherence publish-check must pass (or not have been run).
   const visualReady = useMemo(() => {
     if (!hasCopy) return false;
     if (angle.format === "carousel") {
@@ -92,6 +95,10 @@ export function PostStudio({
         if (s.image_gen_prompt && !paths[String(s.n)]) return false;
       }
       if (slides.length === 0) return false;
+    }
+    if (angle.format === "image") {
+      const path = angle.slide_image_paths?.["1"];
+      if (!path) return false;
     }
     if (angle.coherence_scores && !angle.coherence_scores.publishable.ok) return false;
     return true;
@@ -194,17 +201,29 @@ export function PostStudio({
         </div>
       </div>
 
-      {/* RIGHT pane: Slide studio (Phase B). Phase C will fill in image
-          variants + brand check inside this same component. */}
-      <SlideStudio
-        angleId={angle.angle_id}
-        format={angle.format}
-        carouselTemplate={angle.carousel_template}
-        carouselSlides={angle.carousel_slides}
-        slideImagePaths={angle.slide_image_paths}
-        brandPalette={brandPalette}
-        onUpdate={(next) => setAngle((cur) => ({ ...cur, ...next }))}
-      />
+      {/* RIGHT pane: format-specific studio.
+            carousel → SlideStudio (template + slide grid + variants)
+            image    → ImageStudio (single prompt + 4 variants)
+            other    → SlideStudio's "no slides" placeholder */}
+      {angle.format === "image" ? (
+        <ImageStudio
+          angleId={angle.angle_id}
+          carouselSlides={angle.carousel_slides}
+          slideImagePaths={angle.slide_image_paths}
+          approvedAngleText={angle.hook_seed ?? angle.draft_body ?? null}
+          onUpdate={(next) => setAngle((cur) => ({ ...cur, ...next }))}
+        />
+      ) : (
+        <SlideStudio
+          angleId={angle.angle_id}
+          format={angle.format}
+          carouselTemplate={angle.carousel_template}
+          carouselSlides={angle.carousel_slides}
+          slideImagePaths={angle.slide_image_paths}
+          brandPalette={brandPalette}
+          onUpdate={(next) => setAngle((cur) => ({ ...cur, ...next }))}
+        />
+      )}
 
       {/* Phase D FABs */}
       <CoherencePanel

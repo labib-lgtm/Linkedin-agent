@@ -45,6 +45,9 @@ const ALLOWED_FIELDS = new Set<string>([
   "hook_chosen",
   "dm_response_template",
   "dm_response_includes_link",
+  // Phase B/C: needed for image-format studio + manual slide ops
+  "carousel_slides",
+  "slide_image_paths",
 ]);
 
 const CTA_ARCHETYPES = new Set(["follow", "comment", "dm", "click", "demo"]);
