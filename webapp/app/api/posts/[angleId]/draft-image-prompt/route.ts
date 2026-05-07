@@ -63,16 +63,15 @@ export async function POST(
 
   let drafted: string;
   try {
-    // Sonnet 4 over Haiku for the drafter — image-prompt creation
-    // benefits from richer metaphor work + tighter constraint
-    // following (refusing to default to dashboards/UIs). Single
-    // ≤220-token call fits comfortably under the 10s Vercel ceiling.
+    // Sonnet 4 with tight max_tokens. Lower than 220 to physically
+    // prevent the model from returning multi-paragraph output —
+    // ~120 tokens forces a single sentence/clause, ~50 words.
     drafted = await generateText({
       system: imagePromptDrafterSystemPrompt(business),
       user: userPrompt,
       model: "anthropic/claude-sonnet-4",
       temperature: 0.85,
-      maxTokens: 220,
+      maxTokens: 120,
       timeoutMs: 9_000,
     });
   } catch (e) {
@@ -88,12 +87,39 @@ export async function POST(
     );
   }
 
-  // Strip wrapping quotes / extra whitespace / leading "The image shows" filler.
-  const cleaned = drafted
-    .trim()
-    .replace(/^["'`]|["'`]$/g, "")
-    .replace(/^(the image shows|image:|brief:|visual:)\s*/i, "")
-    .trim();
+  // Aggressive post-processing to make sure the output is a single
+  // visual brief, not the post body in disguise. Catches role labels
+  // ("Hook", "Setup") that operators have pasted in OR that the LLM
+  // echoed back from the user message.
+  let cleaned = drafted.trim();
+  // Strip wrapping quotes
+  cleaned = cleaned.replace(/^["'`]+|["'`]+$/g, "").trim();
+  // Strip leading filler
+  cleaned = cleaned.replace(
+    /^(the image shows|image:|brief:|visual:|subject:|description:)\s*/i,
+    "",
+  );
+  // Strip stray role labels mid-text (Hook, Setup, Pivot, List, Payoff,
+  // CTA appearing on their own as section headers)
+  cleaned = cleaned.replace(
+    /^(?:hook|setup|pivot|list|payoff|cta|body|paragraph)\s*[:.\-]?\s*$/gim,
+    "",
+  );
+  // Collapse all whitespace to single spaces — single-line output
+  cleaned = cleaned.replace(/\s+/g, " ").trim();
+  // Hard cap at 300 chars; take up to the last sentence-end before that
+  if (cleaned.length > 300) {
+    const truncated = cleaned.slice(0, 300);
+    const lastPeriod = truncated.lastIndexOf(".");
+    cleaned = lastPeriod > 100 ? truncated.slice(0, lastPeriod + 1) : truncated;
+  }
+
+  if (cleaned.length < 20) {
+    return NextResponse.json(
+      { error: "draft_too_short", message: "Drafter returned an unusably short brief — try again." },
+      { status: 502 },
+    );
+  }
 
   return NextResponse.json({ prompt: cleaned });
 }

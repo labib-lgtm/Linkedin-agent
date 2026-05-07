@@ -169,29 +169,53 @@ export function ImageStudio({
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            rows={6}
+            rows={4}
             placeholder={
-              "Describe what the PICTURE LITERALLY SHOWS — a subject, a scene, a chart, a diagram. " +
-              "Don't describe what the picture is 'about' (the model will render those words as text). " +
-              "Example: 'A magnifying glass hovering over an Amazon product listing, with a faded ad campaign dashboard behind it.' " +
-              "Brand style + palette comes from your Brand Prompt Prefix automatically."
+              "Describe what the picture LITERALLY SHOWS — one subject, one scene. " +
+              "Example: 'A bucket with five holes of varying sizes, water streaming out at different rates.' " +
+              "Keep under 300 chars. Brand style + palette is added automatically."
             }
             className="text-sm"
           />
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={savePrompt}
-              disabled={saving || !prompt.trim()}
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className={`text-[10px] tabular-nums ${
+                prompt.length > 300
+                  ? "text-rose-700 font-semibold"
+                  : prompt.length > 200
+                    ? "text-amber-700"
+                    : "text-muted-foreground"
+              }`}
             >
-              {saving ? "Saving…" : "Save prompt"}
-            </Button>
+              {prompt.length} / 300 chars
+              {prompt.length > 300 ? " · too long, image model will pick random visuals" : ""}
+            </span>
+            <div className="flex gap-1.5">
+              {prompt ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setPrompt("")}
+                  className="text-muted-foreground"
+                  title="Clear and start over"
+                >
+                  Clear
+                </Button>
+              ) : null}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={savePrompt}
+                disabled={saving || !prompt.trim()}
+              >
+                {saving ? "Saving…" : "Save prompt"}
+              </Button>
+            </div>
           </div>
           <p className="text-[10px] text-muted-foreground leading-snug">
-            <strong className="text-foreground">Tip:</strong> use <em>↺ Draft from post body</em> to
-            let the system pick the strongest visual metaphor from your generated body — that&apos;s
-            usually a better starting point than describing the post abstractly.
+            <strong className="text-foreground">Tip:</strong> use <em>↺ Draft from post body</em>{" "}
+            for a clean single-visual brief. Pasting the whole post body here gets generic
+            output — the image model can&apos;t pick a single subject from a long passage.
           </p>
         </section>
       </div>
