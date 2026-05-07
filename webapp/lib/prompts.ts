@@ -251,33 +251,40 @@ export function imagePromptDrafterSystemPrompt(b: BusinessProfile): string {
 
 Business: ${b.name}. Audience: ${b.audience}.
 
-Rules — non-negotiable:
+PROCESS — follow these steps internally before writing the brief:
 
-1. Describe what the PICTURE LITERALLY SHOWS. A subject, an object, a scene, a physical metaphor. NOT "an image about X" or "an illustration related to X."
+Step 1: Read the post. Extract every CONCRETE NOUN: real products, named platforms, real places, real tools, real systems, real objects (e.g. "Amazon listing", "product packaging", "ad campaign", "shopping cart", "search bar", "shelf", "barcode", "warehouse", "highway", "ledger", "spreadsheet", "envelope", "key", "letter", "thermometer"). The post's TOPIC supplies these.
 
-2. Pick the strongest SINGLE metaphor from the post and physicalize it. If the post is about "5 paid social mistakes leaking $4–47k/mo," the picture might be: "A bucket with five distinct holes of varying sizes, water (representing money) streaming out at different rates onto the ground."
+Step 2: Pick the strongest single metaphor that captures the post's TENSION (e.g. fixing the wrong thing while the real problem sits ignored, leaking money, narrowing funnel, tangled process).
 
-3. PROHIBITED subjects — these always come back as text-heavy AI slop:
-   - Dashboards, monitors, screens, UI mockups, charts with labels
-   - Bar charts / line graphs unless drawn by hand on paper
-   - Magnifying glasses on listing pages with stat overlays
-   - People's faces, headshots, professional portraits
-   - Stock-photo office scenes (laptops on desks, sticky notes, coffee)
-   - Anything with KPI labels, percentages, or stat callouts baked into the picture
+Step 3: Combine. The image must reference AT LEAST ONE concrete noun from Step 1 visually. Generic abstract metaphors are FORBIDDEN if they erase the post's subject matter.
 
-4. PREFERRED subjects — physical metaphors that translate cleanly to illustration:
-   - Real-world objects standing in for abstract concepts (a leaking bucket = wasted spend; a maze = funnel; a tangled knot = complexity; a tightrope walker = balance; a key + lock = unlock; a door ajar = opportunity; gears meshing or grinding = process)
-   - Natural scenes (a single tree on a hill, a path forking, water flowing, fire spreading)
-   - Hand-drawn / etched / printed feel (woodcut, scratchboard, ink wash) over photorealism
-   - Architecture, vessels, instruments, tools — solid physical things
+GROUNDED vs UNGROUNDED examples:
 
-5. NEVER ask for text on the image. No words, no labels, no captions, no headlines, no logos, no numbers, no percentages. The post copy carries the words. The image carries the picture.
+Post: "If your CVR is below 8%, your ad problem is a listing problem. Stop touching bids."
+  ❌ Ungrounded (abstract): "A person adjusting dials on a control panel while ignoring a crack in the foundation beneath them."
+  ✅ Grounded (concrete): "A pristine Amazon-style product listing with crisp packaging and a clean label, while behind it a person frantically twists knobs on a separate billboard for ads — the ads bright and shiny, the listing dusty and ignored."
+  ✅ Grounded (alternate): "A cardboard product box with a faded, peeling label sitting on a shelf, while a hand is busy painting fresh paint onto a separate advertising poster nearby."
 
-6. Concrete and specific. "A bucket with five holes" beats "leaking money concept." "A single match lighting a row of dominoes" beats "chain reaction visual."
+Post: "5 paid social mistakes killing your CAC."
+  ❌ Ungrounded: "A leaking bucket with five holes."
+  ✅ Grounded: "A social media feed scrolling on a tablet, with five small leaks dripping coins from the corners of five different sponsored-ad cards."
 
-7. ≤ 50 words. Single line. Subject + composition only.
+Post: "We tested 47 hooks last quarter."
+  ❌ Ungrounded: "A row of 47 fishing hooks."
+  ✅ Grounded: "A spread of 47 LinkedIn-post-shaped paper cards laid across a desk, each with a small fishhook icon, one card highlighted brighter than the others."
 
-Output: one line of plain text, the visual brief itself. No preamble, no JSON, no quotes, no "the image shows" preface. The brand style + palette is added separately, so omit color/style/medium language entirely — just describe the subject and composition.`;
+PROHIBITED subjects — these always come back as text-heavy AI slop:
+  - Dashboards, monitors, screens, UI mockups, charts with labels
+  - Bar/line graphs unless drawn by hand on paper
+  - People's faces, headshots, professional portraits
+  - Stock-photo office scenes (laptops on desks, sticky notes, coffee mugs as the focal subject)
+  - KPI labels, percentages, stat callouts baked into the picture
+  - Generic "control panel" / "foundation crack" / "leaking bucket" metaphors that don't reference the post's actual subject matter
+
+NEVER ask for text on the image. No words, no labels, no captions, no headlines, no logos, no numbers, no percentages. The post copy carries the words. The image carries the picture.
+
+Output: one line of plain text, the visual brief itself. ≤ 50 words. The brand style + palette is added separately, so omit color/style/medium language entirely. No preamble, no JSON, no quotes, no "the image shows" preface. Just the subject + composition, grounded in at least one concrete noun from the post.`;
 }
 
 // Phase G: AI-drafted comment replies + outbound comments.
