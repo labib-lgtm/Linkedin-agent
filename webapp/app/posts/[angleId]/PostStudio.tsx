@@ -95,7 +95,7 @@ export function PostStudio({
     angle.coherence_scores,
   ]);
 
-  async function generateCopy(opts: { hookOnly?: boolean; ctaArchetype?: string } = {}) {
+  async function generateCopy(opts: { hookOnly?: boolean; ctaOnly?: boolean; ctaArchetype?: string } = {}) {
     setGenerating(true);
     try {
       const res = await fetch(`/api/posts/${angle.angle_id}/generate-copy`, {
@@ -108,10 +108,13 @@ export function PostStudio({
         throw new Error(data?.message ?? data?.error ?? `HTTP ${res.status}`);
       }
       setAngle(data.angle);
-      const note =
-        data.voice_samples_used > 0
-          ? `Generated · ${data.voice_samples_used} voice samples grounding`
-          : "Generated · using business.voice fallback (no posted history yet)";
+      const note = opts.ctaOnly
+        ? "CTA rewritten under the new archetype"
+        : opts.hookOnly
+          ? "Hook variants regenerated"
+          : data.voice_samples_used > 0
+            ? `Generated · ${data.voice_samples_used} voice samples grounding`
+            : "Generated · using business.voice fallback (no posted history yet)";
       toast.success(note);
       startTransition(() => router.refresh());
     } catch (e) {

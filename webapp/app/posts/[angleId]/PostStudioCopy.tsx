@@ -38,7 +38,7 @@ export function PostStudioCopy({
 }: {
   angle: StudioAngle;
   generating: boolean;
-  onGenerate: (opts?: { hookOnly?: boolean; ctaArchetype?: string }) => Promise<void>;
+  onGenerate: (opts?: { hookOnly?: boolean; ctaOnly?: boolean; ctaArchetype?: string }) => Promise<void>;
   onPatch: (patch: Partial<StudioAngle>) => Promise<StudioAngle>;
 }) {
   const hookVariants = angle.hook_variants ?? [];
@@ -96,16 +96,21 @@ export function PostStudioCopy({
     }
   }
 
+  const [archetypeBusy, setArchetypeBusy] = useState(false);
+
   async function setArchetype(id: string) {
-    if (id === angle.cta_archetype) return;
+    if (id === angle.cta_archetype || archetypeBusy) return;
+    setArchetypeBusy(true);
     try {
+      // Optimistic chip flip while the regen runs.
       await onPatch({ cta_archetype: id });
-      // Regenerate just the CTA copy under the new archetype. Simplest
-      // path is to re-run generate-copy with hookOnly=false; we accept
-      // the hook + body churn for the better CTA copy. (A surgical
-      // CTA-only LLM call is a Phase A.1 nice-to-have.)
+      // Surgical CTA-only regen — keeps hooks + body intact, only
+      // rewrites cta_text + pin_comment under the new archetype.
+      await onGenerate({ ctaOnly: true, ctaArchetype: id });
     } catch (e) {
       toast.error(`Archetype change failed: ${(e as Error).message}`);
+    } finally {
+      setArchetypeBusy(false);
     }
   }
 

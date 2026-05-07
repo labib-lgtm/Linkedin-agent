@@ -83,7 +83,7 @@ async function handle(
   const { angleId } = await ctx.params;
   const supabase = createServiceClient();
 
-  let body: { ctaArchetype?: string; hookOnly?: boolean } = {};
+  let body: { ctaArchetype?: string; hookOnly?: boolean; ctaOnly?: boolean } = {};
   try {
     body = await req.json();
   } catch {
@@ -170,14 +170,29 @@ async function handle(
       text: p.text.trim(),
     }));
 
-  // hookOnly path: keep prior body / cta / pin if present, only update hooks.
+  // Three modes:
+  //   hookOnly  — keep body + cta + pin, only update hook variants
+  //   ctaOnly   — keep hooks + body, only update cta_archetype + cta_text + pin
+  //   default   — full regen
   const patch: Record<string, unknown> = {
-    hook_variants: hookVariants,
-    selected_hook_index: selectedIndex,
     copy_generated_at: new Date().toISOString(),
   };
 
-  if (!body.hookOnly) {
+  if (body.ctaOnly) {
+    patch.cta_archetype = ctaArchetype;
+    patch.cta_text = (copy.cta_text ?? "").trim() || null;
+    patch.pin_comment = (copy.pin_comment ?? "").trim() || null;
+  } else if (body.hookOnly) {
+    patch.hook_variants = hookVariants;
+    patch.selected_hook_index = selectedIndex;
+    patch.hook_chosen = hookVariants[selectedIndex].text;
+    patch.hook_alternates = hookVariants
+      .filter((_, i) => i !== selectedIndex)
+      .map((h) => h.text)
+      .join("\n");
+  } else {
+    patch.hook_variants = hookVariants;
+    patch.selected_hook_index = selectedIndex;
     patch.body_paragraphs = bodyParagraphs;
     patch.cta_archetype = ctaArchetype;
     patch.cta_text = (copy.cta_text ?? "").trim() || null;
