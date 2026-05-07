@@ -87,12 +87,26 @@ export const generateSlideImages = task({
 
     const finalPrompt = assembleImagePrompt(brandPrefix, slide.image_gen_prompt);
 
+    // Image model from app_settings (openrouter.image_model). Fall back
+    // to the lib's default when unset.
+    let modelOverride: string | undefined = undefined;
+    try {
+      const { data: settings } = await client
+        .from("app_settings")
+        .select("values")
+        .eq("id", 1)
+        .maybeSingle();
+      const val = (settings?.values as Record<string, string> | null)?.["openrouter.image_model"];
+      if (typeof val === "string" && val.trim()) modelOverride = val.trim();
+    } catch {
+      // app_settings table missing — env var fallback handles it.
+    }
+
     let variants;
     try {
       variants = await generatePostImages(finalPrompt, {
         n: 4,
-        size: "1024x1024",
-        quality: "medium",
+        model: modelOverride,
       });
     } catch (e) {
       logger.error("image gen failed", { error: (e as Error).message });

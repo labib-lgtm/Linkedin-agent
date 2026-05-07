@@ -55,16 +55,8 @@ export async function POST(
       { status: 503 },
     );
   }
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json(
-      {
-        error: "openai_not_configured",
-        message:
-          "OPENAI_API_KEY env var missing. Set it in the Trigger.dev project's Environment Variables (prod + dev).",
-      },
-      { status: 503 },
-    );
-  }
+  // OPENROUTER_API_KEY is checked inside the Trigger.dev task; if it's
+  // missing the run fails with a clear error in the worker logs.
 
   try {
     const handle = await tasks.trigger("generate-slide-images", {
