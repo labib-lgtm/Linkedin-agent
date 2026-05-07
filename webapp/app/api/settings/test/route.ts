@@ -80,28 +80,104 @@ async function testUnipile() {
 async function testOpenRouter() {
   const apiKey = await getSetting("openrouter.api_key");
   if (!apiKey) return { ok: false, message: "Set api_key first" };
+
   const controller = new AbortController();
   const abortTimer = setTimeout(() => controller.abort(), 8000);
   abortTimer.unref?.();
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/key", {
-      headers: { Authorization: `Bearer ${apiKey}`, accept: "application/json" },
-      signal: controller.signal,
-    });
+    // Run the auth probe + the model-catalog fetch in parallel so the
+    // 8s budget covers both. Catalog is ~150 KB, ~500ms typical.
+    const [authRes, modelsRes] = await Promise.all([
+      fetch("https://openrouter.ai/api/v1/key", {
+        headers: { Authorization: `Bearer ${apiKey}`, accept: "application/json" },
+        signal: controller.signal,
+      }),
+      fetch("https://openrouter.ai/api/v1/models", {
+        headers: { accept: "application/json" },
+        signal: controller.signal,
+      }),
+    ]);
     clearTimeout(abortTimer);
-    if (res.ok) {
-      const data = (await res.json().catch(() => ({}))) as { data?: { label?: string; usage?: number } };
-      const label = data.data?.label ?? "unnamed key";
-      return { ok: true, message: `Authenticated — ${label}` };
+
+    if (!authRes.ok) {
+      return { ok: false, message: `OpenRouter auth returned ${authRes.status}` };
     }
-    return {
-      ok: false,
-      message: `OpenRouter returned ${res.status}`,
+    const authData = (await authRes.json().catch(() => ({}))) as {
+      data?: { label?: string; usage?: number };
     };
+    const label = authData.data?.label ?? "unnamed key";
+
+    // Validate the configured image model + text model are both in the
+    // OpenRouter catalog. Catches typos in the model id before any
+    // generation actually fires.
+    const imageModel = await getSetting("openrouter.image_model");
+    const textModel = await getSetting("openrouter.text_model");
+
+    let modelMsg = "";
+    if (modelsRes.ok && (imageModel || textModel)) {
+      type ModelEntry = { id?: string };
+      type ModelsPayload = { data?: ModelEntry[] };
+      const models = (await modelsRes.json().catch(() => ({}))) as ModelsPayload;
+      const ids = new Set(
+        (models.data ?? []).map((m) => (m.id ?? "").toLowerCase()),
+      );
+
+      const issues: string[] = [];
+      if (imageModel && !ids.has(imageModel.toLowerCase())) {
+        const suggestion = guessModel(imageModel, ids);
+        issues.push(
+          suggestion
+            ? `image model "${imageModel}" not found — did you mean "${suggestion}"?`
+            : `image model "${imageModel}" not found in catalog`,
+        );
+      }
+      if (textModel && !ids.has(textModel.toLowerCase())) {
+        const suggestion = guessModel(textModel, ids);
+        issues.push(
+          suggestion
+            ? `text model "${textModel}" not found — did you mean "${suggestion}"?`
+            : `text model "${textModel}" not found in catalog`,
+        );
+      }
+      if (issues.length > 0) {
+        return { ok: false, message: `Auth OK (${label}). ${issues.join(" · ")}` };
+      }
+      const checked: string[] = [];
+      if (imageModel) checked.push(`image=${imageModel}`);
+      if (textModel) checked.push(`text=${textModel}`);
+      modelMsg = checked.length > 0 ? ` · ${checked.join(", ")} valid` : "";
+    }
+
+    return { ok: true, message: `Authenticated — ${label}${modelMsg}` };
   } catch (e) {
     clearTimeout(abortTimer);
     return { ok: false, message: `Network: ${(e as Error).message}` };
   }
+}
+
+// Tiny similarity guess to surface "did you mean" when the configured
+// id isn't in the catalog. Substring containment is enough for typo
+// catches like "gpt-5-image-mini" vs "gpt-image-1-mini".
+function guessModel(target: string, catalog: Set<string>): string | null {
+  const t = target.toLowerCase();
+  // Provider/family root, e.g. "openai/gpt" from "openai/gpt-5-image-mini"
+  const root = t.replace(/[\d-]+(image|mini|preview|pro|flash)?$/g, "").replace(/-+$/, "");
+  if (root.length < 4) return null;
+  let best: string | null = null;
+  let bestScore = 0;
+  for (const id of catalog) {
+    if (!id.startsWith(root.split("-")[0])) continue;
+    let score = 0;
+    if (id.includes("image")) score += 2;
+    if (t.includes("mini") && id.includes("mini")) score += 2;
+    if (t.includes("preview") && id.includes("preview")) score += 1;
+    if (id.includes(root)) score += 1;
+    if (score > bestScore) {
+      bestScore = score;
+      best = id;
+    }
+  }
+  return bestScore >= 2 ? best : null;
 }
 
 async function testSupabase() {
