@@ -124,16 +124,21 @@ interface CommentListResponse {
 /** Fetch comments on a post. The exact endpoint shape varies by Unipile
  *  DSN version; we try the /posts/:id/comments form first, then the flat
  *  /comments?post_id= fallback (mirrors tools/unipile_monitor_comments.py
- *  _fetch_comments at lines 94–119). */
+ *  _fetch_comments at lines 94–119).
+ *
+ *  Unipile GET endpoints require account_id as a query param (POSTs accept
+ *  it in the body). Both URLs include it. */
 export async function fetchPostComments(postId: string): Promise<UnipileComment[]> {
-  const primary = `/api/v1/posts/${encodeURIComponent(postId)}/comments`;
+  const accountId = encodeURIComponent(env("UNIPILE_LINKEDIN_ACCOUNT_ID"));
+  const encodedId = encodeURIComponent(postId);
+  const primary = `/api/v1/posts/${encodedId}/comments?account_id=${accountId}`;
   try {
     const r = await request<CommentListResponse>("GET", primary);
     return r.items ?? r.data ?? r.comments ?? [];
   } catch (e) {
     // Fall back to the flat endpoint with post_id query.
     try {
-      const fallback = `/api/v1/comments?post_id=${encodeURIComponent(postId)}`;
+      const fallback = `/api/v1/comments?post_id=${encodedId}&account_id=${accountId}`;
       const r = await request<CommentListResponse>("GET", fallback);
       return r.items ?? r.data ?? r.comments ?? [];
     } catch {
