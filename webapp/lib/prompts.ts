@@ -253,26 +253,45 @@ Business: ${b.name}. Audience: ${b.audience}.
 
 PROCESS — follow these steps internally before writing the brief:
 
-Step 1: Read the post. Extract every CONCRETE NOUN: real products, named platforms, real places, real tools, real systems, real objects (e.g. "Amazon listing", "product packaging", "ad campaign", "shopping cart", "search bar", "shelf", "barcode", "warehouse", "highway", "ledger", "spreadsheet", "envelope", "key", "letter", "thermometer"). The post's TOPIC supplies these.
+Step 1: Read the post. Extract every CONCRETE NOUN: real products, named platforms, real places, real tools, real systems, real objects.
 
-Step 2: Pick the strongest single metaphor that captures the post's TENSION (e.g. fixing the wrong thing while the real problem sits ignored, leaking money, narrowing funnel, tangled process).
+Step 2: TRANSLATE digital things into PHYSICAL DOCUMENT equivalents. Image models can't render screens / webpages / apps cleanly (they come back blurry or with text overlays). So every digital noun must be re-mapped:
+   - Amazon product listing      → a printed product spec sheet on paper (with hand-drawn product silhouette + bullet lines, no text)
+   - Web page / landing page     → a printed flyer or single-page brochure
+   - Ad campaign / paid social   → a printed advertising poster or pinned billboard sheet
+   - Dashboard / analytics       → an open hand-drawn ledger book or spreadsheet on paper
+   - Social media feed           → a stack of pinned cards on a corkboard
+   - Spreadsheet / KPI report    → an open paper ledger with hand-ruled rows
+   - Inbox / DM / email          → a paper letter, an envelope, a stack of mail
+   - Search bar / search result  → a paper card pulled from a card catalog drawer
+   - Shopping cart / checkout    → a tin shopping basket with paper receipts
+   - Funnel / pipeline           → a glass funnel with marbles, or a row of paper cups
+The image renders the PHYSICAL form, not the digital one. Always.
 
-Step 3: Combine. The image must reference AT LEAST ONE concrete noun from Step 1 visually. Generic abstract metaphors are FORBIDDEN if they erase the post's subject matter.
+Step 3: Pick the strongest single metaphor that captures the post's TENSION (fixing the wrong thing, leaking money, narrowing, tangled, ignored).
 
-GROUNDED vs UNGROUNDED examples:
+Step 4: Pick ONE focal subject. Do not write "X in background WHILE Y in foreground" — that produces split compositions where the image model picks whichever it understands more concretely. One subject, centered. Other elements can be implied (a faded poster behind, a closed door beside) but the focal subject is single.
+
+Step 5: Combine. The image must reference at least one concrete noun from Step 1 (translated via Step 2 if digital). Generic abstract metaphors are FORBIDDEN if they erase the post's subject matter.
+
+GROUNDED vs UNGROUNDED examples (notice how digital things become PHYSICAL DOCUMENTS, and the composition has ONE focal subject):
 
 Post: "If your CVR is below 8%, your ad problem is a listing problem. Stop touching bids."
-  ❌ Ungrounded (abstract): "A person adjusting dials on a control panel while ignoring a crack in the foundation beneath them."
-  ✅ Grounded (concrete): "A pristine Amazon-style product listing with crisp packaging and a clean label, while behind it a person frantically twists knobs on a separate billboard for ads — the ads bright and shiny, the listing dusty and ignored."
-  ✅ Grounded (alternate): "A cardboard product box with a faded, peeling label sitting on a shelf, while a hand is busy painting fresh paint onto a separate advertising poster nearby."
+  ❌ Ungrounded (abstract): "A person adjusting dials on a control panel while ignoring a crack in the foundation."
+  ❌ Split composition (two subjects): "A pristine Amazon listing on a shelf in the background, while a hand frantically adjusts dials on a control panel in the foreground."
+  ✅ Grounded + single subject: "A printed product spec sheet on cream paper, sitting yellowed and dust-covered on a wooden desk, while above it a freshly painted advertising poster has been pinned with three brand-new pushpins."
+  ✅ Alternate: "A folded paper product brochure tucked into the corner of a corkboard, sun-faded, while bright new advertising flyers cover most of the board."
 
 Post: "5 paid social mistakes killing your CAC."
   ❌ Ungrounded: "A leaking bucket with five holes."
-  ✅ Grounded: "A social media feed scrolling on a tablet, with five small leaks dripping coins from the corners of five different sponsored-ad cards."
+  ✅ Grounded: "A stack of five printed advertising flyers pinned to a board, each with a small coin-shaped hole punched through the center, coins falling out beneath."
 
 Post: "We tested 47 hooks last quarter."
-  ❌ Ungrounded: "A row of 47 fishing hooks."
-  ✅ Grounded: "A spread of 47 LinkedIn-post-shaped paper cards laid across a desk, each with a small fishhook icon, one card highlighted brighter than the others."
+  ❌ Ungrounded: "A row of fishing hooks."
+  ✅ Grounded: "A worn cork pinboard with rows of 47 small printed cards arranged in a grid, one card highlighted brighter and pinned at a slight angle as if just selected."
+
+Post: "How we fixed our cold DMs after 200 fails."
+  ✅ Grounded: "A stack of opened envelopes spilling across a wooden desk, with a single fresh sealed envelope set apart on top, illuminated."
 
 PROHIBITED subjects — these always come back as text-heavy AI slop:
   - Dashboards, monitors, screens, UI mockups, charts with labels
