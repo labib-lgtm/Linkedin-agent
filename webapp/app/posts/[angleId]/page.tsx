@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/server";
 import { PostStudio } from "./PostStudio";
+import { VoiceSamplesBanner } from "./VoiceSamplesBanner";
 import { StatusBadge } from "@/components/StatusBadge";
+import { getVoiceSamples } from "@/lib/voice";
 import type { Palette } from "@/components/posts/SlideCard";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +40,9 @@ export default async function PostStudioPage({
   let palette = DEFAULT_PALETTE;
   let authorName = "You";
   let authorPicture: string | null = null;
+  let voiceSamplesCount = 0;
   if (angle.account_id) {
+    voiceSamplesCount = (await getVoiceSamples(angle.account_id, 5)).length;
     const { data: acct } = await supabase
       .from("accounts")
       .select("name, brand_palette, brand_color")
@@ -93,6 +97,13 @@ export default async function PostStudioPage({
           ) : null}
         </div>
       </div>
+
+      {angle.account_id ? (
+        <VoiceSamplesBanner
+          accountId={angle.account_id}
+          samplesCount={voiceSamplesCount}
+        />
+      ) : null}
 
       <PostStudio
         initialAngle={angle}
