@@ -121,29 +121,64 @@ interface CommentListResponse {
   cursor?: unknown;
 }
 
-/** Fetch comments on a post. The exact endpoint shape varies by Unipile
- *  DSN version; we try the /posts/:id/comments form first, then the flat
- *  /comments?post_id= fallback (mirrors tools/unipile_monitor_comments.py
- *  _fetch_comments at lines 94–119).
+/** Fetch comments on a post. Unipile is finicky about the post identifier
+ *  shape — sometimes it accepts the bare numeric activity id, sometimes
+ *  it demands a full URN. We try the most-likely forms in sequence and
+ *  return on the first success.
  *
- *  Unipile GET endpoints require account_id as a query param (POSTs accept
- *  it in the body). Both URLs include it. */
+ *  Unipile GET endpoints also require account_id as a query param (POSTs
+ *  accept it in the body). All URLs below include it. */
 export async function fetchPostComments(postId: string): Promise<UnipileComment[]> {
   const accountId = encodeURIComponent(env("UNIPILE_LINKEDIN_ACCOUNT_ID"));
-  const encodedId = encodeURIComponent(postId);
-  const primary = `/api/v1/posts/${encodedId}/comments?account_id=${accountId}`;
-  try {
-    const r = await request<CommentListResponse>("GET", primary);
-    return r.items ?? r.data ?? r.comments ?? [];
-  } catch (e) {
-    // Fall back to the flat endpoint with post_id query.
+
+  // Build the candidate id list. If the caller already passed a URN we
+  // try that first and bail out if Unipile rejects it. If the caller
+  // passed a bare numeric, we try each URN type in turn — `activity` is
+  // the most common shape for `/feed/update/N/` URLs but Unipile DSNs
+  // disagree on which they accept.
+  const isUrn = /^urn:li:[a-zA-Z]+:\d+$/.test(postId);
+  const numericMatch = postId.match(/^\d+$/);
+  const candidates = isUrn
+    ? [postId]
+    : numericMatch
+      ? [
+          `urn:li:activity:${postId}`,
+          `urn:li:share:${postId}`,
+          `urn:li:ugcPost:${postId}`,
+          postId, // last-resort: bare numeric (some DSNs accept it)
+        ]
+      : [postId];
+
+  let lastErr: unknown = null;
+  for (const candidate of candidates) {
+    const encoded = encodeURIComponent(candidate);
     try {
-      const fallback = `/api/v1/comments?post_id=${encodedId}&account_id=${accountId}`;
-      const r = await request<CommentListResponse>("GET", fallback);
+      const r = await request<CommentListResponse>(
+        "GET",
+        `/api/v1/posts/${encoded}/comments?account_id=${accountId}`,
+      );
       return r.items ?? r.data ?? r.comments ?? [];
-    } catch {
-      throw e;
+    } catch (e) {
+      lastErr = e;
+      // Treat 400 "invalid post_id" as a signal to try the next URN form.
+      // Anything else (auth, 5xx) is fatal — don't keep guessing.
+      const msg = String(e);
+      const isInvalidId = /400/.test(msg) && /invalid post_id|errors\/malformed_request|errors\/invalid_parameters/.test(msg);
+      if (!isInvalidId) break;
     }
+  }
+
+  // Final fallback — flat endpoint with post_id as query param. Use the
+  // original input verbatim here since this endpoint shape may have its
+  // own preferred id form.
+  try {
+    const r = await request<CommentListResponse>(
+      "GET",
+      `/api/v1/comments?post_id=${encodeURIComponent(postId)}&account_id=${accountId}`,
+    );
+    return r.items ?? r.data ?? r.comments ?? [];
+  } catch {
+    throw lastErr ?? new Error("fetchPostComments: all candidates failed");
   }
 }
 
