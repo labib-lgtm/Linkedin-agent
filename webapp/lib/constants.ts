@@ -17,7 +17,7 @@ export const STATUS_VALUES = [
 export type Status = (typeof STATUS_VALUES)[number];
 
 // Statuses shown as kanban columns. Killed is collapsed into a side panel,
-// not a primary column.
+// not a primary column. Kept for worker compatibility.
 export const KANBAN_STATUSES: Status[] = [
   "Pending",
   "Approved",
@@ -28,6 +28,51 @@ export const KANBAN_STATUSES: Status[] = [
   "Posted",
   "Reviewed",
 ];
+
+// Per the project roast: 8 columns is too many. The UI groups statuses
+// into 4 stages, status field stays granular for the worker.
+//   Idea       — pre-production
+//   Producing  — copy + visual + scheduling
+//   Live       — published
+//   Learned    — reviewed for engagement signal
+//
+// Cross-stage drag → status flips to the stage's default-landing
+// status. Inside a stage, the granular status pill on each card lets
+// the operator see + advance state without dedicated columns.
+export const STAGES = [
+  {
+    id: "idea",
+    label: "Idea",
+    statuses: ["Pending", "Approved"] as Status[],
+    landingStatus: "Pending" as Status,
+  },
+  {
+    id: "producing",
+    label: "Producing",
+    statuses: ["Drafting", "Drafted", "Visualizing", "Visual Ready"] as Status[],
+    landingStatus: "Drafting" as Status,
+  },
+  {
+    id: "live",
+    label: "Live",
+    statuses: ["Scheduled", "Posted"] as Status[],
+    landingStatus: "Scheduled" as Status,
+  },
+  {
+    id: "learned",
+    label: "Learned",
+    statuses: ["Reviewed"] as Status[],
+    landingStatus: "Reviewed" as Status,
+  },
+] as const;
+export type StageId = (typeof STAGES)[number]["id"];
+
+export function stageForStatus(status: Status): StageId | null {
+  for (const stage of STAGES) {
+    if ((stage.statuses as readonly Status[]).includes(status)) return stage.id;
+  }
+  return null;
+}
 
 export const PILLAR_VALUES = [
   "Performance Operator",

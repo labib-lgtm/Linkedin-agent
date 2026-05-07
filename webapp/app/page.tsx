@@ -1,5 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/server";
-import { KANBAN_STATUSES, type Status } from "@/lib/constants";
+import { STAGES, stageForStatus, type StageId } from "@/lib/constants";
 import { type Angle } from "@/lib/types";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { KanbanFilters } from "@/components/kanban/KanbanFilters";
@@ -48,11 +48,12 @@ export default async function KanbanPage({
   }
 
   const angles = (data ?? []) as Angle[];
-  const grouped: Record<Status, Angle[]> = Object.fromEntries(
-    KANBAN_STATUSES.map((s) => [s, [] as Angle[]]),
-  ) as Record<Status, Angle[]>;
+  const grouped: Record<StageId, Angle[]> = Object.fromEntries(
+    STAGES.map((s) => [s.id, [] as Angle[]]),
+  ) as Record<StageId, Angle[]>;
   for (const a of angles) {
-    if (a.status in grouped) grouped[a.status].push(a);
+    const stage = stageForStatus(a.status);
+    if (stage) grouped[stage].push(a);
   }
 
   return (

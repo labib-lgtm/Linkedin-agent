@@ -13,36 +13,40 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { toast } from "sonner";
-import { KANBAN_STATUSES, type Status } from "@/lib/constants";
+import { STAGES, stageForStatus, type StageId, type Status } from "@/lib/constants";
 import { type Angle } from "@/lib/types";
 import { KanbanColumn } from "./KanbanColumn";
 import { KanbanCard } from "./KanbanCard";
 
-type Grouped = Record<Status, Angle[]>;
+type Grouped = Record<StageId, Angle[]>;
 
-function findColumn(grouped: Grouped, id: string): Status | null {
-  // id can be a column id (status) or a card id (angle_id).
-  if ((KANBAN_STATUSES as readonly string[]).includes(id)) return id as Status;
-  for (const status of KANBAN_STATUSES) {
-    if (grouped[status].some((a) => a.angle_id === id)) return status;
+const STAGE_IDS = STAGES.map((s) => s.id) as readonly StageId[];
+
+function findStage(grouped: Grouped, id: string): StageId | null {
+  if ((STAGE_IDS as readonly string[]).includes(id)) return id as StageId;
+  for (const stage of STAGE_IDS) {
+    if (grouped[stage].some((a) => a.angle_id === id)) return stage;
   }
   return null;
+}
+
+function landingStatusForStage(stageId: StageId): Status {
+  return STAGES.find((s) => s.id === stageId)!.landingStatus;
 }
 
 export function KanbanBoard({ initial }: { initial: Grouped }) {
   const [grouped, setGrouped] = useState<Grouped>(initial);
   const [activeAngle, setActiveAngle] = useState<Angle | null>(null);
 
-  // distance:5 prevents accidental drags when clicking the link inside the card.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
   function onDragStart(e: DragStartEvent) {
     const id = String(e.active.id);
-    const col = findColumn(grouped, id);
-    if (!col) return;
-    const angle = grouped[col].find((a) => a.angle_id === id) ?? null;
+    const stage = findStage(grouped, id);
+    if (!stage) return;
+    const angle = grouped[stage].find((a) => a.angle_id === id) ?? null;
     setActiveAngle(angle);
   }
 
@@ -51,18 +55,20 @@ export function KanbanBoard({ initial }: { initial: Grouped }) {
     const overId = e.over ? String(e.over.id) : null;
     if (!overId) return;
 
-    const fromCol = findColumn(grouped, activeId);
-    const toCol = findColumn(grouped, overId);
-    if (!fromCol || !toCol || fromCol === toCol) return;
+    const fromStage = findStage(grouped, activeId);
+    const toStage = findStage(grouped, overId);
+    if (!fromStage || !toStage || fromStage === toStage) return;
+
+    const newStatus = landingStatusForStage(toStage);
 
     setGrouped((prev) => {
       const next: Grouped = { ...prev };
-      const sourceItems = [...prev[fromCol]];
+      const sourceItems = [...prev[fromStage]];
       const movingIdx = sourceItems.findIndex((a) => a.angle_id === activeId);
       if (movingIdx === -1) return prev;
       const [moving] = sourceItems.splice(movingIdx, 1);
-      next[fromCol] = sourceItems;
-      next[toCol] = [{ ...moving, status: toCol }, ...prev[toCol]];
+      next[fromStage] = sourceItems;
+      next[toStage] = [{ ...moving, status: newStatus }, ...prev[toStage]];
       return next;
     });
   }
@@ -73,34 +79,30 @@ export function KanbanBoard({ initial }: { initial: Grouped }) {
     setActiveAngle(null);
     if (!overId) return;
 
-    const targetCol = findColumn(grouped, overId);
-    if (!targetCol) return;
+    const targetStage = findStage(grouped, overId);
+    if (!targetStage) return;
 
-    const angle = grouped[targetCol].find((a) => a.angle_id === activeId);
-    if (!angle) return;
+    // Same-stage reorder is local-only. Cross-stage = status change → persist.
+    const originalStage = stageForStatus(
+      Object.values(initial)
+        .flat()
+        .find((a) => a.angle_id === activeId)?.status ?? ("Pending" as Status),
+    );
+    if (originalStage === targetStage) return;
 
-    // Same-column reorder is local-only for now (we don't track per-card order
-    // in Supabase). Cross-column = status change → persist.
-    const originalCol = initial[targetCol].some((a) => a.angle_id === activeId)
-      ? targetCol
-      : (Object.entries(initial).find(([, list]) =>
-          list.some((a) => a.angle_id === activeId),
-        )?.[0] as Status | undefined);
-
-    if (originalCol === targetCol) return;
-
+    const newStatus = landingStatusForStage(targetStage);
     const snapshot = JSON.parse(JSON.stringify(grouped)) as Grouped;
     try {
       const res = await fetch(`/api/angles/${activeId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: targetCol }),
+        body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data?.error ?? `HTTP ${res.status}`);
       }
-      toast.success(`Moved ${activeId} to ${targetCol}`);
+      toast.success(`Moved ${activeId} → ${newStatus}`);
     } catch (err) {
       setGrouped(snapshot);
       toast.error(`Failed to move ${activeId}: ${(err as Error).message}`);
@@ -115,12 +117,13 @@ export function KanbanBoard({ initial }: { initial: Grouped }) {
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
-        {KANBAN_STATUSES.map((status) => (
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {STAGES.map((stage) => (
           <KanbanColumn
-            key={status}
-            status={status}
-            items={grouped[status]}
+            key={stage.id}
+            stageId={stage.id}
+            label={stage.label}
+            items={grouped[stage.id] ?? []}
           />
         ))}
       </div>

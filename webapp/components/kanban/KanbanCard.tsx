@@ -6,6 +6,18 @@ import { CSS } from "@dnd-kit/utilities";
 import { type Angle } from "@/lib/types";
 import { shortDate } from "@/lib/utils";
 
+const STATUS_TONE: Record<string, string> = {
+  Pending: "bg-amber-100 text-amber-800",
+  Approved: "bg-blue-100 text-blue-800",
+  Drafting: "bg-violet-100 text-violet-800",
+  Drafted: "bg-violet-100 text-violet-800",
+  Visualizing: "bg-fuchsia-100 text-fuchsia-800",
+  "Visual Ready": "bg-fuchsia-100 text-fuchsia-800",
+  Scheduled: "bg-cyan-100 text-cyan-800",
+  Posted: "bg-green-100 text-green-800",
+  Reviewed: "bg-stone-200 text-stone-700",
+};
+
 export function KanbanCard({ angle }: { angle: Angle }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: angle.angle_id, data: { type: "card", angle } });
@@ -36,11 +48,21 @@ export function KanbanCard({ angle }: { angle: Angle }) {
           <div className="text-xs font-mono text-muted-foreground">
             {angle.angle_id}
           </div>
-          {formatLabel ? (
-            <span className="text-[10px] font-semibold text-muted-foreground tracking-wider">
-              {formatLabel}
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                STATUS_TONE[angle.status] ?? "bg-muted text-muted-foreground"
+              }`}
+              title={`Status: ${angle.status}`}
+            >
+              {angle.status}
             </span>
-          ) : null}
+            {formatLabel ? (
+              <span className="text-[10px] font-semibold text-muted-foreground tracking-wider">
+                {formatLabel}
+              </span>
+            ) : null}
+          </div>
         </div>
         <p className="mt-2 text-sm font-medium leading-snug line-clamp-3">
           {headline}
