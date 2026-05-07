@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { StudioAngle } from "./PostStudio";
+import { NewMagnetDialog, type LeadMagnet } from "@/app/settings/NewMagnetDialog";
 
 const ROLE_LABEL: Record<string, string> = {
   hook: "Hook",
@@ -60,6 +61,55 @@ export function PostStudioCopy({
   useEffect(() => setLocalDmTemplate(angle.dm_response_template ?? ""), [angle.dm_response_template]);
   const [localDmIncludesLink, setLocalDmIncludesLink] = useState(angle.dm_response_includes_link ?? true);
   useEffect(() => setLocalDmIncludesLink(angle.dm_response_includes_link ?? true), [angle.dm_response_includes_link]);
+
+  // Lead magnet library — fetched once per studio mount; refreshed when
+  // the operator creates a new one inline via NewMagnetDialog.
+  const [magnets, setMagnets] = useState<LeadMagnet[]>([]);
+  const [magnetsLoaded, setMagnetsLoaded] = useState(false);
+  const [newMagnetOpen, setNewMagnetOpen] = useState(false);
+
+  async function loadMagnets() {
+    try {
+      const res = await fetch("/api/settings/lead-magnets");
+      const d = (await res.json()) as { magnets?: LeadMagnet[] };
+      setMagnets(d.magnets ?? []);
+    } catch {
+      // Soft-fail — picker just shows empty state.
+    } finally {
+      setMagnetsLoaded(true);
+    }
+  }
+  useEffect(() => {
+    loadMagnets();
+  }, []);
+
+  async function pickMagnet(magnetId: string) {
+    const m = magnets.find((x) => x.id === magnetId);
+    if (!m) return;
+    try {
+      await onPatch({
+        lead_magnet_id: m.id,
+        lead_magnet_url: m.url,
+        lead_magnet_path: m.file_path,
+      } as Partial<StudioAngle>);
+      toast.success(`Attached "${m.label}"`);
+    } catch (e) {
+      toast.error(`Attach failed: ${(e as Error).message}`);
+    }
+  }
+
+  async function clearMagnet() {
+    try {
+      await onPatch({
+        lead_magnet_id: null,
+        lead_magnet_url: null,
+        lead_magnet_path: null,
+      } as Partial<StudioAngle>);
+      toast.success("Detached lead magnet");
+    } catch (e) {
+      toast.error(`Detach failed: ${(e as Error).message}`);
+    }
+  }
 
   const wordCount = paragraphs.reduce(
     (n, p) => n + (p.text.match(/\S+/g)?.length ?? 0),
@@ -298,16 +348,75 @@ export function PostStudioCopy({
         />
       </section>
 
-      {/* DM auto-reply (only when CTA archetype = dm) */}
-      {angle.cta_archetype === "dm" ? (
+      {/* DM auto-reply + lead magnet picker — visible for both DM and
+          comment-driver CTAs (both flow through the same engagement loop). */}
+      {angle.cta_archetype === "dm" || angle.cta_archetype === "comment" ? (
         <section>
           <SectionHeader
             title="DM auto-reply · sent when commenters reply with the keyword"
             actionLabel={generating ? "…" : "↻ Regenerate template"}
             actionDisabled={generating}
-            onAction={() => onGenerate({ ctaOnly: true, ctaArchetype: "dm" })}
+            onAction={() =>
+              onGenerate({ ctaOnly: true, ctaArchetype: angle.cta_archetype ?? "dm" })
+            }
           />
-          <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 space-y-2">
+          <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 space-y-3">
+            {/* Lead magnet picker */}
+            <div className="space-y-1.5">
+              <span className="block text-[10px] uppercase tracking-[0.16em] font-bold text-muted-foreground">
+                Lead magnet
+              </span>
+              <div className="flex items-center gap-2">
+                <select
+                  value={angle.lead_magnet_id ?? ""}
+                  onChange={(e) => {
+                    if (e.target.value) pickMagnet(e.target.value);
+                    else clearMagnet();
+                  }}
+                  className="flex-1 text-sm bg-background border border-border rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                >
+                  <option value="">— None attached —</option>
+                  {magnets.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label} {m.kind === "file" ? "📎" : "🔗"}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setNewMagnetOpen(true)}
+                  className="text-[11px] font-medium px-2 py-1.5 rounded border border-border bg-background hover:bg-muted"
+                >
+                  + New
+                </button>
+              </div>
+              {magnetsLoaded && magnets.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground">
+                  No magnets in library yet. Click <strong>+ New</strong> or add one in
+                  <a
+                    href="/settings"
+                    className="underline hover:text-foreground mx-1"
+                  >
+                    Settings → Lead Magnets
+                  </a>.
+                </p>
+              ) : angle.lead_magnet_url ? (
+                <p className="text-[10px] text-muted-foreground break-all">
+                  Will substitute into <code className="text-[10px] bg-background px-1 py-0.5 rounded">{"{{lead_magnet_url}}"}</code>:
+                  <a
+                    href={angle.lead_magnet_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-1 underline hover:text-foreground font-mono"
+                  >
+                    {angle.lead_magnet_url.length > 50
+                      ? `${angle.lead_magnet_url.slice(0, 47)}…`
+                      : angle.lead_magnet_url}
+                  </a>
+                </p>
+              ) : null}
+            </div>
+
             <textarea
               value={localDmTemplate}
               onChange={(e) => setLocalDmTemplate(e.target.value)}
@@ -330,6 +439,15 @@ export function PostStudioCopy({
               Placeholders: <code>{"{{commenter_name}}"}</code>, <code>{"{{lead_magnet_url}}"}</code>.
             </p>
           </div>
+
+          <NewMagnetDialog
+            open={newMagnetOpen}
+            onClose={() => setNewMagnetOpen(false)}
+            onCreated={async (created) => {
+              await loadMagnets();
+              await pickMagnet(created.id);
+            }}
+          />
         </section>
       ) : null}
 

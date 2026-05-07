@@ -63,6 +63,11 @@ async function handle(ctx: { params: Promise<{ angleId: string }> }) {
     angle.cta_archetype as string | null,
     angle.cta_text as string | null,
     angle.pin_comment as string | null,
+    {
+      dm_response_template: angle.dm_response_template as string | null,
+      lead_magnet_id: (angle.lead_magnet_id as string | null) ?? null,
+      lead_magnet_url: (angle.lead_magnet_url as string | null) ?? null,
+    },
   );
 
   // Brand match: average brand_score across picked variants for this angle.

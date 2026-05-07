@@ -7,7 +7,7 @@ export type CoherenceScores = {
   word_count: number;
   char_count: number;
   hook_delivery: { ok: boolean; reason: string };
-  cta_match: { ok: boolean; archetype: string; has_link: boolean };
+  cta_match: { ok: boolean; archetype: string; has_link: boolean; reason?: string };
   brand_match: { ok: boolean; average_score: number | null; checked: number };
   voice_grounded: { ok: boolean; samples_used: number };
   publishable: { ok: boolean; reason: string; model?: string };
@@ -100,7 +100,11 @@ export function CoherencePanel({
             <Row
               label="CTA match"
               ok={scores.cta_match.ok}
-              detail={`${scores.cta_match.archetype}${scores.cta_match.has_link ? " · link present" : ""}`}
+              detail={
+                scores.cta_match.reason
+                  ? scores.cta_match.reason
+                  : `${scores.cta_match.archetype}${scores.cta_match.has_link ? " · link present" : ""}`
+              }
             />
             <Row
               label="Voice grounded"

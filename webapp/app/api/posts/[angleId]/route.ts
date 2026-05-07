@@ -48,6 +48,11 @@ const ALLOWED_FIELDS = new Set<string>([
   // Phase B/C: needed for image-format studio + manual slide ops
   "carousel_slides",
   "slide_image_paths",
+  // Lead magnet library picker — denormalized URL onto the angle so the
+  // engagement loop reads it without a join.
+  "lead_magnet_id",
+  "lead_magnet_url",
+  "lead_magnet_path",
 ]);
 
 const CTA_ARCHETYPES = new Set(["follow", "comment", "dm", "click", "demo"]);

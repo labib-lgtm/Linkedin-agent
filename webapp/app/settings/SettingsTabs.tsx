@@ -6,6 +6,7 @@ import { IntegrationsPanel } from "./IntegrationsPanel";
 import { AccountPanel } from "./AccountPanel";
 import { BusinessPanel } from "./BusinessPanel";
 import { AccountsPanel } from "./AccountsPanel";
+import { LeadMagnetsPanel } from "./LeadMagnetsPanel";
 import type { SettingService, SettingKey } from "@/lib/settings";
 
 export type SettingsPayload = {
@@ -33,6 +34,7 @@ export function SettingsTabs({ initial }: { initial: SettingsPayload }) {
         <TabsTrigger value="accounts">Accounts</TabsTrigger>
         <TabsTrigger value="integrations">Integrations</TabsTrigger>
         <TabsTrigger value="business">Business</TabsTrigger>
+        <TabsTrigger value="lead-magnets">Lead Magnets</TabsTrigger>
         <TabsTrigger value="account">Sign-in</TabsTrigger>
         <TabsTrigger value="preferences">Preferences</TabsTrigger>
       </TabsList>
@@ -47,6 +49,10 @@ export function SettingsTabs({ initial }: { initial: SettingsPayload }) {
 
       <TabsContent value="business">
         <BusinessPanel data={data} onChange={setData} />
+      </TabsContent>
+
+      <TabsContent value="lead-magnets">
+        <LeadMagnetsPanel />
       </TabsContent>
 
       <TabsContent value="account">

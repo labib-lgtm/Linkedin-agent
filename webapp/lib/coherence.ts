@@ -18,7 +18,7 @@ export type CoherenceCheck = {
   word_count: number;
   char_count: number;
   hook_delivery: { ok: boolean; reason: string };
-  cta_match: { ok: boolean; archetype: string; has_link: boolean };
+  cta_match: { ok: boolean; archetype: string; has_link: boolean; reason?: string };
   brand_match: { ok: boolean; average_score: number | null; checked: number };
   voice_grounded: { ok: boolean; samples_used: number };
 };
@@ -59,13 +59,35 @@ export function checkCtaMatch(
   archetype: string | null,
   ctaText: string | null,
   pinComment: string | null,
-): { ok: boolean; archetype: string; has_link: boolean } {
+  dmContext?: {
+    dm_response_template: string | null;
+    lead_magnet_id: string | null;
+    lead_magnet_url: string | null;
+  },
+): { ok: boolean; archetype: string; has_link: boolean; reason?: string } {
   const text = `${ctaText ?? ""} ${pinComment ?? ""}`.toLowerCase();
   const hasLink =
     /(https?:\/\/|\.[a-z]{2,}\/|\.com|\.co\b|link in)/i.test(text) ||
     /lynxmedia\.co/i.test(text);
 
   if (!archetype) return { ok: false, archetype: "(none)", has_link: hasLink };
+
+  // DM + comment archetypes drive the engagement-loop auto-reply. If the
+  // template references {{lead_magnet_url}} but no magnet is attached,
+  // the substitution will produce an empty string at send time.
+  function magnetCheck(): { ok: boolean; reason?: string } {
+    if (!dmContext) return { ok: true };
+    const tpl = dmContext.dm_response_template ?? "";
+    const usesPlaceholder = /{{\s*lead_magnet_url\s*}}/.test(tpl);
+    const hasMagnet = !!dmContext.lead_magnet_id || !!dmContext.lead_magnet_url;
+    if (usesPlaceholder && !hasMagnet) {
+      return {
+        ok: false,
+        reason: "DM template uses {{lead_magnet_url}} but no lead magnet attached",
+      };
+    }
+    return { ok: true };
+  }
 
   switch (archetype) {
     case "click":
@@ -74,9 +96,20 @@ export function checkCtaMatch(
       return { ok: hasLink, archetype, has_link: hasLink };
     case "dm": {
       const hasKeyword = /\bdm\b.+['"]?[A-Z]{3,}/i.test(text) || /reply\s+\w+/i.test(text);
-      return { ok: hasKeyword, archetype, has_link: false };
+      const m = magnetCheck();
+      return {
+        ok: hasKeyword && m.ok,
+        archetype,
+        has_link: false,
+        reason: !hasKeyword
+          ? "DM CTA must name a keyword (e.g. \"DM 'THRESHOLD'\")"
+          : m.reason,
+      };
     }
-    case "comment":
+    case "comment": {
+      const m = magnetCheck();
+      return { ok: m.ok, archetype, has_link: hasLink, reason: m.reason };
+    }
     case "follow":
     default:
       return { ok: true, archetype, has_link: hasLink };
