@@ -6,7 +6,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PostStudioCopy } from "./PostStudioCopy";
 import { MarkDraftedButton } from "./MarkDraftedButton";
+import { MarkVisualReadyButton } from "./MarkVisualReadyButton";
 import { SlideStudio } from "@/components/posts/SlideStudio";
+import { CoherencePanel, type CoherenceScores } from "@/components/posts/CoherencePanel";
+import { LinkedInPreview } from "@/components/posts/LinkedInPreview";
 import type { Palette, Slide } from "@/components/posts/SlideCard";
 
 type HookVariant = {
@@ -42,18 +45,22 @@ export type StudioAngle = {
   carousel_slides: Slide[] | null;
   slides_generated_at: string | null;
   slide_image_paths: Record<string, string> | null;
+  coherence_scores: CoherenceScores | null;
+  coherence_checked_at: string | null;
 };
 
-// The studio's frame — split-pane Copy / Visual.
-// LEFT pane: copy editor (Phase A).
-// RIGHT pane: slide studio for carousel angles (Phase B); fallback
-// placeholder for non-carousel formats.
+// The studio's frame — split-pane Copy / Visual + two FAB overlays
+// (Coherence panel + LinkedIn preview) introduced in Phase D.
 export function PostStudio({
   initialAngle,
   brandPalette,
+  authorName,
+  authorPicture,
 }: {
   initialAngle: StudioAngle;
   brandPalette: Palette;
+  authorName: string;
+  authorPicture: string | null;
 }) {
   const router = useRouter();
   const [angle, setAngle] = useState<StudioAngle>(initialAngle);
@@ -63,6 +70,30 @@ export function PostStudio({
   const hasCopy = useMemo(() => {
     return Array.isArray(angle.body_paragraphs) && angle.body_paragraphs.length > 0;
   }, [angle.body_paragraphs]);
+
+  // Mark Visual Ready gating: copy present AND (text format OR every
+  // slide that requested an illustration has a picked image) AND last
+  // coherence check passed publishable (or hasn't been run — we let
+  // the operator override by running it themselves).
+  const visualReady = useMemo(() => {
+    if (!hasCopy) return false;
+    if (angle.format === "carousel") {
+      const slides = angle.carousel_slides ?? [];
+      const paths = angle.slide_image_paths ?? {};
+      for (const s of slides) {
+        if (s.image_gen_prompt && !paths[String(s.n)]) return false;
+      }
+      if (slides.length === 0) return false;
+    }
+    if (angle.coherence_scores && !angle.coherence_scores.publishable.ok) return false;
+    return true;
+  }, [
+    hasCopy,
+    angle.format,
+    angle.carousel_slides,
+    angle.slide_image_paths,
+    angle.coherence_scores,
+  ]);
 
   async function generateCopy(opts: { hookOnly?: boolean; ctaArchetype?: string } = {}) {
     setGenerating(true);
@@ -113,10 +144,16 @@ export function PostStudio({
             Copy
           </div>
           <div className="flex items-center gap-2">
-            {hasCopy ? (
+            {hasCopy && angle.status !== "Visual Ready" ? (
               <MarkDraftedButton
                 angleId={angle.angle_id}
                 disabled={!hasCopy}
+                onMarked={(updated) => setAngle(updated)}
+              />
+            ) : null}
+            {visualReady ? (
+              <MarkVisualReadyButton
+                angleId={angle.angle_id}
                 onMarked={(updated) => setAngle(updated)}
               />
             ) : null}
@@ -150,6 +187,22 @@ export function PostStudio({
         slideImagePaths={angle.slide_image_paths}
         brandPalette={brandPalette}
         onUpdate={(next) => setAngle((cur) => ({ ...cur, ...next }))}
+      />
+
+      {/* Phase D FABs */}
+      <CoherencePanel
+        angleId={angle.angle_id}
+        scores={angle.coherence_scores}
+        checkedAt={angle.coherence_checked_at}
+        onScored={(updated) => setAngle((cur) => ({ ...cur, ...updated }))}
+      />
+      <LinkedInPreview
+        authorName={authorName}
+        authorPicture={authorPicture}
+        bodyParagraphs={angle.body_paragraphs}
+        format={angle.format}
+        slideImagePaths={angle.slide_image_paths}
+        totalSlides={angle.carousel_slides?.length ?? 0}
       />
     </div>
   );

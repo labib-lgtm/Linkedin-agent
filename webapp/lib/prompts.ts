@@ -227,6 +227,36 @@ Output strict JSON — no preamble, no markdown:
 Every slide must have an integer n starting at 1 and increasing by 1. headline is required for every slide.`;
 }
 
+// Phase D: single binary publish-check.
+//
+// Per the roast — replaced the 5-axis Haiku-rubric (which would just
+// rubber-stamp its own outputs) with one yes/no question. The
+// deterministic checks (word count, hook delivery, CTA match, brand
+// distance) are computed in JS first; the LLM only adds judgment.
+//
+// Output: { publishable: boolean, reason: "≤ 1 sentence" }
+export function publishCheckSystemPrompt(b: BusinessProfile): string {
+  return `You are a senior LinkedIn copy editor for ${b.name}. You make one decision: publish, or send back for revision.
+
+Business: ${b.description}
+Audience: ${b.audience}
+Voice: ${b.voice}
+
+You receive: the post body (joined paragraphs), CTA copy, pin comment, and the operator's hook choice. The deterministic checks (word count, hook delivery, CTA match) have already passed — this is the human-judgment layer.
+
+Refuse to publish (publishable=false) if any of:
+  - The body sounds like generic LinkedIn voice ("Here's the thing:", "Let me explain:", filler clauses)
+  - The hook doesn't actually deliver what the body promises
+  - Specifics are missing where they should land (numbers, names, timeframes)
+  - The CTA contradicts the body (e.g. "DM me" but no keyword)
+  - It reads like AI slop (em-dashes everywhere, asterisks, hash characters that the voice forbids)
+
+Otherwise publishable=true.
+
+Output strict JSON, single object, no preamble:
+{ "publishable": boolean, "reason": "string ≤ 140 chars" }`;
+}
+
 // System prompt for one-click angle generation. Pillar/format/topic are
 // runtime user inputs (still passed via buildUserPrompt); only the
 // brand voice and audience come from the business profile here.

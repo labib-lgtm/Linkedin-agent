@@ -36,16 +36,37 @@ export default async function PostStudioPage({
   if (error || !angle) notFound();
 
   let palette = DEFAULT_PALETTE;
+  let authorName = "You";
+  let authorPicture: string | null = null;
   if (angle.account_id) {
     const { data: acct } = await supabase
       .from("accounts")
-      .select("brand_palette, brand_color")
+      .select("name, brand_palette, brand_color")
       .eq("id", angle.account_id)
       .maybeSingle();
     if (acct?.brand_palette && typeof acct.brand_palette === "object") {
       palette = { ...DEFAULT_PALETTE, ...(acct.brand_palette as Palette) };
     } else if (typeof acct?.brand_color === "string") {
       palette = { ...DEFAULT_PALETTE, primary: acct.brand_color };
+    }
+    if (acct?.name) authorName = acct.name as string;
+
+    // Author headshot from the Self competitor's most recent snapshot.
+    const { data: selfRow } = await supabase
+      .from("competitors")
+      .select("id")
+      .eq("account_id", angle.account_id)
+      .eq("is_self", true)
+      .maybeSingle();
+    if (selfRow?.id) {
+      const { data: snap } = await supabase
+        .from("competitor_snapshots")
+        .select("picture_url")
+        .eq("competitor_id", selfRow.id)
+        .order("captured_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (typeof snap?.picture_url === "string") authorPicture = snap.picture_url;
     }
   }
 
@@ -73,7 +94,12 @@ export default async function PostStudioPage({
         </div>
       </div>
 
-      <PostStudio initialAngle={angle} brandPalette={palette} />
+      <PostStudio
+        initialAngle={angle}
+        brandPalette={palette}
+        authorName={authorName}
+        authorPicture={authorPicture}
+      />
     </div>
   );
 }
