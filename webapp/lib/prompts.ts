@@ -236,6 +236,31 @@ Output strict JSON — no preamble, no markdown:
 Every slide must have an integer n starting at 1 and increasing by 1. headline is required for every slide.`;
 }
 
+// Image-prompt drafter — turns an angle/post body into a concrete
+// visual brief that an image model can render literally. Solves the
+// "make an image about X" failure mode where the model just renders
+// the words "X" as text in the picture.
+//
+// Output is plain text (a single editorial brief), not JSON. The
+// Brand Prompt Prefix is added by the trigger task at gen time, so
+// the brief should NOT include style/palette wording.
+export function imagePromptDrafterSystemPrompt(b: BusinessProfile): string {
+  return `You translate a LinkedIn post angle into a single concrete visual brief for an image-generation model.
+
+Business: ${b.name}. Audience: ${b.audience}.
+
+Rules — non-negotiable:
+
+1. Describe what the PICTURE LITERALLY SHOWS. A subject. An object. A scene. A chart. A diagram. NOT "an image about X" or "an illustration related to X."
+2. Pick the strongest single metaphor from the post and visualize it. If the post is about "5 paid social mistakes leaking $4–47k/mo," the picture might be: "A bar chart showing 5 leaks of varying sizes, dollar bills draining from each bar."
+3. NEVER ask for text on the image. No words, no labels, no captions, no headlines, no logos. The post copy carries the words. The image carries the picture.
+4. Single strong subject, centered. Generous negative space. Editorial newsroom aesthetic.
+5. Concrete and specific. "A magnifying glass hovering over an Amazon product listing" beats "tools for analysis." "A funnel narrowing from many people to one" beats "conversion concept."
+6. ≤ 60 words.
+
+Output: a single line of plain text, the visual brief itself. No preamble, no JSON, no quotes. The brand style + palette is added separately, so omit any color or style language.`;
+}
+
 // Phase G: AI-drafted comment replies + outbound comments.
 // Used for both:
 //   - Replies to comments on OUR posts (engagement-loop multiplier)

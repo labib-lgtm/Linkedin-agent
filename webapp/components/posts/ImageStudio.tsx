@@ -26,18 +26,19 @@ export function ImageStudio({
   angleId,
   carouselSlides,
   slideImagePaths,
-  approvedAngleText,
+  hasBody,
   onUpdate,
 }: {
   angleId: string;
   carouselSlides: Slide[] | null;
   slideImagePaths: Record<string, string> | null;
-  approvedAngleText: string | null;
+  hasBody: boolean;
   onUpdate: (next: { carousel_slides?: Slide[] | null; slide_image_paths?: Record<string, string> | null } & Record<string, unknown>) => void;
 }) {
   const slide = (carouselSlides ?? [])[0] ?? null;
   const [prompt, setPrompt] = useState(slide?.image_gen_prompt ?? "");
   const [saving, setSaving] = useState(false);
+  const [drafting, setDrafting] = useState(false);
   const [picker, setPicker] = useState(false);
 
   useEffect(() => {
@@ -81,11 +82,24 @@ export function ImageStudio({
     }
   }
 
-  function suggestPromptFromAngle() {
-    if (!approvedAngleText) return;
-    const subject = approvedAngleText.slice(0, 240);
-    const draft = `Editorial illustration that visualizes: ${subject.trim()}. Single strong subject, clean composition, brand-consistent palette.`;
-    setPrompt(draft);
+  // Calls Haiku with imagePromptDrafterSystemPrompt to translate the
+  // FULL post body + hook into a concrete visual brief. Solves the
+  // "POST COPY rendered as text on a card" failure where a meta-prompt
+  // produces a meta-image. Brief is only the subject/scene — brand
+  // style + palette get prepended by the trigger task.
+  async function draftFromBody() {
+    setDrafting(true);
+    try {
+      const res = await fetch(`/api/posts/${angleId}/draft-image-prompt`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message ?? data?.error ?? `HTTP ${res.status}`);
+      setPrompt(data.prompt as string);
+      toast.success("Drafted from post body");
+    } catch (e) {
+      toast.error(`Draft failed: ${(e as Error).message}`);
+    } finally {
+      setDrafting(false);
+    }
   }
 
   return (
@@ -137,21 +151,31 @@ export function ImageStudio({
             <Label className="text-[10px] uppercase tracking-[0.16em] font-bold text-muted-foreground">
               Image gen prompt
             </Label>
-            {approvedAngleText ? (
+            {hasBody ? (
               <button
                 type="button"
-                onClick={suggestPromptFromAngle}
-                className="text-[11px] text-foreground/70 hover:text-foreground"
+                onClick={draftFromBody}
+                disabled={drafting}
+                className="text-[11px] text-foreground/70 hover:text-foreground disabled:opacity-60"
               >
-                ↺ Draft from angle
+                {drafting ? "Drafting…" : "↺ Draft from post body"}
               </button>
-            ) : null}
+            ) : (
+              <span className="text-[11px] text-muted-foreground italic">
+                Generate copy first to enable auto-draft
+              </span>
+            )}
           </div>
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             rows={6}
-            placeholder="Editorial illustration brief for the image. Subject + composition. Brand palette + style come from your account's Brand Prompt Prefix (Settings → Accounts)."
+            placeholder={
+              "Describe what the PICTURE LITERALLY SHOWS — a subject, a scene, a chart, a diagram. " +
+              "Don't describe what the picture is 'about' (the model will render those words as text). " +
+              "Example: 'A magnifying glass hovering over an Amazon product listing, with a faded ad campaign dashboard behind it.' " +
+              "Brand style + palette comes from your Brand Prompt Prefix automatically."
+            }
             className="text-sm"
           />
           <div className="flex justify-end">
@@ -165,8 +189,9 @@ export function ImageStudio({
             </Button>
           </div>
           <p className="text-[10px] text-muted-foreground leading-snug">
-            Save first, then generate. Variants land in the picker; clicking one writes
-            slide_image_paths[&quot;1&quot;] which the publish route attaches to LinkedIn.
+            <strong className="text-foreground">Tip:</strong> use <em>↺ Draft from post body</em> to
+            let the system pick the strongest visual metaphor from your generated body — that&apos;s
+            usually a better starting point than describing the post abstractly.
           </p>
         </section>
       </div>

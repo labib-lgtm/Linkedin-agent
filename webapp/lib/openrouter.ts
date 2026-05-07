@@ -207,6 +207,7 @@ export async function generateText(opts: {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  timeoutMs?: number;
 }): Promise<string> {
   return callOpenRouter({
     messages: [
@@ -216,6 +217,7 @@ export async function generateText(opts: {
     model: opts.model,
     temperature: opts.temperature,
     maxTokens: opts.maxTokens,
+    timeoutMs: opts.timeoutMs,
   });
 }
 

@@ -210,7 +210,7 @@ export function PostStudio({
           angleId={angle.angle_id}
           carouselSlides={angle.carousel_slides}
           slideImagePaths={angle.slide_image_paths}
-          approvedAngleText={angle.hook_seed ?? angle.draft_body ?? null}
+          hasBody={hasCopy}
           onUpdate={(next) => setAngle((cur) => ({ ...cur, ...next }))}
         />
       ) : (
