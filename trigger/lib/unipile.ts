@@ -70,15 +70,26 @@ async function request<T = unknown>(
   throw new Error(`Unipile request failed after retries: ${String(lastErr)}`);
 }
 
-/** Post a comment in reply to (or on) an existing post comment thread. */
+/** Post a comment on a post, OR (when parentCommentId is provided) post a
+ *  threaded reply to an existing comment. Without parentCommentId,
+ *  Unipile creates a top-level comment on the post.
+ *
+ *  Unipile field name for the parent is `parent_comment_id`. If your DSN
+ *  rejects that, try `parent_id` or `comment_id` — the API surface is
+ *  inconsistent across versions. */
 export async function postComment(args: {
   postId: string;
   text: string;
+  parentCommentId?: string;
 }): Promise<{ id?: string }> {
-  return request("POST", `/api/v1/posts/${args.postId}/comments`, {
+  const body: Record<string, unknown> = {
     account_id: env("UNIPILE_LINKEDIN_ACCOUNT_ID"),
     text: args.text,
-  });
+  };
+  if (args.parentCommentId) {
+    body.parent_comment_id = args.parentCommentId;
+  }
+  return request("POST", `/api/v1/posts/${args.postId}/comments`, body);
 }
 
 /** Send a 1:1 DM. The exact endpoint name varies by Unipile version; this

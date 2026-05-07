@@ -144,9 +144,13 @@ export const ctaCommentResponse = task({
     const postId = postIdFromUrl(payload.post_url);
     await safePatch(payload.recipient_id, { trigger_run_id: ctx.run.id });
 
-    // ─── T+0 — public reply ───────────────────────────────────────
+    // ─── T+0 — public reply (threaded under the commenter's comment) ─
     try {
-      await postComment({ postId, text: T0_REPLY_TEXT });
+      await postComment({
+        postId,
+        text: T0_REPLY_TEXT,
+        parentCommentId: payload.comment_id,
+      });
       logger.info("T+0 reply posted", { comment_id: payload.comment_id });
       await safePatch(payload.recipient_id, {
         t0_reply_at: nowIso(),
@@ -226,9 +230,13 @@ export const ctaCommentResponse = task({
       throw e;
     }
 
-    // ─── T+3h — public follow-up reply ────────────────────────────
+    // ─── T+3h — public follow-up reply (also threaded) ────────────
     try {
-      await postComment({ postId, text: T3_FOLLOWUP_TEXT });
+      await postComment({
+        postId,
+        text: T3_FOLLOWUP_TEXT,
+        parentCommentId: payload.comment_id,
+      });
       logger.info("T+3h follow-up reply posted", { comment_id: payload.comment_id });
       await safePatch(payload.recipient_id, {
         t3_reply_at: nowIso(),
