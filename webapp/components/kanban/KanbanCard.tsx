@@ -32,10 +32,11 @@ export function KanbanCard({ angle }: { angle: Angle }) {
     angle.hook_chosen?.trim() || angle.hook_seed?.trim() || angle.angle_id;
   const formatLabel = angle.format ? angle.format.toUpperCase() : null;
 
-  // Composable statuses open the Post Studio. Posted / Reviewed angles
-  // route to the existing detail page since you analyze those, not edit.
-  const composable = angle.status === "Approved" || angle.status === "Drafting" || angle.status === "Drafted";
-  const href = composable ? `/posts/${angle.angle_id}` : `/angles/${angle.angle_id}`;
+  // Always route to the Post Studio. The studio handles every status —
+  // including Posted angles where the operator may still need to attach a
+  // lead magnet, view picked variants, or re-run coherence. The legacy
+  // /angles/[id] audit page stays reachable by direct URL.
+  const href = `/posts/${angle.angle_id}`;
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
