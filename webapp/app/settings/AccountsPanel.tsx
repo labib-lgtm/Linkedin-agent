@@ -290,8 +290,10 @@ function AccountCard({ account, onChanged }: { account: Account; onChanged: () =
                 ))}
               </div>
               <p className="mt-1 text-[10px] text-muted-foreground leading-snug">
-                Used by Phase B carousel slides + Phase C image gen brand prefix. Primary
-                is the accent on cover slides; ink/paper are the slide background pair.
+                Drives slide card rendering AND auto-injects into every image gen call as a
+                <code className="px-1 py-0.5 rounded bg-muted text-[10px] mx-1">[PALETTE]</code>
+                block. Image models use these hex codes directly — paper/ink dominate, accents
+                land on the focal subject only.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2">

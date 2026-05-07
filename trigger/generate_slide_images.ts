@@ -85,7 +85,11 @@ export const generateSlideImages = task({
     };
     if (!acct?.brand_palette && acct?.brand_color) palette.primary = acct.brand_color as string;
 
-    const finalPrompt = assembleImagePrompt(brandPrefix, slide.image_gen_prompt);
+    // Pass the palette through so the [PALETTE] block lands in the
+    // prompt regardless of whether the operator wrote colors into the
+    // brand_prompt_prefix. Color compliance shouldn't depend on the
+    // operator remembering to mention them.
+    const finalPrompt = assembleImagePrompt(brandPrefix, slide.image_gen_prompt, palette);
 
     // Image model from app_settings (openrouter.image_model). Fall back
     // to the lib's default when unset.

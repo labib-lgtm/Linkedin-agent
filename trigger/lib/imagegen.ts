@@ -138,12 +138,36 @@ export async function generatePostImages(
   return variants;
 }
 
+export type Palette = {
+  primary: string;
+  secondary: string;
+  accent: string;
+  ink: string;
+  paper: string;
+};
+
 // Built-in baseline style fired when an account has no
 // brand_prompt_prefix set. Without it the image model defaults to
 // stock-photo / dashboard-y output. Operators override per-account
 // via Settings → Accounts → Edit.
 const DEFAULT_STYLE_BLOCK = `[STYLE BLOCK]
-Editorial illustration in the style of a New Yorker cover or a hand-drawn newsroom diagram. Solid physical objects, real-world metaphors, natural scenes. Hand-drawn line work over flat color blocks. Slight grain texture. Limited palette: cream paper, ink, one rust accent, one olive accent.`;
+Editorial illustration in the style of a New Yorker cover or a hand-drawn newsroom diagram. Solid physical objects, real-world metaphors, natural scenes. Hand-drawn line work over flat color blocks. Slight grain texture.`;
+
+// [PALETTE] block — appended to every prompt regardless of whether the
+// operator wrote a custom brand_prompt_prefix. Separates style/medium
+// (handled by the prefix) from color compliance (handled here). Image
+// models like gpt-image-1 follow hex codes reasonably; flux-1.1-pro
+// follows them very well. Models that ignore hex still pick up the
+// descriptive role labels ("background," "accent").
+function paletteBlock(p: Palette): string {
+  return `[PALETTE — use ONLY these colors]
+Background / paper:        ${p.paper}
+Ink / line work / type:    ${p.ink}
+Primary accent (focal):    ${p.primary}
+Secondary tone:            ${p.secondary}
+Editorial highlight:       ${p.accent}
+No other colors. Treat the background and ink as the dominant pair (>80% of canvas). Reserve accents for the single focal element.`;
+}
 
 // [NEGATIVE] block — repeats the constraints from the drafter prompt
 // directly to the image model, since some image models (gpt-image-1,
@@ -157,14 +181,18 @@ const NEGATIVE_BLOCK = `[ABSOLUTELY DO NOT INCLUDE]
 - No people's faces, headshots, professional portraits, or stock-photo office scenes (laptops on desks, sticky notes, coffee cups).
 - No magnifying glasses on listings, no rising-arrow charts, no bar/line graphs unless hand-drawn on paper.
 - No corporate stock photography vibes. No tech product renders.
+- No colors outside the palette block above.
 If the subject brief implies any of the above, render the underlying physical metaphor instead (a leaking bucket, a maze, a tangled knot, a tightrope, gears, dominoes, an unlocked door).`;
 
 // Build the final prompt the image model receives. Brand prefix lives on
 // accounts.brand_prompt_prefix (Settings → Accounts → Edit). The slide's
-// own image_gen_prompt is the [SUBJECT] block.
+// own image_gen_prompt is the [SUBJECT] block. Palette is loaded from
+// accounts.brand_palette and ALWAYS appended so color compliance
+// doesn't depend on whether the operator wrote it into the prefix.
 export function assembleImagePrompt(
   brandPrefix: string,
   subject: string,
+  palette?: Palette,
   composition?: string,
   mood?: string,
 ): string {
@@ -179,6 +207,7 @@ export function assembleImagePrompt(
     );
   }
   if (mood && mood.trim()) parts.push(`[MOOD]\n${mood.trim()}`);
+  if (palette) parts.push(paletteBlock(palette));
   parts.push(NEGATIVE_BLOCK);
   return parts.join("\n\n");
 }
