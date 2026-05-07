@@ -8,6 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+type BrandPalette = {
+  primary: string;
+  secondary: string;
+  accent: string;
+  ink: string;
+  paper: string;
+};
+
 type Account = {
   id: string;
   name: string;
@@ -17,8 +25,18 @@ type Account = {
   logo_url: string | null;
   niche_tag: string | null;
   seed_voice_samples: string | null;
+  brand_palette: BrandPalette | null;
+  brand_typography: string | null;
   competitor_count: number;
   recent_post_count: number;
+};
+
+const DEFAULT_PALETTE: BrandPalette = {
+  primary: "#C6F21F",
+  secondary: "#666666",
+  accent: "#b8543c",
+  ink: "#0e0e0e",
+  paper: "#fafafa",
 };
 
 // Settings → Accounts. Lists accounts, lets the operator add new ones,
@@ -164,10 +182,19 @@ function AccountCard({ account, onChanged }: { account: Account; onChanged: () =
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(account.name);
   const [nicheTag, setNicheTag] = useState(account.niche_tag ?? "");
-  const [brandColor, setBrandColor] = useState(account.brand_color ?? "#C6F21F");
   const [logoUrl, setLogoUrl] = useState(account.logo_url ?? "");
   const [seedVoiceSamples, setSeedVoiceSamples] = useState(account.seed_voice_samples ?? "");
+  const [palette, setPalette] = useState<BrandPalette>({
+    ...DEFAULT_PALETTE,
+    primary: account.brand_color ?? DEFAULT_PALETTE.primary,
+    ...(account.brand_palette ?? {}),
+  });
+  const [typography, setTypography] = useState(account.brand_typography ?? "");
   const [saving, setSaving] = useState(false);
+
+  function updatePalette(key: keyof BrandPalette, value: string) {
+    setPalette((p) => ({ ...p, [key]: value }));
+  }
 
   async function save() {
     setSaving(true);
@@ -178,9 +205,11 @@ function AccountCard({ account, onChanged }: { account: Account; onChanged: () =
         body: JSON.stringify({
           name: name.trim() || account.name,
           niche_tag: nicheTag.trim() || null,
-          brand_color: brandColor,
+          brand_color: palette.primary,
           logo_url: logoUrl.trim() || null,
           seed_voice_samples: seedVoiceSamples.trim() || null,
+          brand_palette: palette,
+          brand_typography: typography.trim() || null,
         }),
       });
       const data = await res.json();
@@ -240,19 +269,40 @@ function AccountCard({ account, onChanged }: { account: Account; onChanged: () =
             <Input value={name} onChange={(e) => setName(e.target.value)} />
             <Label className="text-[10px] uppercase">Niche tag</Label>
             <Input value={nicheTag} onChange={(e) => setNicheTag(e.target.value)} />
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px] uppercase">Brand color</Label>
-                <Input
-                  type="color"
-                  value={brandColor}
-                  onChange={(e) => setBrandColor(e.target.value)}
-                  className="h-9 p-1"
-                />
+            <div>
+              <Label className="text-[10px] uppercase">Brand palette</Label>
+              <div className="grid grid-cols-5 gap-1.5">
+                {(["primary", "secondary", "accent", "ink", "paper"] as const).map((k) => (
+                  <div key={k}>
+                    <input
+                      type="color"
+                      value={palette[k]}
+                      onChange={(e) => updatePalette(k, e.target.value)}
+                      className="w-full h-9 rounded border border-border cursor-pointer p-0"
+                    />
+                    <div className="text-[9px] text-muted-foreground text-center mt-0.5 capitalize">
+                      {k}
+                    </div>
+                  </div>
+                ))}
               </div>
+              <p className="mt-1 text-[10px] text-muted-foreground leading-snug">
+                Used by Phase B carousel slides + Phase C image gen brand prefix. Primary
+                is the accent on cover slides; ink/paper are the slide background pair.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-[10px] uppercase">Logo URL</Label>
                 <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase">Typography</Label>
+                <Input
+                  value={typography}
+                  onChange={(e) => setTypography(e.target.value)}
+                  placeholder="e.g. Georgia headlines, Inter UI"
+                />
               </div>
             </div>
             <div>

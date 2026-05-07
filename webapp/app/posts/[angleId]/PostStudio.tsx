@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PostStudioCopy } from "./PostStudioCopy";
 import { MarkDraftedButton } from "./MarkDraftedButton";
+import { SlideStudio } from "@/components/posts/SlideStudio";
+import type { Palette, Slide } from "@/components/posts/SlideCard";
 
 type HookVariant = {
   text: string;
@@ -36,11 +38,22 @@ export type StudioAngle = {
   cta_text: string | null;
   pin_comment: string | null;
   copy_generated_at: string | null;
+  carousel_template: string | null;
+  carousel_slides: Slide[] | null;
+  slides_generated_at: string | null;
 };
 
-// The studio's frame — split-pane Copy / Visual. Phase A only renders
-// the Copy pane; the right pane is a placeholder noting Phase B + C.
-export function PostStudio({ initialAngle }: { initialAngle: StudioAngle }) {
+// The studio's frame — split-pane Copy / Visual.
+// LEFT pane: copy editor (Phase A).
+// RIGHT pane: slide studio for carousel angles (Phase B); fallback
+// placeholder for non-carousel formats.
+export function PostStudio({
+  initialAngle,
+  brandPalette,
+}: {
+  initialAngle: StudioAngle;
+  brandPalette: Palette;
+}) {
   const router = useRouter();
   const [angle, setAngle] = useState<StudioAngle>(initialAngle);
   const [generating, setGenerating] = useState(false);
@@ -126,18 +139,16 @@ export function PostStudio({ initialAngle }: { initialAngle: StudioAngle }) {
         </div>
       </div>
 
-      {/* RIGHT pane: Visual placeholder (Phase B+C) */}
-      <div className="rounded-xl border border-dashed border-border bg-muted/10 flex flex-col items-center justify-center p-10 text-center min-h-[400px]">
-        <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground mb-2">
-          Visual studio
-        </div>
-        <h3 className="text-lg font-semibold mb-2">Coming in Phase B + C</h3>
-        <p className="text-sm text-muted-foreground max-w-sm">
-          Carousel slide structure (Phase B) + per-slide image generation with brand
-          consistency check (Phase C) land here. Phase A ships the copy half so the
-          Drafting → Drafted flow is end-to-end today.
-        </p>
-      </div>
+      {/* RIGHT pane: Slide studio (Phase B). Phase C will fill in image
+          variants + brand check inside this same component. */}
+      <SlideStudio
+        angleId={angle.angle_id}
+        format={angle.format}
+        carouselTemplate={angle.carousel_template}
+        carouselSlides={angle.carousel_slides}
+        brandPalette={brandPalette}
+        onUpdate={(next) => setAngle((cur) => ({ ...cur, ...next }))}
+      />
     </div>
   );
 }

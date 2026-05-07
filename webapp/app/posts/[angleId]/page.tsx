@@ -3,12 +3,21 @@ import { notFound } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/server";
 import { PostStudio } from "./PostStudio";
 import { StatusBadge } from "@/components/StatusBadge";
+import type { Palette } from "@/components/posts/SlideCard";
 
 export const dynamic = "force-dynamic";
 
-// Phase A of Post Studio. The right pane (slide editor) is a placeholder
-// until Phase B; this page handles the copy half end-to-end: 5 hook
-// variants, role-tagged body editor, CTA archetype + copy, pin comment.
+// Phase A + B of Post Studio. Left pane: copy editor (5 hooks, body,
+// CTA, pin). Right pane: slide editor for carousel angles, otherwise a
+// placeholder. Phase C/D land coherence + image gen on top of this.
+
+const DEFAULT_PALETTE: Palette = {
+  primary: "#C6F21F",
+  secondary: "#666666",
+  accent: "#b8543c",
+  ink: "#0e0e0e",
+  paper: "#fafafa",
+};
 
 export default async function PostStudioPage({
   params,
@@ -25,6 +34,20 @@ export default async function PostStudioPage({
     .maybeSingle();
 
   if (error || !angle) notFound();
+
+  let palette = DEFAULT_PALETTE;
+  if (angle.account_id) {
+    const { data: acct } = await supabase
+      .from("accounts")
+      .select("brand_palette, brand_color")
+      .eq("id", angle.account_id)
+      .maybeSingle();
+    if (acct?.brand_palette && typeof acct.brand_palette === "object") {
+      palette = { ...DEFAULT_PALETTE, ...(acct.brand_palette as Palette) };
+    } else if (typeof acct?.brand_color === "string") {
+      palette = { ...DEFAULT_PALETTE, primary: acct.brand_color };
+    }
+  }
 
   return (
     <div className="container-tight py-4 sm:py-6 space-y-4">
@@ -50,7 +73,7 @@ export default async function PostStudioPage({
         </div>
       </div>
 
-      <PostStudio initialAngle={angle} />
+      <PostStudio initialAngle={angle} brandPalette={palette} />
     </div>
   );
 }

@@ -140,6 +140,93 @@ Output strict JSON (no preamble, no markdown):
 hook_variants always returns exactly 5. voice_match_score is 0.0–1.0 (your honest estimate vs the voice samples). model_self_estimate is your own gut (0–100) — operators are warned this is a self-report, not engagement prediction. The first paragraph of body_paragraphs has role "hook" and its text equals hook_variants[selected_hook_index].text. The last paragraph has role "cta" and its text equals cta_text.`;
 }
 
+// Phase B: carousel slide-by-slide structure prompt. Receives the
+// already-generated body (joined paragraphs) plus the chosen template
+// and the account's brand palette/typography. Returns a full slide
+// spec the studio renders + lets the operator edit.
+//
+// Slide-count enforcement is in the system prompt — the LLM can pick
+// inside a band per template, the route validates the result.
+export type BrandPalette = {
+  primary: string;
+  secondary: string;
+  accent: string;
+  ink: string;
+  paper: string;
+};
+
+export function carouselStructureSystemPrompt(
+  palette: BrandPalette,
+  typography: string,
+): string {
+  return `You design LinkedIn carousels. You receive a body draft and a template choice. You return slide-by-slide structure.
+
+Carousel rules — non-negotiable:
+
+— SLIDE COUNT must match the body's logical structure
+   list      → cover + N items + payoff + CTA   (typical 7–10 slides for N=4–7)
+   story     → cover + setup + 3–5 beats + resolution + CTA   (typical 6–8 slides)
+   compare   → cover + before/after pairs + CTA   (typical 5–7 slides)
+   framework → cover + framework intro + each component + use case + CTA   (typical 6–8 slides)
+
+— SLIDE 1 (Cover) rules
+   Restate the hook with the strongest 2–4 words emphasized.
+   Tease the payoff slide ("based on 41 audits", "tested 47 ways").
+   ≤ 12 words for the headline.
+   Always include a swipe-cue affordance (visual or implicit).
+
+— LIST SLIDES (numbered)
+   Big number prefix (01, 02, never 1, 2).
+   Headline ≤ 12 words.
+   1 supporting micro-stat per slide if available.
+   No body paragraphs — those live in the post caption, not the slide.
+
+— PAYOFF SLIDE
+   The "punchline" — the insight everything pointed toward.
+   Strong contrasting layout vs the list slides.
+
+— CTA SLIDE (last)
+   Inverted color scheme (e.g. ink background if list slides are paper).
+   Headline ≤ 8 words.
+   Specific destination (URL, keyword, or action). Never just "Follow for more".
+
+— VISUAL ELEMENT per slide
+   layout role: cover | list-item | framework-block | chart | quote | divider | payoff | cta
+   visual_element: bar-chart | line-chart | icon-grid | single-icon | blank | photo | illustration
+   color_emphasis: primary | secondary | accent | neutral | inverted
+
+Brand visual tokens (the studio renders cards with these — do not invent new colors):
+  primary:   ${palette.primary}
+  secondary: ${palette.secondary}
+  accent:    ${palette.accent}
+  ink:       ${palette.ink}
+  paper:     ${palette.paper}
+Typography: ${typography || "default sans"}
+
+image_gen_prompt is non-null only when visual_element ∈ {illustration, single-icon, icon-grid}. When non-null it should be a short editorial brief (1–2 sentences) usable verbatim by an image model — describe subject, composition, no style/brand wording (the brand prefix is added later).
+
+Output strict JSON — no preamble, no markdown:
+{
+  "template": "list|story|compare|framework",
+  "slide_count": 6,
+  "slides": [
+    {
+      "n": 1,
+      "role": "cover|list-item|framework-block|chart|quote|divider|payoff|cta",
+      "layout": "cover|big-number|big-stat|chart|inverted-cta",
+      "headline": "string ≤ 12 words",
+      "supporting": "string ≤ 30 words OR null",
+      "stat": "string OR null",
+      "visual_element": "bar-chart|line-chart|icon-grid|single-icon|blank|photo|illustration",
+      "color_emphasis": "primary|secondary|accent|neutral|inverted",
+      "image_gen_prompt": "string OR null"
+    }
+  ]
+}
+
+Every slide must have an integer n starting at 1 and increasing by 1. headline is required for every slide.`;
+}
+
 // System prompt for one-click angle generation. Pillar/format/topic are
 // runtime user inputs (still passed via buildUserPrompt); only the
 // brand voice and audience come from the business profile here.

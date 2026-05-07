@@ -14,6 +14,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     logo_url?: string | null;
     niche_tag?: string | null;
     seed_voice_samples?: string | null;
+    brand_palette?: Record<string, string> | null;
+    brand_typography?: string | null;
   };
   try {
     body = await req.json();
@@ -26,6 +28,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   if ("logo_url" in body) patch.logo_url = body.logo_url || null;
   if ("niche_tag" in body) patch.niche_tag = body.niche_tag || null;
   if ("seed_voice_samples" in body) patch.seed_voice_samples = body.seed_voice_samples || null;
+  if ("brand_palette" in body) patch.brand_palette = body.brand_palette ?? null;
+  if ("brand_typography" in body) patch.brand_typography = body.brand_typography || null;
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "no_fields_to_update" }, { status: 400 });
   }
