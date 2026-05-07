@@ -42,7 +42,7 @@ const getClient = getServiceClient;
 
 export interface PatchRecipientRowArgs {
   recipientId: string;
-  fields: Record<string, string>;
+  fields: Record<string, string | number>;
 }
 
 /**

@@ -1,4 +1,9 @@
-"""Poll Unipile for new comments on a published post and fire the
+"""DEPRECATED for production. Replaced by trigger/monitor_post_comments.ts
+(Trigger.dev cron, every 5 min). Kept here for ad-hoc CLI testing only —
+e.g. probing a specific post URL on demand without waiting for the next
+cron tick.
+
+Poll Unipile for new comments on a published post and fire the
 Trigger.dev cta-comment-response task whenever a comment matches the
 angle's CTA keyword.
 

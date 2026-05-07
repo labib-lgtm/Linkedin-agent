@@ -51,4 +51,5 @@ export interface Recipient {
   dm_sent_at: string | null;
   t3_reply_at: string | null;
   status: RecipientStatus;
+  retry_count: number;
 }

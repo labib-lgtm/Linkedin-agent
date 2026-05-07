@@ -80,13 +80,32 @@ async function loadAngleDmTemplate(
   }
 }
 
+// Re-fetch lead_magnet_url at retry time. The trigger-time payload may be
+// stale: operator can attach a magnet AFTER the comment lands but before
+// the DM is due, and we want that fresh URL to substitute into
+// {{lead_magnet_url}}, not the empty string the payload was carrying.
+async function fetchAngleMagnetUrl(angleId: string): Promise<string | null> {
+  try {
+    const client = getServiceClient();
+    const { data } = await client
+      .from("angles")
+      .select("lead_magnet_url")
+      .eq("angle_id", angleId)
+      .maybeSingle();
+    const url = (data?.lead_magnet_url as string | null) ?? null;
+    return url && url.trim() ? url.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 const nowIso = () => new Date().toISOString();
 
 // Best-effort recipient-row patch. Logs but never throws — the public-facing
 // engagement steps must continue even if the audit row write fails.
 async function safePatch(
   recipientId: string | null | undefined,
-  fields: Record<string, string>,
+  fields: Record<string, string | number>,
 ): Promise<void> {
   if (!recipientId) return;
   try {
@@ -105,10 +124,16 @@ function postIdFromUrl(url: string): string {
   throw new Error(`Could not extract post id from URL: ${url}`);
 }
 
+// T+3h .. T+24h — recheck hourly for a magnet URL.
+const MAX_MAGNET_RETRIES = 21;
+
 export const ctaCommentResponse = task({
   id: "cta-comment-response",
-  // 4h ceiling because the body sleeps for 3h between the two touches.
-  maxDuration: 60 * 60 * 4,
+  // 25h ceiling: 3h initial wait + up to 21 hourly retries when the
+  // operator hasn't attached the magnet yet at T+0. Trigger.dev v3
+  // durable execution makes long sleeps cheap (the run pauses, no worker
+  // time burned), but maxDuration must allow it.
+  maxDuration: 60 * 60 * 25,
   run: async (payload: CtaPayload, { ctx }) => {
     logger.info("CTA comment received", {
       runId: ctx.run.id,
@@ -138,28 +163,65 @@ export const ctaCommentResponse = task({
     // on whatever worker is online at T+3h.
     await wait.for({ hours: 3 });
 
-    // ─── T+3h — DM with the lead-magnet link ──────────────────────
+    // ─── T+3h — resolve a lead_magnet_url, retry hourly if missing ─
+    // The trigger-time payload may be stale (operator could have
+    // attached a magnet between T+0 and T+3h, or may attach it during
+    // the retry window). Re-fetch from DB each iteration. After 21
+    // hourly retries (T+24h) give up silently; operator sees the
+    // 'abandoned' state at /recipients.
+    let magnetUrl = await fetchAngleMagnetUrl(payload.angle_id);
+    let retries = 0;
+    while (!magnetUrl && retries < MAX_MAGNET_RETRIES) {
+      logger.info("magnet not attached, holding 1h", {
+        angle_id: payload.angle_id,
+        retry: retries + 1,
+      });
+      await wait.for({ hours: 1 });
+      retries += 1;
+      await safePatch(payload.recipient_id, { retry_count: retries });
+      magnetUrl = await fetchAngleMagnetUrl(payload.angle_id);
+    }
+
+    if (!magnetUrl) {
+      logger.warn("abandoned — magnet never attached", {
+        angle_id: payload.angle_id,
+        retries,
+      });
+      await safePatch(payload.recipient_id, { status: "abandoned" });
+      return {
+        angle_id: payload.angle_id,
+        commenter_id: payload.commenter_id,
+        cta_keyword: payload.cta_keyword,
+        abandoned_at: nowIso(),
+      };
+    }
+
+    // ─── T+3h+ — DM with the lead-magnet link ─────────────────────
     // Phase F: prefer per-angle dm_response_template when set in the
-    // studio; fall back to the default copy.
+    // studio; fall back to the default copy. Substitute with the
+    // freshly-fetched magnet URL — payload.lead_magnet_url could be
+    // stale if the operator attached it after trigger time.
+    const livePayload: CtaPayload = { ...payload, lead_magnet_url: magnetUrl };
     const dmCfg = await loadAngleDmTemplate(payload.angle_id);
     const dmFinal = dmCfg.template
-      ? applyDmTemplate(dmCfg.template, payload, dmCfg.includeLink)
-      : defaultDmText(payload);
+      ? applyDmTemplate(dmCfg.template, livePayload, dmCfg.includeLink)
+      : defaultDmText(livePayload);
     try {
       await sendDm({
         recipientId: payload.commenter_id,
         text: dmFinal,
       });
-      logger.info("T+3h DM sent", {
+      logger.info("DM sent", {
         commenter_id: payload.commenter_id,
-        lead_magnet_url: payload.lead_magnet_url,
+        lead_magnet_url: magnetUrl,
+        retries,
       });
       await safePatch(payload.recipient_id, {
         dm_sent_at: nowIso(),
         status: "dm_sent",
       });
     } catch (e) {
-      logger.error("T+3h DM failed", { error: String(e) });
+      logger.error("DM failed", { error: String(e) });
       await safePatch(payload.recipient_id, { status: "failed" });
       throw e;
     }

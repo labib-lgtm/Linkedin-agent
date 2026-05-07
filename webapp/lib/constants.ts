@@ -90,7 +90,9 @@ export const RECIPIENT_STATUSES = [
   "replied",
   "dm_sent",
   "completed",
+  "completed_partial",
   "failed",
+  "abandoned",
 ] as const;
 export type RecipientStatus = (typeof RECIPIENT_STATUSES)[number];
 
