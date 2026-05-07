@@ -119,13 +119,17 @@ async function handle(
 
   let copy: GeneratedCopy;
   try {
+    // Haiku 4.5 fits comfortably in Vercel Hobby's 10s ceiling alongside
+    // ~6s of Supabase round-trips on cold start. Sonnet 4 was the natural
+    // choice but routinely pushed past 9s — the digest's same-shape call
+    // had to be split into 3 phases for the same reason.
     copy = await generateJson<GeneratedCopy>({
       system: postCopySystemPrompt(businessProfile, voiceSamples, recentHooks),
       user: buildUserPrompt(angle as Record<string, unknown>, ctaArchetype),
-      model: "anthropic/claude-sonnet-4",
+      model: "anthropic/claude-haiku-4-5",
       temperature: 0.7,
-      maxTokens: 2000,
-      timeoutMs: 9_000,
+      maxTokens: 1500,
+      timeoutMs: 8_000,
     });
   } catch (e) {
     if (e instanceof OpenRouterError) {

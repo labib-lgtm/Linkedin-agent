@@ -157,10 +157,10 @@ async function handle(
     result = await generateJson<GeneratedSlides>({
       system: carouselStructureSystemPrompt(palette, typography),
       user: buildUserPrompt(angle as Record<string, unknown>, template),
-      model: "anthropic/claude-sonnet-4",
+      model: "anthropic/claude-haiku-4-5",
       temperature: 0.4,
-      maxTokens: 3000,
-      timeoutMs: 9_000,
+      maxTokens: 2200,
+      timeoutMs: 8_000,
     });
   } catch (e) {
     if (e instanceof OpenRouterError) {
