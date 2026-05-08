@@ -137,12 +137,24 @@ def _comment_text(c: dict) -> str:
 
 
 def _commenter_id(c: dict) -> str:
-    for path in ("commenter", "author", "user"):
+    # Current Unipile shape: id at author_details.id (LinkedIn member URN)
+    ad = c.get("author_details")
+    if isinstance(ad, dict):
+        for key in ("id", "provider_id", "public_identifier"):
+            if ad.get(key):
+                return str(ad[key])
+    # Legacy / alt shapes
+    for path in ("commenter", "user"):
         node = c.get(path)
         if isinstance(node, dict):
             for key in ("id", "provider_id", "public_identifier"):
                 if node.get(key):
                     return str(node[key])
+    author = c.get("author")
+    if isinstance(author, dict):
+        for key in ("id", "provider_id", "public_identifier"):
+            if author.get(key):
+                return str(author[key])
     for key in ("commenter_id", "author_id"):
         if c.get(key):
             return str(c[key])
@@ -150,12 +162,21 @@ def _commenter_id(c: dict) -> str:
 
 
 def _commenter_name(c: dict) -> str:
-    for path in ("commenter", "author", "user"):
+    # Current Unipile shape: author is a plain string display name
+    author = c.get("author")
+    if isinstance(author, str) and author.strip():
+        return author.strip()
+    # Legacy / alt shapes
+    for path in ("commenter", "user"):
         node = c.get(path)
         if isinstance(node, dict):
             for key in ("name", "full_name", "display_name"):
                 if node.get(key):
                     return str(node[key])
+    if isinstance(author, dict):
+        for key in ("name", "full_name", "display_name"):
+            if author.get(key):
+                return str(author[key])
     return ""
 
 

@@ -74,9 +74,10 @@ async function request<T = unknown>(
  *  threaded reply to an existing comment. Without parentCommentId,
  *  Unipile creates a top-level comment on the post.
  *
- *  Unipile field name for the parent is `parent_comment_id`. If your DSN
- *  rejects that, try `parent_id` or `comment_id` — the API surface is
- *  inconsistent across versions. */
+ *  Unipile's field for "the comment to reply to" is `comment_id`
+ *  (https://developer.unipile.com/reference/postscontroller_sendcomment).
+ *  Unknown fields are silently dropped, so passing the wrong name posts
+ *  a top-level comment instead of a reply. */
 export async function postComment(args: {
   postId: string;
   text: string;
@@ -87,7 +88,7 @@ export async function postComment(args: {
     text: args.text,
   };
   if (args.parentCommentId) {
-    body.parent_comment_id = args.parentCommentId;
+    body.comment_id = args.parentCommentId;
   }
   return request("POST", `/api/v1/posts/${args.postId}/comments`, body);
 }
@@ -106,9 +107,13 @@ export async function sendDm(args: {
   });
 }
 
-/** Comment on a published post. Mirrors the loose shape returned by Unipile —
- *  the Python monitor probes the same endpoints, so we match its tolerance
- *  by accepting items / data / comments under different keys. */
+/** Comment on a published post. Shape from live Unipile responses:
+ *    { id, post_id, post_urn, date, text,
+ *      author: "Display Name",                       // string, NOT object
+ *      author_details: { id, headline, profile_url, profile_picture_url },
+ *      reaction_counter, reply_counter, ... }
+ *  Older shape variants (commenter / user as objects) are still tolerated
+ *  to keep the monitor robust if Unipile changes the surface again. */
 export interface UnipileComment {
   id?: string;
   comment_id?: string;
@@ -117,8 +122,11 @@ export interface UnipileComment {
   text?: string;
   body?: string;
   commentary?: string;
+  // Current Unipile shape:
+  author?: string | { id?: string; provider_id?: string; public_identifier?: string; name?: string; full_name?: string; display_name?: string };
+  author_details?: { id?: string; provider_id?: string; public_identifier?: string; profile_url?: string; headline?: string };
+  // Legacy fallbacks:
   commenter?: { id?: string; provider_id?: string; public_identifier?: string; name?: string; full_name?: string; display_name?: string };
-  author?: { id?: string; provider_id?: string; public_identifier?: string; name?: string; full_name?: string; display_name?: string };
   user?: { id?: string; provider_id?: string; public_identifier?: string; name?: string; full_name?: string; display_name?: string };
   commenter_id?: string;
   author_id?: string;
@@ -203,24 +211,41 @@ export function commentText(c: UnipileComment): string {
   return String(c.text ?? c.body ?? c.commentary ?? "");
 }
 
-/** Best-effort commenter id (used as DM recipient_id). */
+/** Best-effort commenter id (used as DM recipient_id).
+ *  Current Unipile shape exposes the LinkedIn member URN at
+ *  `author_details.id`. Older shapes are checked as fallbacks. */
 export function commenterId(c: UnipileComment): string {
-  for (const node of [c.commenter, c.author, c.user]) {
+  const ad = c.author_details;
+  if (ad) {
+    const id = ad.id ?? ad.provider_id ?? ad.public_identifier;
+    if (id) return String(id);
+  }
+  for (const node of [c.commenter, c.user]) {
     if (node) {
       const id = node.id ?? node.provider_id ?? node.public_identifier;
       if (id) return String(id);
     }
   }
+  if (c.author && typeof c.author === "object") {
+    const id = c.author.id ?? c.author.provider_id ?? c.author.public_identifier;
+    if (id) return String(id);
+  }
   return String(c.commenter_id ?? c.author_id ?? "");
 }
 
-/** Best-effort commenter display name. */
+/** Best-effort commenter display name.
+ *  Current Unipile shape returns `author` as a plain string. */
 export function commenterName(c: UnipileComment): string {
-  for (const node of [c.commenter, c.author, c.user]) {
+  if (typeof c.author === "string" && c.author.trim()) return c.author.trim();
+  for (const node of [c.commenter, c.user]) {
     if (node) {
       const name = node.name ?? node.full_name ?? node.display_name;
       if (name) return String(name);
     }
+  }
+  if (c.author && typeof c.author === "object") {
+    const name = c.author.name ?? c.author.full_name ?? c.author.display_name;
+    if (name) return String(name);
   }
   return "";
 }
