@@ -16,6 +16,22 @@ const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 
 type Message = { role: "system" | "user" | "assistant"; content: string };
 
+// Errors worth retrying once: transient OpenRouter / upstream issues that
+// typically resolve on a second attempt. Excludes timeouts (504) and any
+// 4xx that's the caller's fault (auth, bad model, missing credits, etc).
+function isFastRetryable(err: OpenRouterError, elapsedMs: number): boolean {
+  // Timeouts are SLOW failures — don't retry, they'll just time out again
+  // and burn the rest of the request budget.
+  if (err.status === 504) return false;
+  // The retry budget is ~3s (1s backoff + 2s for second call). If the
+  // first attempt already burned more than 1.5s, skip — we won't fit
+  // another full call inside Vercel Hobby's 10s ceiling.
+  if (elapsedMs > 1500) return false;
+  // 429 (rate-limited), 502/503 (transient upstream), or network errors
+  // surfaced as 502 are worth one retry.
+  return err.status === 429 || err.status === 502 || err.status === 503;
+}
+
 async function callOpenRouter(opts: {
   messages: Message[];
   model?: string;
@@ -158,10 +174,13 @@ function extractJson(s: string): string {
   return fenceStripped;
 }
 
-// Generate JSON. NO retry — the retry path on Hobby's 10s budget can't
-// fit a second LLM call. Instead: strip fences and prose aggressively,
-// and if parse still fails, surface the malformed content so the user
-// sees what the model actually returned.
+// Generate JSON. Retries are off by default — the retry path on Hobby's
+// 10s budget can't fit a second LLM call after a slow generation.
+// Set retryFastFailures=true to retry ONCE on transient fast failures
+// (429 / 502 / 503 in <1.5s); slow generations still bubble up cleanly.
+// Either way: strip fences and prose aggressively, and if parse still
+// fails, surface the malformed content so the user sees what the model
+// actually returned.
 export async function generateJson<T>(opts: {
   system: string;
   user: string;
@@ -169,6 +188,7 @@ export async function generateJson<T>(opts: {
   temperature?: number;
   maxTokens?: number;
   timeoutMs?: number;
+  retryFastFailures?: boolean;
 }): Promise<T> {
   const messages: Message[] = [
     {
@@ -180,14 +200,33 @@ export async function generateJson<T>(opts: {
     { role: "user", content: opts.user },
   ];
 
-  const raw = await callOpenRouter({
-    messages,
-    model: opts.model,
-    temperature: opts.temperature,
-    maxTokens: opts.maxTokens,
-    jsonMode: true,
-    timeoutMs: opts.timeoutMs,
-  });
+  const callOnce = () =>
+    callOpenRouter({
+      messages,
+      model: opts.model,
+      temperature: opts.temperature,
+      maxTokens: opts.maxTokens,
+      jsonMode: true,
+      timeoutMs: opts.timeoutMs,
+    });
+
+  let raw: string;
+  if (opts.retryFastFailures) {
+    const tStart = Date.now();
+    try {
+      raw = await callOnce();
+    } catch (e) {
+      if (e instanceof OpenRouterError && isFastRetryable(e, Date.now() - tStart)) {
+        console.warn("[openrouter] retrying fast failure", { status: e.status, elapsedMs: Date.now() - tStart });
+        await new Promise((r) => setTimeout(r, 1000));
+        raw = await callOnce();
+      } else {
+        throw e;
+      }
+    }
+  } else {
+    raw = await callOnce();
+  }
 
   const candidate = extractJson(raw);
   try {

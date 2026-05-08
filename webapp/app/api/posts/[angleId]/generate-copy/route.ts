@@ -91,11 +91,14 @@ async function handle(
     // Empty body is fine — defaults apply.
   }
 
-  const { data: angle, error: angleErr } = await supabase
-    .from("angles")
-    .select("*")
-    .eq("angle_id", angleId)
-    .maybeSingle();
+  // Fire angle + businessProfile in parallel — businessProfile doesn't need
+  // accountId (it reads global settings) so it can race the angle fetch.
+  // Saves ~200-500ms of serial wait on cold-cache requests.
+  const [angleRes, businessProfile] = await Promise.all([
+    supabase.from("angles").select("*").eq("angle_id", angleId).maybeSingle(),
+    getBusinessProfile(),
+  ]);
+  const { data: angle, error: angleErr } = angleRes;
   if (angleErr) return NextResponse.json({ error: angleErr.message }, { status: 500 });
   if (!angle) return NextResponse.json({ error: "angle_not_found" }, { status: 404 });
 
@@ -112,8 +115,7 @@ async function handle(
     body.ctaArchetype,
   );
 
-  const [businessProfile, voiceSamples, recentHooks] = await Promise.all([
-    getBusinessProfile(),
+  const [voiceSamples, recentHooks] = await Promise.all([
     getVoiceSamples(accountId, 5),
     getRecentHooks(accountId, 30),
   ]);
@@ -130,7 +132,12 @@ async function handle(
       model: "anthropic/claude-haiku-4-5",
       temperature: 0.7,
       maxTokens: 1500,
-      timeoutMs: 8_000,
+      // Tightened from 8s → 5s to leave room for one retry on FAST failures
+      // (429 / 503 / network glitch) within the 10s Vercel Hobby ceiling.
+      // Slow generations still time out cleanly; the retry only fires for
+      // transient errors that fail in <1s. See lib/openrouter.ts.
+      timeoutMs: 5_000,
+      retryFastFailures: true,
     });
   } catch (e) {
     if (e instanceof OpenRouterError) {
