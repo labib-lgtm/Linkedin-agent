@@ -802,15 +802,47 @@ export async function publishMediaPost(
 
 // Publish a text post. Used by the publish route — keeps Unipile API
 // surface in one place.
+//
+// As of 2026-05, Unipile's POST /api/v1/posts ONLY accepts
+// multipart/form-data — sending the same fields as JSON returns 400
+// with a schema-validation error citing multer-style file fields.
+// We send an empty multipart payload (no attachments) to satisfy the
+// validator while still posting text-only.
 export async function publishTextPost(text: string): Promise<{
   postId: string;
   postUrl: string;
   raw: Record<string, unknown>;
 }> {
-  const { accountId } = await loadCreds();
-  const payload = await unipileFetch<Record<string, unknown>>("POST", "/api/v1/posts", {
-    body: { account_id: accountId, text },
-  });
+  const { apiKey, baseUrl, accountId } = await loadCreds();
+  const form = new FormData();
+  form.set("account_id", accountId);
+  form.set("text", text);
+
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 20_000);
+  t.unref?.();
+
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}/api/v1/posts`, {
+      method: "POST",
+      headers: { "X-API-KEY": apiKey, accept: "application/json" },
+      body: form,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(t);
+  }
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    throw new UnipileError(
+      `Unipile text publish returned ${res.status}`,
+      res.status,
+      errText.slice(0, 800),
+    );
+  }
+  const payload = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   const postId =
     (payload.post_id as string | undefined) ??
     (payload.id as string | undefined) ??
