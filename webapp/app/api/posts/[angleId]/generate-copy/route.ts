@@ -6,7 +6,9 @@ import { postCopySystemPrompt } from "@/lib/prompts";
 import { getVoiceSamples, getRecentHooks } from "@/lib/voice";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 10;
+// Vercel Pro: 60s ceiling. 30s leaves comfortable headroom for Sonnet
+// tail latency (~12s) plus Supabase round-trips + the fast-failure retry.
+export const maxDuration = 30;
 
 type CtaArchetype = "follow" | "comment" | "dm" | "click" | "demo";
 const CTA_ARCHETYPES: CtaArchetype[] = ["follow", "comment", "dm", "click", "demo"];
@@ -132,11 +134,11 @@ async function handle(
       model: "anthropic/claude-haiku-4-5",
       temperature: 0.7,
       maxTokens: 1500,
-      // Tightened from 8s → 5s to leave room for one retry on FAST failures
-      // (429 / 503 / network glitch) within the 10s Vercel Hobby ceiling.
-      // Slow generations still time out cleanly; the retry only fires for
-      // transient errors that fail in <1s. See lib/openrouter.ts.
-      timeoutMs: 5_000,
+      // Vercel Pro: 30s ceiling on the route. 18s on the LLM call leaves
+      // ~12s for Supabase + a fast-failure retry. Switch the model to
+      // anthropic/claude-sonnet-4 in /settings if you want better copy
+      // and can spend the extra ~5-10s of latency.
+      timeoutMs: 18_000,
       retryFastFailures: true,
     });
   } catch (e) {

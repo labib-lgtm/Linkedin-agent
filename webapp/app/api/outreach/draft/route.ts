@@ -7,7 +7,7 @@ import { getVoiceSamples } from "@/lib/voice";
 import { getActiveAccountId } from "@/lib/active-account";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 10;
+export const maxDuration = 30;
 
 // POST /api/outreach/draft
 //
@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
       model: "anthropic/claude-haiku-4-5",
       temperature: 0.6,
       maxTokens: 400,
-      timeoutMs: 8_000,
+      timeoutMs: 20_000,
+      retryFastFailures: true,
     });
   } catch (e) {
     if (e instanceof OpenRouterError) {

@@ -5,7 +5,7 @@ import { getBusinessProfile } from "@/lib/business";
 import { imagePromptDrafterSystemPrompt } from "@/lib/prompts";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 10;
+export const maxDuration = 30;
 
 // POST /api/posts/[angleId]/draft-image-prompt
 //
@@ -76,7 +76,7 @@ export async function POST(
       model: "anthropic/claude-sonnet-4",
       temperature: 0.85,
       maxTokens: isCarousel ? 120 : 600,
-      timeoutMs: 9_000,
+      timeoutMs: 22_000,
     });
   } catch (e) {
     if (e instanceof OpenRouterError) {

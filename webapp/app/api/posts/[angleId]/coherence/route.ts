@@ -13,7 +13,7 @@ import {
 } from "@/lib/coherence";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 10;
+export const maxDuration = 30;
 
 type BodyParagraph = { role: string; text: string };
 
@@ -131,7 +131,8 @@ async function handle(ctx: { params: Promise<{ angleId: string }> }) {
         model: "anthropic/claude-haiku-4-5",
         temperature: 0.2,
         maxTokens: 200,
-        timeoutMs: 9_000,
+        timeoutMs: 20_000,
+        retryFastFailures: true,
       });
       publishable = {
         ok: !!result.publishable,

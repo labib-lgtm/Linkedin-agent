@@ -5,7 +5,7 @@ import { getBusinessProfile } from "@/lib/business";
 import { anglesSystemPrompt } from "@/lib/prompts";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 10;
+export const maxDuration = 30;
 
 type Body = {
   topic?: string;

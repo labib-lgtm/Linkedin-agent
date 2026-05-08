@@ -3,9 +3,10 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { fetchPostComments, UnipileError } from "@/lib/unipile";
 
 export const dynamic = "force-dynamic";
-// Comments fetch on Hobby: single Unipile call with 8s timeout, comfortable
-// inside the 10s function ceiling.
-export const maxDuration = 10;
+// Single Unipile call with 8s timeout, plus a small Supabase round-trip
+// for the cache check. 30s leaves ample headroom on Vercel Pro for
+// retry/backoff if Unipile is slow.
+export const maxDuration = 30;
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 

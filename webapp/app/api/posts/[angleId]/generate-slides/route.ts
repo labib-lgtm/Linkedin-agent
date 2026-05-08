@@ -4,7 +4,7 @@ import { generateJson, OpenRouterError } from "@/lib/openrouter";
 import { carouselStructureSystemPrompt, type BrandPalette } from "@/lib/prompts";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 10;
+export const maxDuration = 30;
 
 type Template = "story" | "list" | "compare" | "framework";
 const TEMPLATES: Template[] = ["story", "list", "compare", "framework"];
@@ -160,7 +160,8 @@ async function handle(
       model: "anthropic/claude-haiku-4-5",
       temperature: 0.4,
       maxTokens: 2200,
-      timeoutMs: 8_000,
+      timeoutMs: 20_000,
+      retryFastFailures: true,
     });
   } catch (e) {
     if (e instanceof OpenRouterError) {

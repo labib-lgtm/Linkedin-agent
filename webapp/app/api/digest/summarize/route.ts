@@ -3,10 +3,10 @@ import { summarizeDigest, DigestError, type DigestReadOut } from "@/lib/digest";
 import { OpenRouterError } from "@/lib/openrouter";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 10;
+export const maxDuration = 30;
 
 // Phase 2: takes the read payload from /run and runs the LLM. Isolated
-// from the reads so the model call gets its own 10s budget.
+// from the reads so the model call gets its own dedicated budget.
 export async function POST(req: NextRequest) {
   try {
     return await handle(req);
