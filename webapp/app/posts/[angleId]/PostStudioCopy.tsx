@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { StudioAngle } from "./PostStudio";
 import { NewMagnetDialog, type LeadMagnet } from "@/app/settings/NewMagnetDialog";
+import { ImproveButton } from "@/components/posts/ImproveButton";
 
 const ROLE_LABEL: Record<string, string> = {
   hook: "Hook",
@@ -36,11 +37,15 @@ export function PostStudioCopy({
   generating,
   onGenerate,
   onPatch,
+  onAngleUpdated,
 }: {
   angle: StudioAngle;
   generating: boolean;
   onGenerate: (opts?: { hookOnly?: boolean; ctaOnly?: boolean; ctaArchetype?: string }) => Promise<void>;
   onPatch: (patch: Partial<StudioAngle>) => Promise<StudioAngle>;
+  /** Called when the inline "improve" endpoint persists a change server-side
+      and returns the updated angle. Lets the parent skip a second PATCH. */
+  onAngleUpdated: (updatedAngle: StudioAngle) => void;
 }) {
   const hookVariants = angle.hook_variants ?? [];
   const selectedIdx = angle.selected_hook_index ?? 0;
@@ -231,20 +236,24 @@ export function PostStudioCopy({
           {hookVariants.map((v, i) => {
             const selected = i === selectedIdx;
             return (
-              <button
+              <div
                 key={i}
-                type="button"
-                onClick={() => pickHook(i)}
-                className={`w-full text-left grid gap-3 items-center px-3 py-2.5 rounded-lg border transition-colors ${
+                className={`grid gap-3 items-center px-3 py-2.5 rounded-lg border transition-colors ${
                   selected
                     ? "border-lynx-green bg-lynx-green/10 ring-1 ring-lynx-green"
                     : "border-border bg-background hover:bg-muted/50"
                 }`}
-                style={{ gridTemplateColumns: "1fr auto" }}
+                style={{ gridTemplateColumns: "1fr auto auto" }}
               >
-                <span className={`text-sm leading-snug ${selected ? "font-medium" : ""}`}>
-                  {v.text}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => pickHook(i)}
+                  className="text-left bg-transparent border-0 p-0 m-0 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-lynx-green rounded"
+                >
+                  <span className={`text-sm leading-snug ${selected ? "font-medium" : ""}`}>
+                    {v.text}
+                  </span>
+                </button>
                 {typeof v.voice_match_score === "number" ? (
                   <span
                     className={`text-[10px] tabular-nums px-2 py-0.5 rounded ${
@@ -256,8 +265,16 @@ export function PostStudioCopy({
                   >
                     {Math.round(v.voice_match_score * 100)}% voice
                   </span>
-                ) : null}
-              </button>
+                ) : (
+                  <span />
+                )}
+                <ImproveButton
+                  angleId={angle.angle_id}
+                  target="hook"
+                  index={i}
+                  onApplied={(updated) => onAngleUpdated(updated as StudioAngle)}
+                />
+              </div>
             );
           })}
         </div>
@@ -276,7 +293,7 @@ export function PostStudioCopy({
             <div
               key={i}
               className="grid gap-3 items-start px-3.5 py-3 hover:bg-muted/30 transition-colors"
-              style={{ gridTemplateColumns: "1fr 90px" }}
+              style={{ gridTemplateColumns: "1fr auto auto" }}
             >
               <textarea
                 value={p.text}
@@ -296,6 +313,12 @@ export function PostStudioCopy({
               >
                 {ROLE_LABEL[p.role] ?? p.role}
               </span>
+              <ImproveButton
+                angleId={angle.angle_id}
+                target="body"
+                index={i}
+                onApplied={(updated) => onAngleUpdated(updated as StudioAngle)}
+              />
             </div>
           ))}
         </div>

@@ -200,6 +200,7 @@ export function PostStudio({
             generating={generating}
             onGenerate={generateCopy}
             onPatch={patchAngle}
+            onAngleUpdated={(updated) => setAngle(updated)}
           />
         </div>
       </div>

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { Slide } from "./SlideCard";
+import { ImproveButton } from "./ImproveButton";
 
 const ROLES = ["cover", "list-item", "framework-block", "chart", "quote", "divider", "payoff", "cta"];
 const LAYOUTS = ["cover", "big-number", "big-stat", "chart", "inverted-cta"];
@@ -109,7 +110,20 @@ export function SlideEditDrawer({
 
         <div className="space-y-4 mt-2">
           <div>
-            <Label className="text-[10px] uppercase tracking-wider">Headline</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] uppercase tracking-wider">Headline</Label>
+              <ImproveButton
+                angleId={angleId}
+                target="slide-copy"
+                index={slide.n}
+                onApplied={(updatedAngle) => {
+                  const slides = (updatedAngle.carousel_slides as Slide[]) ?? [];
+                  const refreshed = slides.find((s) => s.n === slide.n);
+                  if (refreshed) setHeadline(refreshed.headline);
+                  onSaved(updatedAngle as { carousel_slides: Slide[] } & Record<string, unknown>);
+                }}
+              />
+            </div>
             <Input
               value={headline}
               onChange={(e) => setHeadline(e.target.value)}
@@ -197,9 +211,22 @@ export function SlideEditDrawer({
           </div>
 
           <div>
-            <Label className="text-[10px] uppercase tracking-wider">
-              Image gen prompt (Phase C uses this)
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] uppercase tracking-wider">
+                Image gen prompt (Phase C uses this)
+              </Label>
+              <ImproveButton
+                angleId={angleId}
+                target="slide-image"
+                index={slide.n}
+                onApplied={(updatedAngle) => {
+                  const slides = (updatedAngle.carousel_slides as Slide[]) ?? [];
+                  const refreshed = slides.find((s) => s.n === slide.n);
+                  if (refreshed) setImagePrompt(refreshed.image_gen_prompt ?? "");
+                  onSaved(updatedAngle as { carousel_slides: Slide[] } & Record<string, unknown>);
+                }}
+              />
+            </div>
             <Textarea
               value={imagePrompt}
               onChange={(e) => setImagePrompt(e.target.value)}

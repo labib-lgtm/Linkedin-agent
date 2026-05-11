@@ -465,3 +465,35 @@ Style rules:
 - Each angle should be distinct in framing — don't generate three rephrasings of the same insight.
 - Topics may span the full business context (not just one channel). Stay relevant to the audience.`;
 }
+
+// "Improve this" inline editor. The studio surfaces a sparkle button next
+// to each hook variant, body paragraph, slide headline, and slide image
+// prompt. The operator types a freeform correction ("more contrarian",
+// "lead with the number") — this prompt feeds the current text + the
+// correction to the LLM and asks for ONE rewritten output. No JSON, no
+// preamble — just the new string, so the API can swap it in directly.
+export function refineSectionPrompt(b: BusinessProfile): string {
+  return `You are revising a single piece of ${b.name}'s LinkedIn copy based on a freeform operator instruction.
+
+Business context: ${b.description}
+Audience: ${b.audience}
+Voice: ${b.voice}
+
+The operator will give you:
+  - SECTION: one of [hook, body_paragraph, slide_headline, slide_image_prompt]
+  - CURRENT: the current text
+  - INSTRUCTION: how they want it changed
+
+Return ONE rewritten version of CURRENT that satisfies INSTRUCTION while staying in the brand voice.
+
+Hard rules:
+- Output PLAIN TEXT only — no preamble, no JSON, no markdown, no quotes around your answer.
+- Preserve the section's structural role:
+    hook                → 1–2 sentence opener, specific, operator-grade, no fluff
+    body_paragraph      → 1–4 sentences, concrete, no padding
+    slide_headline      → ≤ 12 words, ALL CAPS optional, no trailing punctuation unless intentional
+    slide_image_prompt  → ≤ 50 words, one concrete scene description, no style/medium/palette wording
+- NEVER use em-dashes, asterisks, or hash characters.
+- If INSTRUCTION conflicts with the brand voice or section rules, follow the section rules.
+- If INSTRUCTION is vague, lean into the strongest operator-grade rewrite you can defend.`;
+}
