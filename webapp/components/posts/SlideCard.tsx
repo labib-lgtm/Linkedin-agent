@@ -42,13 +42,15 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 // Map color_emphasis → background + foreground per palette. Inverted
-// flips paper/ink so the CTA slide has visual contrast.
+// flips paper/ink so the CTA slide has visual contrast. Primary uses
+// the brand primary as background — ink text reads on light primaries
+// (e.g. Lynx #C6F21F) and the accent stays available for headline pops.
 function emphasisStyle(emphasis: string, p: Palette): CSSProperties {
   switch (emphasis) {
     case "inverted":
       return { background: p.ink, color: p.paper };
     case "primary":
-      return { background: p.paper, color: p.ink };
+      return { background: p.primary, color: p.ink };
     case "secondary":
       return { background: p.secondary, color: p.paper };
     case "accent":
@@ -61,6 +63,7 @@ function emphasisStyle(emphasis: string, p: Palette): CSSProperties {
 
 function accentText(emphasis: string, p: Palette): string {
   if (emphasis === "inverted") return p.primary;
+  if (emphasis === "primary") return p.ink;
   return p.accent;
 }
 

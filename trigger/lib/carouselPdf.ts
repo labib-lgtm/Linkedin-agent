@@ -42,11 +42,14 @@ function emphasisColors(emphasis: string, p: Palette): { bg: string; fg: string;
   switch (emphasis) {
     case "inverted":
       return { bg: p.ink, fg: p.paper, accentFg: p.primary };
+    case "primary":
+      // Brand primary as bg. ink text reads on light primaries (e.g.
+      // Lynx #C6F21F). accentFg stays ink so headline emphasis pops.
+      return { bg: p.primary, fg: p.ink, accentFg: p.ink };
     case "secondary":
       return { bg: p.secondary, fg: p.paper, accentFg: p.accent };
     case "accent":
       return { bg: p.accent, fg: p.paper, accentFg: p.paper };
-    case "primary":
     case "neutral":
     default:
       return { bg: p.paper, fg: p.ink, accentFg: p.accent };
