@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SlideCard, type Palette, type Slide } from "./SlideCard";
 import { SlideEditDrawer } from "./SlideEditDrawer";
 import { SlideVariantPicker } from "./SlideVariantPicker";
+import { ImproveButton } from "./ImproveButton";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const STORAGE_BUCKET = "post-assets";
@@ -250,19 +251,43 @@ export function SlideStudio({
                       pickedImagePath={pickedPath}
                       onClick={() => setEditingSlide(s)}
                     />
-                    {hasImagePrompt ? (
-                      <button
-                        type="button"
-                        onClick={() => setVariantSlide(s)}
-                        className={`w-full text-[10px] font-semibold py-1 rounded border transition-colors ${
-                          pickedPath
-                            ? "border-lynx-green bg-lynx-green/10 text-lynx-charcoal hover:bg-lynx-green/20"
-                            : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/30"
-                        }`}
-                      >
-                        {pickedPath ? "✓ Image picked · view variants" : "Generate 4 image variants"}
-                      </button>
-                    ) : null}
+                    {/* Per-slide footer: revamp comment (left) +
+                        variants button (right). Comment-driven revamp
+                        works even when image_gen_prompt is empty — the
+                        improve endpoint seeds it from slide copy. */}
+                    <div className="flex items-stretch gap-1">
+                      {hasImagePrompt ? (
+                        <button
+                          type="button"
+                          onClick={() => setVariantSlide(s)}
+                          className={`flex-1 text-[10px] font-semibold py-1 rounded border transition-colors ${
+                            pickedPath
+                              ? "border-lynx-green bg-lynx-green/10 text-lynx-charcoal hover:bg-lynx-green/20"
+                              : "border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                          }`}
+                        >
+                          {pickedPath ? "✓ Image picked · view variants" : "Generate 4 image variants"}
+                        </button>
+                      ) : (
+                        <span className="flex-1 text-[10px] py-1 text-center text-muted-foreground/60 italic">
+                          no image brief yet
+                        </span>
+                      )}
+                      <span className="flex items-center justify-center px-1 rounded border border-border bg-background">
+                        <ImproveButton
+                          angleId={angleId}
+                          target="slide-image"
+                          index={s.n}
+                          align={s.n % 2 === 0 ? "right" : "left"}
+                          label={
+                            hasImagePrompt
+                              ? "Revamp this image"
+                              : "Draft image brief from a comment"
+                          }
+                          onApplied={(updatedAngle) => onUpdate(updatedAngle)}
+                        />
+                      </span>
+                    </div>
                   </div>
                 );
               })}
