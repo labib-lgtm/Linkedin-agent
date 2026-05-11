@@ -15,12 +15,18 @@ import { toast } from "sonner";
 // positioning + a click-outside / Escape listener. Keeps the dependency
 // surface flat and dodges the Radix-vs-vaul thrash.
 
-export type ImproveTarget = "hook" | "body" | "slide-copy" | "slide-image";
+export type ImproveTarget =
+  | "hook"
+  | "body"
+  | "body-all"
+  | "slide-copy"
+  | "slide-image";
 
 type Props = {
   angleId: string;
   target: ImproveTarget;
-  index: number; // 0-based for hook/body, 1-based for slide
+  /** 0-based for hook/body, 1-based for slide. Omit / 0 for body-all. */
+  index?: number;
   /** Optional label override for the popover header. */
   label?: string;
   /** Disabled state from the parent (e.g. during another save). */
@@ -34,6 +40,7 @@ type Props = {
 const DEFAULT_LABELS: Record<ImproveTarget, string> = {
   hook: "Improve this hook",
   body: "Improve this paragraph",
+  "body-all": "Improve the whole body",
   "slide-copy": "Improve this slide",
   "slide-image": "Improve the image brief",
 };
@@ -41,6 +48,7 @@ const DEFAULT_LABELS: Record<ImproveTarget, string> = {
 const PLACEHOLDERS: Record<ImproveTarget, string> = {
   hook: "e.g. lead with the 78-comment stat",
   body: "e.g. tighten this to 2 sentences",
+  "body-all": "e.g. make the whole thing more contrarian and cut the fluff",
   "slide-copy": "e.g. make the headline more contrarian",
   "slide-image": "e.g. less cluttered, just the laptop",
 };
@@ -93,7 +101,7 @@ export function ImproveButton({
       const res = await fetch(`/api/posts/${angleId}/improve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target, index, instruction: trimmed }),
+        body: JSON.stringify({ target, index: index ?? 0, instruction: trimmed }),
       });
       const data = await res.json();
       if (!res.ok) {

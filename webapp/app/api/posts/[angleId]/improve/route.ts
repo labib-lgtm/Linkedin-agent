@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { tasks } from "@trigger.dev/sdk/v3";
 import { createServiceClient } from "@/lib/supabase/server";
-import { generateText, OpenRouterError } from "@/lib/openrouter";
+import { generateText, generateJson, OpenRouterError } from "@/lib/openrouter";
 import { getBusinessProfile } from "@/lib/business";
-import { refineSectionPrompt } from "@/lib/prompts";
+import { refineSectionPrompt, refineFullBodyPrompt } from "@/lib/prompts";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -22,8 +22,8 @@ export const maxDuration = 30;
 //   slide-image  — rewrite carousel_slides[index-1].image_gen_prompt
 //                  then fire the generate-slide-images Trigger.dev task
 
-type Target = "hook" | "body" | "slide-copy" | "slide-image";
-const TARGETS: Target[] = ["hook", "body", "slide-copy", "slide-image"];
+type Target = "hook" | "body" | "body-all" | "slide-copy" | "slide-image";
+const TARGETS: Target[] = ["hook", "body", "body-all", "slide-copy", "slide-image"];
 
 type HookVariant = {
   text: string;
@@ -83,7 +83,8 @@ export async function POST(
       { status: 400 },
     );
   }
-  if (!Number.isInteger(index) || index < 0) {
+  // body-all targets the entire body, so no index is required.
+  if (target !== "body-all" && (!Number.isInteger(index) || index < 0)) {
     return NextResponse.json({ error: "invalid_index" }, { status: 400 });
   }
   if (!instruction) {
@@ -104,6 +105,95 @@ export async function POST(
     .maybeSingle();
   if (aErr) return NextResponse.json({ error: aErr.message }, { status: 500 });
   if (!angle) return NextResponse.json({ error: "angle_not_found" }, { status: 404 });
+
+  // ────────────────────────────────────────────────────────────────────
+  // body-all — single-shot whole-body rewrite. Uses generateJson so the
+  // paragraph / role mapping survives. Per-paragraph improves break
+  // coherence between paragraphs, hence this section-level surface.
+  // ────────────────────────────────────────────────────────────────────
+  if (target === "body-all") {
+    const paras = (angle.body_paragraphs as BodyParagraph[] | null) ?? [];
+    if (paras.length === 0) {
+      return NextResponse.json(
+        { error: "no_body_paragraphs", message: "Generate body copy first." },
+        { status: 400 },
+      );
+    }
+
+    const businessProfile = await getBusinessProfile();
+    let rewrittenBody: { body_paragraphs?: BodyParagraph[] };
+    try {
+      rewrittenBody = await generateJson<{ body_paragraphs?: BodyParagraph[] }>({
+        system: refineFullBodyPrompt(businessProfile),
+        user: `CURRENT:\n${JSON.stringify(paras, null, 2)}\n\nINSTRUCTION:\n${instruction}\n\nReturn only the JSON object.`,
+        model: "anthropic/claude-sonnet-4",
+        temperature: 0.6,
+        maxTokens: 1500,
+        timeoutMs: 22_000,
+        retryFastFailures: true,
+      });
+    } catch (e) {
+      if (e instanceof OpenRouterError) {
+        return NextResponse.json(
+          { error: "openrouter_failed", status: e.status, body: e.body },
+          { status: 502 },
+        );
+      }
+      return NextResponse.json(
+        { error: "improve_failed", message: (e as Error).message },
+        { status: 502 },
+      );
+    }
+
+    const next = (rewrittenBody.body_paragraphs ?? [])
+      .filter((p) => p && typeof p.text === "string" && p.text.trim())
+      .map((p) => ({ role: (p.role ?? "setup") as BodyParagraph["role"], text: p.text.trim() }));
+
+    // Defensive: count must match. If the LLM dropped or added a paragraph
+    // despite the prompt, fall back to swapping just the text positionally.
+    if (next.length !== paras.length) {
+      console.warn("[improve body-all] paragraph count drifted", {
+        got: next.length, want: paras.length,
+      });
+    }
+    if (next.length === 0) {
+      return NextResponse.json(
+        { error: "empty_rewrite", message: "Model returned no usable paragraphs." },
+        { status: 502 },
+      );
+    }
+
+    // Force the role on each paragraph to match the original order so a
+    // hallucinated role rename doesn't desync the studio's role badges.
+    const aligned = next.map((p, i) => ({
+      role: (paras[i]?.role ?? p.role) as BodyParagraph["role"],
+      text: p.text,
+    }));
+
+    const bodyPatch: Record<string, unknown> = {
+      body_paragraphs: aligned,
+      draft_body: joinBody(aligned),
+    };
+    // Keep cta_text in sync if the last paragraph is the CTA.
+    const last = aligned[aligned.length - 1];
+    if (last?.role === "cta") {
+      bodyPatch.cta_text = last.text;
+    }
+    if (angle.format === "carousel" && angle.carousel_pdf_path) {
+      bodyPatch.carousel_pdf_path = null;
+      bodyPatch.carousel_rendered_at = null;
+    }
+
+    const { data: updated, error: upErr } = await supabase
+      .from("angles")
+      .update(bodyPatch)
+      .eq("angle_id", angleId)
+      .select()
+      .single();
+    if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+
+    return NextResponse.json({ angle: updated });
+  }
 
   // Resolve the CURRENT text for the LLM and the section label.
   let currentText: string;

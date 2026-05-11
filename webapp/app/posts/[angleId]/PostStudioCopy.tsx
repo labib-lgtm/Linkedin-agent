@@ -287,13 +287,20 @@ export function PostStudioCopy({
           actionLabel={generating ? "Generating…" : "↻ Regenerate body"}
           actionDisabled={generating}
           onAction={() => onGenerate()}
+          extra={
+            <ImproveButton
+              angleId={angle.angle_id}
+              target="body-all"
+              onApplied={(updated) => onAngleUpdated(updated as StudioAngle)}
+            />
+          }
         />
         <div className="rounded-lg border border-border bg-background overflow-hidden divide-y divide-border">
           {localBody.map((p, i) => (
             <div
               key={i}
               className="grid gap-3 items-start px-3.5 py-3 hover:bg-muted/30 transition-colors"
-              style={{ gridTemplateColumns: "1fr auto auto" }}
+              style={{ gridTemplateColumns: "1fr 90px" }}
             >
               <textarea
                 value={p.text}
@@ -313,12 +320,6 @@ export function PostStudioCopy({
               >
                 {ROLE_LABEL[p.role] ?? p.role}
               </span>
-              <ImproveButton
-                angleId={angle.angle_id}
-                target="body"
-                index={i}
-                onApplied={(updated) => onAngleUpdated(updated as StudioAngle)}
-              />
             </div>
           ))}
         </div>
@@ -495,27 +496,33 @@ function SectionHeader({
   actionLabel,
   actionDisabled,
   onAction,
+  extra,
 }: {
   title: string;
   actionLabel?: string;
   actionDisabled?: boolean;
   onAction?: () => void;
+  /** Optional extra control (e.g. ImproveButton) rendered to the right of the action label. */
+  extra?: React.ReactNode;
 }) {
   return (
     <div className="flex items-center justify-between mb-2">
       <h3 className="text-[10px] uppercase tracking-[0.16em] font-bold text-muted-foreground">
         {title}
       </h3>
-      {actionLabel && onAction ? (
-        <button
-          type="button"
-          onClick={onAction}
-          disabled={actionDisabled}
-          className="text-[11px] text-foreground/70 hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed px-2 py-1 rounded hover:bg-muted"
-        >
-          {actionLabel}
-        </button>
-      ) : null}
+      <div className="flex items-center gap-1">
+        {actionLabel && onAction ? (
+          <button
+            type="button"
+            onClick={onAction}
+            disabled={actionDisabled}
+            className="text-[11px] text-foreground/70 hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed px-2 py-1 rounded hover:bg-muted"
+          >
+            {actionLabel}
+          </button>
+        ) : null}
+        {extra}
+      </div>
     </div>
   );
 }

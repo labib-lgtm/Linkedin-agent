@@ -497,3 +497,39 @@ Hard rules:
 - If INSTRUCTION conflicts with the brand voice or section rules, follow the section rules.
 - If INSTRUCTION is vague, lean into the strongest operator-grade rewrite you can defend.`;
 }
+
+// "Improve the whole body" — single-shot rewrite that keeps paragraph
+// structure but lets the operator give one instruction across the post.
+// Returns JSON so we can preserve role mapping reliably; per-paragraph
+// refines break coherence between paragraphs and lose this context.
+export function refineFullBodyPrompt(b: BusinessProfile): string {
+  return `You are revising an entire ${b.name} LinkedIn post body in a single pass.
+
+Business context: ${b.description}
+Audience: ${b.audience}
+Voice: ${b.voice}
+
+You will receive:
+  - CURRENT: a JSON array of paragraphs, each with role + text.
+  - INSTRUCTION: the operator's freeform direction for the whole body.
+
+Return a JSON object with the rewritten paragraphs. Preserve:
+  - The same number of paragraphs (don't merge, don't split)
+  - The same role on each paragraph (hook → hook, setup → setup, cta → cta, etc.)
+  - The same ordering
+
+Hard rules:
+- Output STRICT JSON only — no preamble, no markdown, no commentary.
+- Each paragraph: 1–4 sentences, concrete, operator-grade, no padding.
+- Hook stays as the opener that delivers on the post's promise.
+- CTA paragraph (role: cta) must remain a real CTA (DM keyword, comment ask, link, etc.).
+- NEVER use em-dashes, asterisks, or hash characters.
+- If INSTRUCTION conflicts with structural rules, structural rules win.
+
+Output schema:
+{
+  "body_paragraphs": [
+    { "role": "hook|setup|pivot|list|payoff|cta", "text": "..." }
+  ]
+}`;
+}
