@@ -29,13 +29,49 @@ const POLL_WINDOW_HOURS = 24;
 const MAX_ANGLES_PER_RUN = 30;
 const PACING_MS_BETWEEN_FETCHES = 250;
 
-// Match the angle.cta_keyword against a comment's text — case-insensitive
-// word-boundary regex. Mirrors tools/unipile_monitor_comments.py:_matches_cta.
+// Match the angle.cta_keyword against a comment's text.
+//   1. Exact word-boundary match, case-insensitive (the strict path).
+//   2. For keywords ≥6 chars, ALSO accept any whole word within edit
+//      distance 1 (1 insertion / deletion / substitution). Catches the
+//      common typo classes: 'Thresold', 'Threshhold', 'Treshold'.
+//      The 6-char floor stops short keywords like 'KILL' from
+//      matching innocuous words like 'kell', 'bill', 'kil'.
+function withinDistanceOne(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) {
+      i++;
+      j++;
+      continue;
+    }
+    edits++;
+    if (edits > 1) return false;
+    if (a.length === b.length) {
+      i++;
+      j++; // substitution
+    } else if (a.length > b.length) {
+      i++; // delete from a
+    } else {
+      j++; // delete from b == insert into a
+    }
+  }
+  return edits + (a.length - i) + (b.length - j) <= 1;
+}
+
 function matchesCta(text: string, ctaKeyword: string): boolean {
   if (!ctaKeyword) return false;
-  // Escape regex special chars in the keyword.
   const escaped = ctaKeyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`\\b${escaped}\\b`, "i").test(text);
+  if (new RegExp(`\\b${escaped}\\b`, "i").test(text)) return true;
+  // Fuzzy fallback: only for longer keywords, only on alphabetic tokens.
+  if (ctaKeyword.length < 6) return false;
+  const lower = ctaKeyword.toLowerCase();
+  const words = text.toLowerCase().match(/[a-z]+/g);
+  if (!words) return false;
+  return words.some((w) => withinDistanceOne(w, lower));
 }
 
 // Extract a Unipile-friendly post identifier from a published_media_urn or

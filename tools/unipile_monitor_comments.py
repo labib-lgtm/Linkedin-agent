@@ -180,10 +180,49 @@ def _commenter_name(c: dict) -> str:
     return ""
 
 
+def _within_distance_one(a: str, b: str) -> bool:
+    if a == b:
+        return True
+    if abs(len(a) - len(b)) > 1:
+        return False
+    i = j = edits = 0
+    while i < len(a) and j < len(b):
+        if a[i] == b[j]:
+            i += 1
+            j += 1
+            continue
+        edits += 1
+        if edits > 1:
+            return False
+        if len(a) == len(b):
+            i += 1
+            j += 1  # substitution
+        elif len(a) > len(b):
+            i += 1  # delete from a
+        else:
+            j += 1  # insert into a (== delete from b)
+    return edits + (len(a) - i) + (len(b) - j) <= 1
+
+
 def _matches_cta(text: str, cta_keyword: str) -> bool:
+    """Match cta_keyword against comment text.
+
+    Two-tier:
+      1. Exact word-boundary match, case-insensitive (strict path).
+      2. For keywords >=6 chars, ALSO accept any whole word within edit
+         distance 1 (catches typos like 'Thresold', 'Threshhold').
+         Short keywords like 'KILL' would over-match so they stay strict.
+    """
     if not cta_keyword:
         return False
-    return bool(re.search(rf"\b{re.escape(cta_keyword)}\b", text, re.IGNORECASE))
+    if re.search(rf"\b{re.escape(cta_keyword)}\b", text, re.IGNORECASE):
+        return True
+    if len(cta_keyword) < 6:
+        return False
+    lower = cta_keyword.lower()
+    return any(
+        _within_distance_one(w, lower) for w in re.findall(r"[a-z]+", text.lower())
+    )
 
 
 def _write_recipient_row(angle: dict, comment: dict, run_id: str | None) -> str:
