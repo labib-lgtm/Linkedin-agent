@@ -251,10 +251,12 @@ export function SlideStudio({
                       pickedImagePath={pickedPath}
                       onClick={() => setEditingSlide(s)}
                     />
-                    {/* Per-slide footer: revamp comment (left) +
-                        variants button (right). Comment-driven revamp
-                        works even when image_gen_prompt is empty — the
-                        improve endpoint seeds it from slide copy. */}
+                    {/* Per-slide footer: variants / brief button (left),
+                        sparkle improve (middle), text-only escape (right).
+                        Comment-driven revamp works even when
+                        image_gen_prompt is empty — the improve endpoint
+                        seeds it from slide copy. Text-only is only
+                        offered when there's something to clear. */}
                     <div className="flex items-stretch gap-1">
                       {hasImagePrompt ? (
                         <button
@@ -287,6 +289,42 @@ export function SlideStudio({
                           onApplied={(updatedAngle) => onUpdate(updatedAngle)}
                         />
                       </span>
+                      {hasImagePrompt || pickedPath ? (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(
+                                `/api/posts/${angleId}/slide/${s.n}/pick-variant`,
+                                { method: "DELETE" },
+                              );
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+                              onUpdate(data.angle);
+                              toast.success(`Slide ${s.n} is now text-only`);
+                            } catch (e) {
+                              toast.error(`Could not clear: ${(e as Error).message}`);
+                            }
+                          }}
+                          title="Keep this slide text-only — clear illustration and image brief."
+                          className="flex items-center justify-center px-1.5 rounded border border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="w-3 h-3"
+                            aria-hidden="true"
+                          >
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 );

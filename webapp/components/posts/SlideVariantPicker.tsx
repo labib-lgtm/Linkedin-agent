@@ -50,6 +50,27 @@ export function SlideVariantPicker({
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [skipping, setSkipping] = useState(false);
+
+  async function skipIllustration() {
+    if (!slide) return;
+    setSkipping(true);
+    try {
+      const res = await fetch(
+        `/api/posts/${angleId}/slide/${slide.n}/pick-variant`,
+        { method: "DELETE" },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      onPicked(data.angle);
+      toast.success(`Slide ${slide.n} is now text-only`);
+      onClose();
+    } catch (e) {
+      toast.error(`Could not clear: ${(e as Error).message}`);
+    } finally {
+      setSkipping(false);
+    }
+  }
 
   async function refresh() {
     if (!slide) return;
@@ -172,18 +193,30 @@ export function SlideVariantPicker({
         </DialogHeader>
 
         <div className="mt-4 space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div className="text-[10px] uppercase tracking-[0.16em] font-bold text-muted-foreground">
               {assets.length === 0 ? "No variants yet" : `${assets.length} variant${assets.length === 1 ? "" : "s"}`}
             </div>
-            <Button
-              size="sm"
-              onClick={generate}
-              disabled={generating}
-              className="bg-lynx-green text-lynx-charcoal hover:bg-lynx-green/90"
-            >
-              {generating ? "Generating…" : assets.length > 0 ? "↻ Regenerate 4 variants" : "Generate 4 variants"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={skipIllustration}
+                disabled={skipping}
+                title="Clear this slide's illustration and image brief — keep it text-only."
+                className="text-muted-foreground hover:text-foreground"
+              >
+                {skipping ? "Clearing…" : "Keep text-only"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={generate}
+                disabled={generating}
+                className="bg-lynx-green text-lynx-charcoal hover:bg-lynx-green/90"
+              >
+                {generating ? "Generating…" : assets.length > 0 ? "↻ Regenerate 4 variants" : "Generate 4 variants"}
+              </Button>
+            </div>
           </div>
 
           {loading && assets.length === 0 ? (
