@@ -190,13 +190,62 @@ async function handle(
 
   if (body.ctaOnly) {
     patch.cta_archetype = ctaArchetype;
-    patch.cta_text = (copy.cta_text ?? "").trim() || null;
+    const newCtaText = (copy.cta_text ?? "").trim() || null;
+    patch.cta_text = newCtaText;
     patch.pin_comment = (copy.pin_comment ?? "").trim() || null;
     if (ctaArchetype === "dm") {
       patch.dm_response_template = (copy.dm_response_template ?? "").trim() || null;
       patch.dm_template_generated_at = new Date().toISOString();
     } else {
       patch.dm_response_template = null;
+    }
+
+    // Propagate the new CTA into the body's last paragraph (role="cta")
+    // and rebuild draft_body. Without this, the studio shows the new CTA
+    // in the archetype block but the body + slide 7 still read the old
+    // copy until the user does a full regen.
+    if (newCtaText) {
+      const existing = (angle.body_paragraphs as BodyParagraph[] | null) ?? [];
+      if (existing.length > 0) {
+        const updated = [...existing];
+        const lastIdx = updated.length - 1;
+        const last = updated[lastIdx];
+        if (last && last.role === "cta") {
+          updated[lastIdx] = { role: "cta", text: newCtaText };
+        } else {
+          // No CTA paragraph present — append one so the body ends with the CTA.
+          updated.push({ role: "cta", text: newCtaText });
+        }
+        patch.body_paragraphs = updated;
+        patch.draft_body = joinBody(updated);
+      }
+    }
+
+    // Propagate the new CTA into the last carousel slide (role="cta").
+    // Without this, slide 7 keeps its stale headline (e.g. "DM 'HOURS'
+    // for the full audit template" after the operator switches to a
+    // Comment archetype) and gets rendered into the published PDF
+    // verbatim. Leaves visual_element, color_emphasis, layout
+    // untouched — only the copy changes.
+    if (newCtaText && angle.format === "carousel") {
+      const slides =
+        (angle.carousel_slides as Array<Record<string, unknown>> | null) ?? [];
+      if (slides.length > 0) {
+        const lastIdx = slides.length - 1;
+        const last = slides[lastIdx];
+        if (last && (last.role === "cta" || last.layout === "inverted-cta")) {
+          slides[lastIdx] = {
+            ...last,
+            headline: newCtaText,
+            supporting: last.supporting ?? null,
+          };
+          patch.carousel_slides = slides;
+        }
+      }
+      // Invalidate any rendered PDF — slide 7 changed, the PDF on disk
+      // is now wrong. User has to click Render & publish again.
+      patch.carousel_pdf_path = null;
+      patch.carousel_rendered_at = null;
     }
   } else if (body.hookOnly) {
     patch.hook_variants = hookVariants;

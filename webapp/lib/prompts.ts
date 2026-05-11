@@ -204,10 +204,17 @@ Carousel rules — non-negotiable:
    visual_element: bar-chart | line-chart | icon-grid | single-icon | blank | photo | illustration
    color_emphasis: primary | secondary | accent | neutral | inverted
 
+— COLOR EMPHASIS distribution (load-bearing — this is the brand)
+   Cover slide   → color_emphasis MUST be "primary" (the brand primary owns slide 1).
+   Payoff slide  → color_emphasis MUST be "primary" (reinforce the brand on the punchline).
+   CTA slide     → color_emphasis MUST be "primary" OR "inverted" (pick "inverted" only if every other slide is paper).
+   List slides   → mostly "neutral" or "paper"; AT MOST one "accent" slide across the whole deck.
+   Never use "accent" on the cover, payoff, or CTA — accent is a spice slide, not a hero color.
+
 Brand visual tokens (the studio renders cards with these — do not invent new colors):
-  primary:   ${palette.primary}
+  primary:   ${palette.primary}   ← hero brand color. Owns cover/payoff/CTA.
   secondary: ${palette.secondary}
-  accent:    ${palette.accent}
+  accent:    ${palette.accent}    ← spice only. ≤1 slide per deck.
   ink:       ${palette.ink}
   paper:     ${palette.paper}
 Typography: ${typography || "default sans"}
