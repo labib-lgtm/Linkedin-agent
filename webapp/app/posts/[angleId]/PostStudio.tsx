@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PostStudioCopy } from "./PostStudioCopy";
 import { MarkDraftedButton } from "./MarkDraftedButton";
 import { MarkVisualReadyButton } from "./MarkVisualReadyButton";
+import { MarkReviewedButton } from "./MarkReviewedButton";
 import { RenderAndPublishButton } from "./RenderAndPublishButton";
 import { SlideStudio } from "@/components/posts/SlideStudio";
 import { ImageStudio } from "@/components/posts/ImageStudio";
@@ -182,6 +183,12 @@ export function PostStudio({
               <RenderAndPublishButton
                 angle={angle}
                 onUpdated={(updated) => setAngle(updated)}
+              />
+            ) : null}
+            {angle.status === "Posted" ? (
+              <MarkReviewedButton
+                angleId={angle.angle_id}
+                onMarked={(updated) => setAngle(updated)}
               />
             ) : null}
             <Button
