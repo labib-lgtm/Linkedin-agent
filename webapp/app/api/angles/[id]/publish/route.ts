@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { tasks } from "@trigger.dev/sdk/v3";
 import { createServiceClient } from "@/lib/supabase/server";
 import { publishMediaPost, publishTextPost, UnipileError } from "@/lib/unipile";
 
@@ -147,5 +148,33 @@ export async function POST(
     payload: { format: fmt, post_url: postUrl, source: "webapp" },
   });
 
-  return NextResponse.json({ angle_id: id, post_id: postId, post_url: postUrl });
+  // Schedule the pin comment for T+4 min if the angle has one.
+  // Fire-and-forget — a failure here must not block the publish response.
+  // The Trigger.dev task handles its own retry / logging.
+  let pinCommentRunId: string | null = null;
+  const pinText = String(angle.pin_comment ?? "").trim();
+  if (pinText && process.env.TRIGGER_SECRET_KEY) {
+    try {
+      const handle = await tasks.trigger("pin-comment", {
+        angle_id: id,
+        post_url: postUrl,
+        pin_text: pinText,
+      });
+      pinCommentRunId = handle.id;
+      await supabase.from("audit_log").insert({
+        angle_id: id,
+        event_type: "pin_comment_scheduled",
+        payload: { run_id: handle.id, drops_at_minutes: 4 },
+      });
+    } catch (e) {
+      console.warn(`[publish] pin-comment schedule failed for ${id}: ${(e as Error).message}`);
+    }
+  }
+
+  return NextResponse.json({
+    angle_id: id,
+    post_id: postId,
+    post_url: postUrl,
+    pin_comment_run_id: pinCommentRunId,
+  });
 }
