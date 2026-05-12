@@ -107,12 +107,11 @@ export async function renderCarouselPdf(
           { style: styles.slideNum },
           `${String(s.n).padStart(2, "0")} / ${String(slides.length).padStart(2, "0")}`,
         ),
-        // Role badge (top-right)
-        React.createElement(
-          View,
-          { style: styles.rolePill },
-          React.createElement(Text, { style: styles.rolePillText }, s.role.toUpperCase()),
-        ),
+        // Role badge (CTA, PAYOFF, COVER, etc.) is intentionally omitted
+        // from the rendered PDF — those labels are editor-only metadata
+        // for the studio's slide grid, not something readers should see
+        // on the published carousel. The web preview (SlideCard.tsx)
+        // still shows them for orientation while editing.
         // Content stack
         React.createElement(
           View,
