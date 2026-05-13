@@ -10,6 +10,7 @@ const NAV = [
   { href: "/", label: "Pipeline" },
   { href: "/competitors", label: "Competitors" },
   { href: "/outreach", label: "Outreach" },
+  { href: "/prospects", label: "Prospects" },
   { href: "/digest", label: "Digest" },
   { href: "/reports", label: "Reports" },
   { href: "/recipients", label: "Recipients" },

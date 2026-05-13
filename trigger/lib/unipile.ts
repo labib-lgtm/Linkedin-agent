@@ -249,3 +249,122 @@ export function commenterName(c: UnipileComment): string {
   }
   return "";
 }
+
+/** Result shape for a company-search match. Fields are best-effort — not
+ *  all Unipile DSN versions return URLs vs URNs vs both. */
+export interface CompanyMatch {
+  urn?: string;
+  url?: string;
+  name?: string;
+  id?: string;
+}
+
+interface SearchListResponse {
+  items?: Array<Record<string, unknown>>;
+  data?: Array<Record<string, unknown>>;
+  results?: Array<Record<string, unknown>>;
+  paging?: unknown;
+  cursor?: unknown;
+}
+
+function pickStr(obj: Record<string, unknown>, keys: string[]): string | undefined {
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return undefined;
+}
+
+/** Search LinkedIn for a company by name. Returns the top match or null.
+ *  Unipile DSN versions disagree on the endpoint shape; we try the most
+ *  common search-people-and-companies endpoint first and fall back. */
+export async function searchCompany(query: string): Promise<CompanyMatch | null> {
+  const accountId = encodeURIComponent(env("UNIPILE_LINKEDIN_ACCOUNT_ID"));
+  const q = encodeURIComponent(query.trim());
+  if (!q) return null;
+
+  // Candidate endpoint shapes — first hit wins.
+  const candidates = [
+    `/api/v1/linkedin/search?keywords=${q}&type=COMPANY&account_id=${accountId}&limit=1`,
+    `/api/v1/linkedin/search?keywords=${q}&category=company&account_id=${accountId}&limit=1`,
+    `/api/v1/companies/search?keywords=${q}&account_id=${accountId}&limit=1`,
+    `/api/v1/companies?search=${q}&account_id=${accountId}&limit=1`,
+  ];
+
+  let lastErr: unknown = null;
+  for (const path of candidates) {
+    try {
+      const r = await request<SearchListResponse>("GET", path);
+      const items = r.items ?? r.data ?? r.results ?? [];
+      if (!items.length) {
+        // Endpoint worked but no match — try the next shape only if zero
+        // items is a known "no results" signal for THIS shape. If we've
+        // already gotten a 200 response with empty items, treat as no_match.
+        return null;
+      }
+      const first = items[0];
+      return {
+        urn: pickStr(first, ["urn", "company_urn", "id", "linkedin_urn"]),
+        url: pickStr(first, ["url", "profile_url", "linkedin_url", "company_url"]),
+        name: pickStr(first, ["name", "display_name", "title"]),
+        id: pickStr(first, ["id", "company_id", "provider_id"]),
+      };
+    } catch (e) {
+      lastErr = e;
+      const msg = String(e);
+      const isShapeRejection = /400|404/.test(msg);
+      if (!isShapeRejection) break;
+    }
+  }
+  if (lastErr) throw lastErr;
+  return null;
+}
+
+/** Result shape for an employee/profile match. */
+export interface EmployeeMatch {
+  name?: string;
+  headline?: string;
+  profile_url?: string;
+  provider_id?: string;
+}
+
+/** List employees at a LinkedIn company. Without Sales Nav the API only
+ *  surfaces ~5 "featured" employees — that's the documented cap. */
+export async function getCompanyEmployees(
+  companyUrnOrId: string,
+  limit = 5,
+): Promise<EmployeeMatch[]> {
+  const accountId = encodeURIComponent(env("UNIPILE_LINKEDIN_ACCOUNT_ID"));
+  const encoded = encodeURIComponent(companyUrnOrId);
+
+  // Try a couple endpoint shapes. The dedicated employees endpoint is most
+  // common; a search-people scoped to the company URN is the typical
+  // fallback.
+  const candidates = [
+    `/api/v1/companies/${encoded}/employees?account_id=${accountId}&limit=${limit}`,
+    `/api/v1/linkedin/search?company=${encoded}&type=PEOPLE&account_id=${accountId}&limit=${limit}`,
+    `/api/v1/linkedin/search?company=${encoded}&category=people&account_id=${accountId}&limit=${limit}`,
+    `/api/v1/users/search?current_company=${encoded}&account_id=${accountId}&limit=${limit}`,
+  ];
+
+  let lastErr: unknown = null;
+  for (const path of candidates) {
+    try {
+      const r = await request<SearchListResponse>("GET", path);
+      const items = r.items ?? r.data ?? r.results ?? [];
+      return items.slice(0, limit).map((p) => ({
+        name: pickStr(p, ["name", "full_name", "display_name", "first_name_last_name"]),
+        headline: pickStr(p, ["headline", "title", "occupation"]),
+        profile_url: pickStr(p, ["profile_url", "url", "linkedin_url", "public_profile_url"]),
+        provider_id: pickStr(p, ["provider_id", "id", "member_urn", "public_identifier"]),
+      }));
+    } catch (e) {
+      lastErr = e;
+      const msg = String(e);
+      const isShapeRejection = /400|404/.test(msg);
+      if (!isShapeRejection) break;
+    }
+  }
+  if (lastErr) throw lastErr;
+  return [];
+}
