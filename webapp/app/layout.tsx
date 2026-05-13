@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "sonner";
-import { Header } from "@/components/Header";
+import { Sidebar } from "@/components/Sidebar";
 
 export const metadata: Metadata = {
   title: "Lynx LinkedIn Agent",
@@ -16,8 +16,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-background">
-        <Header />
-        <main>{children}</main>
+        <Sidebar />
+        <main className="min-w-0">{children}</main>
         <Toaster richColors position="bottom-right" />
       </body>
     </html>
