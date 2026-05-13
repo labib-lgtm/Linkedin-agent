@@ -276,20 +276,21 @@ function pickStr(obj: Record<string, unknown>, keys: string[]): string | undefin
 }
 
 /** Search LinkedIn for a company by name. Returns the top match or null.
- *  Unipile uses POST for its search endpoint with a structured body —
- *  earlier guesses with GET + query params all 404'd. */
+ *  Unipile uses POST /api/v1/linkedin/search with account_id as a query
+ *  param (treated as AccountIdParam, not body field). Body holds the
+ *  search criteria. */
 export async function searchCompany(query: string): Promise<CompanyMatch | null> {
   const accountId = env("UNIPILE_LINKEDIN_ACCOUNT_ID");
+  const accountQ = encodeURIComponent(accountId);
   const q = query.trim();
   if (!q) return null;
 
-  // Candidate POST shapes — Unipile DSN versions disagree on the exact
-  // body, so we try the documented shapes in sequence.
+  // account_id goes on the URL (Unipile treats it as a route param).
+  // Body shape varies by DSN — try a few documented shapes.
   const bodies: Array<{ path: string; body: Record<string, unknown> }> = [
     {
-      path: "/api/v1/linkedin/search",
+      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
-        account_id: accountId,
         api: "classic",
         category: "companies",
         keywords: q,
@@ -297,18 +298,16 @@ export async function searchCompany(query: string): Promise<CompanyMatch | null>
       },
     },
     {
-      path: "/api/v1/linkedin/search",
+      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
-        account_id: accountId,
         category: "companies",
         keywords: q,
         limit: 1,
       },
     },
     {
-      path: "/api/v1/linkedin/search",
+      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
-        account_id: accountId,
         keywords: q,
         type: "COMPANY",
         limit: 1,
@@ -356,22 +355,22 @@ export interface EmployeeMatch {
 
 /** List employees at a LinkedIn company. Without Sales Nav the API only
  *  surfaces ~5 "featured" employees — that's the documented cap. Uses
- *  POST /api/v1/linkedin/search with a people-category body scoped by
- *  the company URN/id. */
+ *  POST /api/v1/linkedin/search?account_id=... with a people-category
+ *  body scoped by the company URN/id. */
 export async function getCompanyEmployees(
   companyUrnOrId: string,
   limit = 5,
 ): Promise<EmployeeMatch[]> {
   const accountId = env("UNIPILE_LINKEDIN_ACCOUNT_ID");
+  const accountQ = encodeURIComponent(accountId);
   const companyValue = companyUrnOrId;
 
-  // Try a few POST shapes. Unipile's people-search filters company by
-  // various field names depending on DSN version.
+  // account_id on URL, body holds the people-search filter. DSN versions
+  // disagree on which field name scopes by company.
   const bodies: Array<{ path: string; body: Record<string, unknown> }> = [
     {
-      path: "/api/v1/linkedin/search",
+      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
-        account_id: accountId,
         api: "classic",
         category: "people",
         keywords: "",
@@ -380,18 +379,16 @@ export async function getCompanyEmployees(
       },
     },
     {
-      path: "/api/v1/linkedin/search",
+      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
-        account_id: accountId,
         category: "people",
         current_company: companyValue,
         limit,
       },
     },
     {
-      path: "/api/v1/linkedin/search",
+      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
-        account_id: accountId,
         category: "people",
         company: companyValue,
         limit,
