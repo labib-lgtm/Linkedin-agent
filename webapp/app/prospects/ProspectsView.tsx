@@ -53,7 +53,7 @@ type ImportRow = {
   completed_at: string | null;
 };
 
-const STATUS_TONE: Record<Prospect["status"], string> = {
+const PROSPECT_STATUS_TONE: Record<Prospect["status"], string> = {
   new: "bg-blue-100 text-blue-800",
   contacted: "bg-amber-100 text-amber-800",
   responded: "bg-violet-100 text-violet-800",
@@ -68,14 +68,21 @@ const ENRICH_TONE: Record<Seller["enrichment_status"], string> = {
   failed: "bg-rose-100 text-rose-800",
 };
 
+type SortKey = "seller" | "revenue" | "asins" | "growth" | "status";
+
 function formatMoney(n: number | null): string {
   if (n === null || !Number.isFinite(n)) return "—";
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
   return `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
 function formatPct(n: number | null): string {
   if (n === null || !Number.isFinite(n)) return "—";
-  return `${(n * (n <= 1 && n !== 0 ? 100 : 1)).toFixed(0)}%`;
+  // The CSV gives growth as a percentage already (e.g. 250 means +250%),
+  // not a 0-1 ratio. Format with sign.
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(0)}%`;
 }
 
 export function ProspectsView() {
@@ -86,6 +93,8 @@ export function ProspectsView() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [sortBy, setSortBy] = useState<SortKey>("seller");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -137,6 +146,53 @@ export function ProspectsView() {
     return c;
   }, [sellers]);
 
+  const sorted = useMemo(() => {
+    const copy = [...sellers];
+    const dir = sortDir === "asc" ? 1 : -1;
+    copy.sort((a, b) => {
+      let av: string | number | null = null;
+      let bv: string | number | null = null;
+      switch (sortBy) {
+        case "seller":
+          av = (a.seller_name ?? a.business_name ?? "").toLowerCase();
+          bv = (b.seller_name ?? b.business_name ?? "").toLowerCase();
+          break;
+        case "revenue":
+          av = a.est_monthly_revenue;
+          bv = b.est_monthly_revenue;
+          break;
+        case "asins":
+          av = a.num_asins;
+          bv = b.num_asins;
+          break;
+        case "growth":
+          av = a.growth_3mo;
+          bv = b.growth_3mo;
+          break;
+        case "status":
+          av = a.enrichment_status;
+          bv = b.enrichment_status;
+          break;
+      }
+      if (av === null && bv === null) return 0;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+    return copy;
+  }, [sellers, sortBy, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortBy === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDir(key === "seller" ? "asc" : "desc");
+    }
+  }
+
   async function updateProspectStatus(p: Prospect, status: Prospect["status"]) {
     try {
       const res = await fetch(`/api/prospects/${p.id}`, {
@@ -148,7 +204,6 @@ export function ProspectsView() {
         const d = await res.json();
         throw new Error(d?.error ?? `HTTP ${res.status}`);
       }
-      // Optimistic local update.
       setSellers((prev) =>
         prev.map((s) => ({
           ...s,
@@ -232,18 +287,63 @@ export function ProspectsView() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {sellers.map((s) => (
-            <SellerCard
-              key={s.id}
-              seller={s}
-              expanded={!!expanded[s.id]}
-              onToggle={() =>
-                setExpanded((prev) => ({ ...prev, [s.id]: !prev[s.id] }))
-              }
-              onProspectStatus={updateProspectStatus}
-            />
-          ))}
+        <div className="overflow-x-auto -mx-4 sm:mx-0 border border-border rounded-lg">
+          <table className="min-w-full text-sm">
+            <thead className="bg-muted/40 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="w-8"></th>
+                <SortableTh
+                  label="Seller"
+                  active={sortBy === "seller"}
+                  dir={sortDir}
+                  onClick={() => toggleSort("seller")}
+                />
+                <SortableTh
+                  label="Status"
+                  active={sortBy === "status"}
+                  dir={sortDir}
+                  onClick={() => toggleSort("status")}
+                />
+                <th className="px-3 py-2 font-semibold">Category</th>
+                <SortableTh
+                  label="Revenue"
+                  active={sortBy === "revenue"}
+                  dir={sortDir}
+                  onClick={() => toggleSort("revenue")}
+                  right
+                />
+                <SortableTh
+                  label="ASINs"
+                  active={sortBy === "asins"}
+                  dir={sortDir}
+                  onClick={() => toggleSort("asins")}
+                  right
+                />
+                <SortableTh
+                  label="3mo"
+                  active={sortBy === "growth"}
+                  dir={sortDir}
+                  onClick={() => toggleSort("growth")}
+                  right
+                />
+                <th className="px-3 py-2 font-semibold hidden lg:table-cell">Location</th>
+                <th className="px-3 py-2 font-semibold text-center">Prospects</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((s) => (
+                <SellerRow
+                  key={s.id}
+                  seller={s}
+                  expanded={!!expanded[s.id]}
+                  onToggle={() =>
+                    setExpanded((prev) => ({ ...prev, [s.id]: !prev[s.id] }))
+                  }
+                  onProspectStatus={updateProspectStatus}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -267,7 +367,36 @@ function Pill({ tone, children }: { tone: string; children: React.ReactNode }) {
   );
 }
 
-function SellerCard({
+function SortableTh({
+  label,
+  active,
+  dir,
+  onClick,
+  right,
+}: {
+  label: string;
+  active: boolean;
+  dir: "asc" | "desc";
+  onClick: () => void;
+  right?: boolean;
+}) {
+  return (
+    <th className={`px-3 py-2 font-semibold ${right ? "text-right" : ""}`}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${active ? "text-foreground" : ""}`}
+      >
+        <span>{label}</span>
+        {active ? (
+          <span className="text-[9px]">{dir === "asc" ? "▲" : "▼"}</span>
+        ) : null}
+      </button>
+    </th>
+  );
+}
+
+function SellerRow({
   seller,
   expanded,
   onToggle,
@@ -278,145 +407,172 @@ function SellerCard({
   onToggle: () => void;
   onProspectStatus: (p: Prospect, status: Prospect["status"]) => void;
 }) {
-  const hasProspects = (seller.prospects?.length ?? 0) > 0;
   const tone = ENRICH_TONE[seller.enrichment_status];
   const growthVal = seller.growth_3mo;
   const growthTone =
     growthVal === null
       ? ""
       : growthVal >= 50
-        ? "text-green-700"
+        ? "text-green-700 font-semibold"
         : growthVal < 0
           ? "text-rose-700"
           : "text-muted-foreground";
+  const hasProspects = (seller.prospects?.length ?? 0) > 0;
 
   return (
-    <Card>
-      <CardContent className="p-3">
-        <button
-          type="button"
-          onClick={onToggle}
-          className="w-full text-left flex flex-col sm:flex-row sm:items-center gap-3"
-        >
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-sm truncate">
-                {seller.seller_name || seller.business_name || "—"}
-              </span>
-              {seller.business_name && seller.business_name !== seller.seller_name ? (
-                <span className="text-[11px] text-muted-foreground truncate">
-                  ({seller.business_name})
-                </span>
-              ) : null}
-              <span
-                className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${tone}`}
-              >
-                {seller.enrichment_status.replace("_", " ")}
-              </span>
-              {hasProspects ? (
-                <span className="text-[10px] font-bold bg-foreground text-background px-1.5 py-0.5 rounded">
-                  {seller.prospects.length} prospect{seller.prospects.length === 1 ? "" : "s"}
-                </span>
-              ) : null}
-            </div>
-            <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-              {seller.category ? <span>{seller.category}</span> : null}
-              {seller.est_monthly_revenue !== null ? (
-                <span>· {formatMoney(seller.est_monthly_revenue)}/mo</span>
-              ) : null}
-              {seller.num_asins !== null ? <span>· {seller.num_asins} ASINs</span> : null}
-              {growthVal !== null ? (
-                <span className={growthTone}>· {formatPct(growthVal)} 3mo</span>
-              ) : null}
-              {seller.city && seller.state ? (
-                <span>
-                  · {seller.city}, {seller.state}
-                </span>
-              ) : null}
-            </div>
+    <>
+      <tr
+        className="border-t border-border hover:bg-muted/30 cursor-pointer"
+        onClick={onToggle}
+      >
+        <td className="px-2 py-2 text-center text-muted-foreground">
+          {expanded ? "▾" : "▸"}
+        </td>
+        <td className="px-3 py-2">
+          <div className="font-medium">
+            {seller.seller_name || seller.business_name || "—"}
           </div>
-          <span className="text-[11px] text-muted-foreground self-start sm:self-center">
-            {expanded ? "▾" : "▸"}
+          {seller.business_name && seller.business_name !== seller.seller_name ? (
+            <div className="text-[11px] text-muted-foreground">{seller.business_name}</div>
+          ) : null}
+        </td>
+        <td className="px-3 py-2">
+          <span
+            className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${tone}`}
+          >
+            {seller.enrichment_status.replace("_", " ")}
           </span>
-        </button>
+        </td>
+        <td className="px-3 py-2 text-muted-foreground text-[12px]">
+          {seller.category ?? "—"}
+        </td>
+        <td className="px-3 py-2 text-right tabular-nums">
+          {formatMoney(seller.est_monthly_revenue)}
+        </td>
+        <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+          {seller.num_asins ?? "—"}
+        </td>
+        <td className={`px-3 py-2 text-right tabular-nums ${growthTone}`}>
+          {formatPct(growthVal)}
+        </td>
+        <td className="px-3 py-2 text-muted-foreground text-[12px] hidden lg:table-cell">
+          {seller.city && seller.state ? `${seller.city}, ${seller.state}` : "—"}
+        </td>
+        <td className="px-3 py-2 text-center">
+          {hasProspects ? (
+            <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-foreground text-background">
+              {seller.prospects.length}
+            </span>
+          ) : (
+            <span className="text-[11px] text-muted-foreground">—</span>
+          )}
+        </td>
+      </tr>
+      {expanded ? (
+        <tr className="border-t border-border bg-muted/20">
+          <td></td>
+          <td colSpan={8} className="px-3 py-3">
+            <ExpandedDetail seller={seller} onProspectStatus={onProspectStatus} />
+          </td>
+        </tr>
+      ) : null}
+    </>
+  );
+}
 
-        {expanded ? (
-          <div className="mt-3 pt-3 border-t border-border space-y-2">
-            {seller.linkedin_company_url ? (
-              <a
-                href={seller.linkedin_company_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[11px] text-blue-700 hover:underline break-all"
-              >
-                LinkedIn company page → {seller.linkedin_company_url}
-              </a>
-            ) : null}
-            {seller.enrichment_error ? (
-              <p className="text-[11px] text-rose-700 break-all">
-                Error: {seller.enrichment_error}
-              </p>
-            ) : null}
-            {hasProspects ? (
-              <div className="space-y-1.5">
-                {seller.prospects.map((p) => (
-                  <div
-                    key={p.id}
-                    className="grid gap-2 sm:gap-3 items-start p-2 rounded border border-border bg-muted/20"
-                    style={{ gridTemplateColumns: "1fr auto" }}
-                  >
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm">{p.name ?? "—"}</div>
-                      {p.headline ? (
-                        <div className="text-[11px] text-muted-foreground line-clamp-2">
-                          {p.headline}
-                        </div>
-                      ) : null}
-                      {p.linkedin_url ? (
-                        <a
-                          href={p.linkedin_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] text-blue-700 hover:underline break-all"
-                        >
-                          {p.linkedin_url}
-                        </a>
-                      ) : null}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${STATUS_TONE[p.status]}`}
-                      >
-                        {p.status}
-                      </span>
-                      <select
-                        value={p.status}
-                        onChange={(e) =>
-                          onProspectStatus(p, e.target.value as Prospect["status"])
-                        }
-                        className="text-[11px] bg-background border border-border rounded px-1.5 py-0.5"
-                      >
-                        <option value="new">new</option>
-                        <option value="contacted">contacted</option>
-                        <option value="responded">responded</option>
-                        <option value="converted">converted</option>
-                        <option value="archived">archived</option>
-                      </select>
-                    </div>
+function ExpandedDetail({
+  seller,
+  onProspectStatus,
+}: {
+  seller: Seller;
+  onProspectStatus: (p: Prospect, status: Prospect["status"]) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {seller.linkedin_company_url ? (
+        <a
+          href={seller.linkedin_company_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block text-[11px] text-blue-700 hover:underline break-all"
+        >
+          → LinkedIn company page
+        </a>
+      ) : null}
+      {seller.storefront_url ? (
+        <div>
+          <a
+            href={seller.storefront_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-blue-700 hover:underline break-all"
+          >
+            → Amazon storefront
+          </a>
+        </div>
+      ) : null}
+      {seller.enrichment_error ? (
+        <p className="text-[11px] text-rose-700 break-all">
+          Error: {seller.enrichment_error}
+        </p>
+      ) : null}
+      {(seller.prospects?.length ?? 0) > 0 ? (
+        <div className="space-y-1.5 pt-1">
+          {seller.prospects.map((p) => (
+            <div
+              key={p.id}
+              className="grid gap-2 sm:gap-3 items-start p-2 rounded border border-border bg-background"
+              style={{ gridTemplateColumns: "1fr auto" }}
+            >
+              <div className="min-w-0">
+                <div className="font-medium text-sm">{p.name ?? "—"}</div>
+                {p.headline ? (
+                  <div className="text-[11px] text-muted-foreground line-clamp-2">
+                    {p.headline}
                   </div>
-                ))}
+                ) : null}
+                {p.linkedin_url ? (
+                  <a
+                    href={p.linkedin_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-blue-700 hover:underline break-all"
+                  >
+                    {p.linkedin_url}
+                  </a>
+                ) : null}
               </div>
-            ) : (
-              <p className="text-[11px] text-muted-foreground italic">
-                No prospects matched.
-                {seller.linkedin_company_url
-                  ? " Open the company page to find people manually."
-                  : ""}
-              </p>
-            )}
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${PROSPECT_STATUS_TONE[p.status]}`}
+                >
+                  {p.status}
+                </span>
+                <select
+                  value={p.status}
+                  onChange={(e) =>
+                    onProspectStatus(p, e.target.value as Prospect["status"])
+                  }
+                  className="text-[11px] bg-background border border-border rounded px-1.5 py-0.5"
+                >
+                  <option value="new">new</option>
+                  <option value="contacted">contacted</option>
+                  <option value="responded">responded</option>
+                  <option value="converted">converted</option>
+                  <option value="archived">archived</option>
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[11px] text-muted-foreground italic">
+          No prospects matched.
+          {seller.linkedin_company_url
+            ? " Open the company page to find people manually."
+            : ""}
+        </p>
+      )}
+    </div>
   );
 }
