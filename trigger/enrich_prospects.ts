@@ -24,7 +24,10 @@ import {
  */
 
 const PER_CALL_SLEEP_MS = 2000;
-const EMPLOYEES_PER_COMPANY = 5;
+// Sales Navigator unlocks more than the 5 "featured employees" cap.
+// 10 keeps API cost reasonable while covering founder + commerce/marketing
+// leadership for typical Amazon seller brands.
+const EMPLOYEES_PER_COMPANY = 10;
 
 interface SellerRow {
   id: string;

@@ -193,6 +193,26 @@ export function ProspectsView() {
     }
   }
 
+  async function reenrichImport(importId: string) {
+    const imp = imports.find((i) => i.id === importId);
+    const label = imp ? `${imp.filename} (${imp.row_count} rows)` : "this import";
+    const ok = confirm(
+      `Wipe all enriched data for ${label} and re-run enrichment with the current Unipile settings?\n\nAll existing prospects in this import will be deleted. Manual status changes (contacted / archived) will be lost.`,
+    );
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/prospects/imports/${importId}/reenrich`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message ?? data?.error ?? `HTTP ${res.status}`);
+      toast.success(`Re-enrichment started — ${data.resetCount} sellers reset`);
+      refresh();
+    } catch (e) {
+      toast.error(`Re-enrich failed: ${(e as Error).message}`);
+    }
+  }
+
   async function updateProspectStatus(p: Prospect, status: Prospect["status"]) {
     try {
       const res = await fetch(`/api/prospects/${p.id}`, {
@@ -233,6 +253,16 @@ export function ProspectsView() {
               </option>
             ))}
           </select>
+          {importFilter ? (
+            <button
+              type="button"
+              onClick={() => reenrichImport(importFilter)}
+              title="Wipe + re-enrich this import with current Unipile settings"
+              className="text-sm px-2 py-1.5 rounded border border-border hover:bg-muted"
+            >
+              ↻ Re-enrich
+            </button>
+          ) : null}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}

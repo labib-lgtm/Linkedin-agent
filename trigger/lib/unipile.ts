@@ -275,19 +275,52 @@ function pickStr(obj: Record<string, unknown>, keys: string[]): string | undefin
   return undefined;
 }
 
+/** Decision-maker titles for Sales Nav lead search. Broad coverage of
+ *  founder + commerce/marketing leadership at Amazon seller brands.
+ *  LinkedIn matches these fuzzily (e.g. "Marketing Manager" surfaces
+ *  "Senior Marketing Manager" too) which is usually desirable. */
+export const DECISION_MAKER_TITLES = [
+  "Founder",
+  "CEO",
+  "Owner",
+  "Co-Founder",
+  "President",
+  "CMO",
+  "CGO",
+  "COO",
+  "Head of E-commerce",
+  "Head of Marketing",
+  "Head of Growth",
+  "VP Marketing",
+  "VP of Marketing",
+  "Director of E-commerce",
+  "Director of Marketing",
+  "Brand Manager",
+  "Marketing Manager",
+  "Ecommerce Manager",
+];
+
 /** Search LinkedIn for a company by name. Returns the top match or null.
- *  Unipile uses POST /api/v1/linkedin/search with account_id as a query
- *  param (treated as AccountIdParam, not body field). Body holds the
- *  search criteria. */
+ *  Uses Sales Navigator API (strict match, less noise on generic names).
+ *  Falls back to classic on body-shape rejection. */
 export async function searchCompany(query: string): Promise<CompanyMatch | null> {
   const accountId = env("UNIPILE_LINKEDIN_ACCOUNT_ID");
   const accountQ = encodeURIComponent(accountId);
   const q = query.trim();
   if (!q) return null;
 
-  // account_id goes on the URL (Unipile treats it as a route param).
-  // Body shape varies by DSN — try a few documented shapes.
+  // Sales Navigator company search first; fall back to classic on 400/404
+  // since some DSN versions don't expose Sales Nav under this shape.
   const bodies: Array<{ path: string; body: Record<string, unknown> }> = [
+    {
+      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
+      body: {
+        api: "sales_navigator",
+        category: "companies",
+        keywords: q,
+        limit: 1,
+      },
+    },
     {
       path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
@@ -302,14 +335,6 @@ export async function searchCompany(query: string): Promise<CompanyMatch | null>
       body: {
         category: "companies",
         keywords: q,
-        limit: 1,
-      },
-    },
-    {
-      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
-      body: {
-        keywords: q,
-        type: "COMPANY",
         limit: 1,
       },
     },
@@ -353,21 +378,43 @@ export interface EmployeeMatch {
   provider_id?: string;
 }
 
-/** List employees at a LinkedIn company. Without Sales Nav the API only
- *  surfaces ~5 "featured" employees — that's the documented cap. Uses
- *  POST /api/v1/linkedin/search?account_id=... with a people-category
- *  body scoped by the company URN/id. */
+/** List decision-makers at a LinkedIn company. Uses Sales Navigator lead
+ *  search to enforce strict current_company filtering + title filtering
+ *  (broad decision-maker set: founder, CEO, marketing/ecom leads). Falls
+ *  back to classic with current_companies if Sales Nav rejects the body
+ *  shape — that path won't filter by title and quality drops accordingly. */
 export async function getCompanyEmployees(
   companyUrnOrId: string,
-  limit = 5,
+  limit = 10,
 ): Promise<EmployeeMatch[]> {
   const accountId = env("UNIPILE_LINKEDIN_ACCOUNT_ID");
   const accountQ = encodeURIComponent(accountId);
   const companyValue = companyUrnOrId;
 
-  // account_id on URL, body holds the people-search filter. DSN versions
-  // disagree on which field name scopes by company.
+  // Sales Nav strict path → fall back to classic path on body-shape
+  // rejection. The body schema for Sales Nav varies; we try the most
+  // common documented shapes.
   const bodies: Array<{ path: string; body: Record<string, unknown> }> = [
+    {
+      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
+      body: {
+        api: "sales_navigator",
+        category: "people",
+        current_companies: [companyValue],
+        job_titles: DECISION_MAKER_TITLES,
+        limit,
+      },
+    },
+    {
+      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
+      body: {
+        api: "sales_navigator",
+        category: "people",
+        current_companies: [companyValue],
+        keywords: DECISION_MAKER_TITLES.join(" OR "),
+        limit,
+      },
+    },
     {
       path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
@@ -383,14 +430,6 @@ export async function getCompanyEmployees(
       body: {
         category: "people",
         current_company: companyValue,
-        limit,
-      },
-    },
-    {
-      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
-      body: {
-        category: "people",
-        company: companyValue,
         limit,
       },
     },
