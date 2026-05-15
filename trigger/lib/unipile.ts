@@ -410,6 +410,14 @@ export interface EmployeeMatch {
   provider_id?: string;
 }
 
+/** Sales Nav people-search keyword expression for decision-makers.
+ *  LinkedIn's native search supports OR / quoted phrases. We use this to
+ *  EITHER do real title filtering at LinkedIn's side OR (at worst) just
+ *  satisfy Unipile's schema requirement that `keywords` be present.
+ *  Kept short to stay well under LinkedIn's keyword length limit. */
+const DECISION_MAKER_KEYWORDS =
+  'founder OR ceo OR cmo OR coo OR owner OR president OR marketing OR ecommerce OR "e-commerce"';
+
 /** List decision-makers at a LinkedIn company via Sales Navigator lead
  *  search. Verified body shape (from Unipile docs):
  *
@@ -417,22 +425,25 @@ export interface EmployeeMatch {
  *    {
  *      "api": "sales_navigator",
  *      "category": "people",
- *      "company": { "include": [<numericCompanyId>] },
- *      "limit": <N>
+ *      "keywords": "<required, supports LinkedIn OR/quoted-phrase syntax>",
+ *      "company": { "include": [<numericCompanyId>] }
  *    }
  *
- *  `company.include` takes BARE INTEGER LinkedIn company IDs — not URN
- *  strings. Sending strings or URNs caused the filter to be silently
- *  ignored on prior attempts (Unipile returned a generic default result
- *  set for every company query).
+ *  Three gotchas from prior live debugging:
  *
- *  We don't include a `role` filter in the body. The docs only show
- *  `role: [{ keywords, priority, scope }]` under the `recruiter` API, not
- *  `sales_navigator` — sending it here would be unverified guessing.
- *  Instead we pull ~3x the desired result count and filter client-side
- *  against DECISION_MAKER_TITLES (case-insensitive headline substring),
- *  then take the first `limit`. Slightly more API cost per company, but
- *  zero spec guesswork. */
+ *  1. `company.include` takes BARE INTEGER LinkedIn company IDs — not URN
+ *     strings. Sending strings or URNs caused the filter to be silently
+ *     ignored.
+ *  2. `keywords` is REQUIRED by Unipile's schema validator on the Sales
+ *     Nav People shape. Omitting it returns
+ *     `400 errors/invalid_parameters`. We pass a broad decision-maker
+ *     OR-expression that doubles as a title pre-filter at LinkedIn's side.
+ *  3. We don't include `role: [{ keywords, priority, scope }]`. The docs
+ *     only document `role` under `recruiter`, not `sales_navigator`.
+ *
+ *  After Unipile returns, we filter client-side against
+ *  DECISION_MAKER_TITLES (case-insensitive headline substring) as a
+ *  precision pass, then take the first `limit`. */
 export async function getCompanyEmployees(
   numericCompanyId: number,
   limit = 10,
@@ -445,12 +456,11 @@ export async function getCompanyEmployees(
   const accountId = env("UNIPILE_LINKEDIN_ACCOUNT_ID");
   const accountQ = encodeURIComponent(accountId);
 
-  const fetchLimit = Math.max(limit * 3, 30);
   const body = {
     api: "sales_navigator",
     category: "people",
+    keywords: DECISION_MAKER_KEYWORDS,
     company: { include: [numericCompanyId] },
-    limit: fetchLimit,
   };
 
   const r = await request<SearchListResponse>(
