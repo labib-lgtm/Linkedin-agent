@@ -213,6 +213,26 @@ export function ProspectsView() {
     }
   }
 
+  async function refetchEmployees(importId: string) {
+    const imp = imports.find((i) => i.id === importId);
+    const label = imp ? `${imp.filename} (${imp.row_count} rows)` : "this import";
+    const ok = confirm(
+      `Re-fetch employees for ${label}?\n\nKeeps every seller's existing company match. Wipes current prospects and re-runs ONLY the Sales Nav people lookup. Faster than a full re-enrich.`,
+    );
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/prospects/imports/${importId}/refetch-employees`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message ?? data?.error ?? `HTTP ${res.status}`);
+      toast.success("Employees refetch started");
+      refresh();
+    } catch (e) {
+      toast.error(`Refetch failed: ${(e as Error).message}`);
+    }
+  }
+
   async function updateProspectStatus(p: Prospect, status: Prospect["status"]) {
     try {
       const res = await fetch(`/api/prospects/${p.id}`, {
@@ -254,14 +274,24 @@ export function ProspectsView() {
             ))}
           </select>
           {importFilter ? (
-            <button
-              type="button"
-              onClick={() => reenrichImport(importFilter)}
-              title="Wipe + re-enrich this import with current Unipile settings"
-              className="text-sm px-2 py-1.5 rounded border border-border hover:bg-muted"
-            >
-              ↻ Re-enrich
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => reenrichImport(importFilter)}
+                title="Wipe + re-enrich this import with current Unipile settings"
+                className="text-sm px-2 py-1.5 rounded border border-border hover:bg-muted"
+              >
+                ↻ Re-enrich
+              </button>
+              <button
+                type="button"
+                onClick={() => refetchEmployees(importFilter)}
+                title="Keep company matches, only re-run the employees lookup"
+                className="text-sm px-2 py-1.5 rounded border border-border hover:bg-muted"
+              >
+                ↺ Refetch employees
+              </button>
+            </>
           ) : null}
           <select
             value={statusFilter}
