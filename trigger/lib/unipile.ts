@@ -344,14 +344,21 @@ export const DECISION_MAKER_TITLES = [
 /** Search LinkedIn for a company by name. Returns the top match (with
  *  numeric LinkedIn company ID) or null.
  *
- *  Sales Nav company-search response shape per docs:
- *    { type: "COMPANY", id: "103848457", name, profile_url,
- *      industry, location, headcount }
- *  Classic shape is similar but `profile_url` uses the slug form
- *  (linkedin.com/company/<slug>/) instead of /sales/company/<id>.
+ *  Uses Unipile's `classic` company search ONLY — not Sales Navigator.
+ *  Both return the same numeric LinkedIn company ID under `id`, which is
+ *  all we need to feed into the Sales Nav people search filter
+ *  (`company.include`). Classic has a much higher rate-limit budget on
+ *  LinkedIn's side, so we reserve our Sales Nav quota (~250/day on
+ *  Standard tier) exclusively for `getCompanyEmployees` where the strict
+ *  current-company filter actually matters.
  *
- *  Falls back to classic only on 400/404 (shape rejection). Auth/5xx/network
- *  errors propagate so we hear about real failures instead of papering. */
+ *  Classic company response shape per docs:
+ *    { type: "COMPANY", id: "165158", name, profile_url,
+ *      industry, location, followers_count, job_offers_count }
+ *  `profile_url` uses the slug form (linkedin.com/company/<slug>/).
+ *
+ *  Auth/5xx/429 errors propagate so we hear about real failures instead
+ *  of silently turning a rate-limit into a no_match. */
 export async function searchCompany(query: string): Promise<CompanyMatch | null> {
   const accountId = env("UNIPILE_LINKEDIN_ACCOUNT_ID");
   const accountQ = encodeURIComponent(accountId);
@@ -359,14 +366,6 @@ export async function searchCompany(query: string): Promise<CompanyMatch | null>
   if (!q) return null;
 
   const bodies: Array<{ body: Record<string, unknown> }> = [
-    {
-      body: {
-        api: "sales_navigator",
-        category: "companies",
-        keywords: q,
-        limit: 1,
-      },
-    },
     {
       body: {
         api: "classic",

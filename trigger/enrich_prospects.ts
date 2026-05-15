@@ -23,8 +23,11 @@ import {
  * (don't fail the whole import).
  */
 
-// Sales Nav rate limits trip faster than classic — back off conservatively.
-const PER_CALL_SLEEP_MS = 5000;
+// Sales Nav rate limits trip fast on LinkedIn's side (~250 searches/day on
+// Standard tier). With ~10s pacing we stretch a 200-row import to ~50 min
+// of wall-clock but stay well under per-minute thresholds. The 429 path
+// below still handles a cap blow-up gracefully.
+const PER_CALL_SLEEP_MS = 10_000;
 // One cool-down breath after a 429 before bailing to manual retry.
 const RATE_LIMIT_COOLDOWN_MS = 60_000;
 // Sales Navigator unlocks more than the 5 "featured employees" cap.
