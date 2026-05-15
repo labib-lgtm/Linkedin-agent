@@ -379,10 +379,12 @@ export interface EmployeeMatch {
 }
 
 /** List decision-makers at a LinkedIn company. Uses Sales Navigator lead
- *  search to enforce strict current_company filtering + title filtering
- *  (broad decision-maker set: founder, CEO, marketing/ecom leads). Falls
- *  back to classic with current_companies if Sales Nav rejects the body
- *  shape — that path won't filter by title and quality drops accordingly. */
+ *  search to enforce strict current_company filtering. Tries title-filtered
+ *  first (most precise) → falls back to Sales Nav with NO title filter if
+ *  the precise query returns 0 (covers companies where employees use
+ *  off-the-list titles like "Director of Operations" or "Senior Buyer") →
+ *  falls back to classic search on shape rejection. Empty result on the
+ *  broadest body shape is treated as a real "no employees indexed". */
 export async function getCompanyEmployees(
   companyUrnOrId: string,
   limit = 10,
@@ -391,11 +393,12 @@ export async function getCompanyEmployees(
   const accountQ = encodeURIComponent(accountId);
   const companyValue = companyUrnOrId;
 
-  // Sales Nav strict path → fall back to classic path on body-shape
-  // rejection. The body schema for Sales Nav varies; we try the most
-  // common documented shapes.
-  const bodies: Array<{ path: string; body: Record<string, unknown> }> = [
+  // Ordered from most-precise to broadest. The loop accepts ANY non-empty
+  // result as the final answer; empty results fall through to the next
+  // shape. Shape rejections (400/404) also fall through.
+  const bodies: Array<{ label: string; path: string; body: Record<string, unknown> }> = [
     {
+      label: "sales_nav+titles",
       path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
         api: "sales_navigator",
@@ -406,16 +409,17 @@ export async function getCompanyEmployees(
       },
     },
     {
+      label: "sales_nav+no_titles",
       path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
         api: "sales_navigator",
         category: "people",
         current_companies: [companyValue],
-        keywords: DECISION_MAKER_TITLES.join(" OR "),
         limit,
       },
     },
     {
+      label: "classic+current_companies",
       path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
         api: "classic",
@@ -426,6 +430,7 @@ export async function getCompanyEmployees(
       },
     },
     {
+      label: "classic+current_company",
       path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
         category: "people",
@@ -440,6 +445,11 @@ export async function getCompanyEmployees(
     try {
       const r = await request<SearchListResponse>("POST", path, body);
       const items = r.items ?? r.data ?? r.results ?? [];
+      if (items.length === 0) {
+        // Empty result on this shape — fall through to the next, less-strict
+        // body. If all return empty, getCompanyEmployees returns [].
+        continue;
+      }
       return items.slice(0, limit).map((p) => ({
         name: pickStr(p, ["name", "full_name", "display_name", "first_name_last_name"]),
         headline: pickStr(p, ["headline", "title", "occupation"]),
