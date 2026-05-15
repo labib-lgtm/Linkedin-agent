@@ -250,13 +250,21 @@ export function commenterName(c: UnipileComment): string {
   return "";
 }
 
-/** Result shape for a company-search match. Fields are best-effort — not
- *  all Unipile DSN versions return URLs vs URNs vs both. */
+/** Result shape for a company-search match.
+ *
+ *  Unipile's company-search response (both Sales Nav and Classic) uses a
+ *  stringified numeric LinkedIn company ID under `id` (e.g. `"103848457"`),
+ *  NOT a `urn:li:fs_salesCompany:...` URN. The numeric form is what
+ *  Sales Nav's people search filter `company.include` expects. We keep
+ *  `numericId` separate (as a real number) for that filter, and keep the
+ *  string `id` for storage in our existing `linkedin_company_urn` column.
+ *
+ *  See: https://developer.unipile.com/docs/linkedin-search.md */
 export interface CompanyMatch {
-  urn?: string;
+  numericId: number | null;
+  id?: string;
   url?: string;
   name?: string;
-  id?: string;
 }
 
 interface SearchListResponse {
@@ -273,6 +281,39 @@ function pickStr(obj: Record<string, unknown>, keys: string[]): string | undefin
     if (typeof v === "string" && v.trim()) return v.trim();
   }
   return undefined;
+}
+
+/** Extract a positive integer LinkedIn ID from a response field. Handles
+ *  both raw numbers (`123`) and stringified numerics (`"123"`); also pulls
+ *  the trailing digits out of URN-shaped strings as a last resort. */
+function pickNumericId(obj: Record<string, unknown>, keys: string[]): number | null {
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) return v;
+    if (typeof v === "string") {
+      const trimmed = v.trim();
+      if (/^\d+$/.test(trimmed)) {
+        const n = parseInt(trimmed, 10);
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+      const m = trimmed.match(/:(\d+)$/);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+    }
+  }
+  return null;
+}
+
+/** Case-insensitive headline match against the decision-maker title list.
+ *  Substring match so "Senior Marketing Manager" hits "Marketing Manager"
+ *  and "Founder & CEO at X" hits both "Founder" and "CEO". Operator does
+ *  the final pruning in the prospects table. */
+function headlineMatchesDecisionMaker(headline: string | undefined): boolean {
+  if (!headline) return false;
+  const h = headline.toLowerCase();
+  return DECISION_MAKER_TITLES.some((t) => h.includes(t.toLowerCase()));
 }
 
 /** Decision-maker titles for Sales Nav lead search. Broad coverage of
@@ -300,20 +341,25 @@ export const DECISION_MAKER_TITLES = [
   "Ecommerce Manager",
 ];
 
-/** Search LinkedIn for a company by name. Returns the top match or null.
- *  Uses Sales Navigator API (strict match, less noise on generic names).
- *  Falls back to classic on body-shape rejection. */
+/** Search LinkedIn for a company by name. Returns the top match (with
+ *  numeric LinkedIn company ID) or null.
+ *
+ *  Sales Nav company-search response shape per docs:
+ *    { type: "COMPANY", id: "103848457", name, profile_url,
+ *      industry, location, headcount }
+ *  Classic shape is similar but `profile_url` uses the slug form
+ *  (linkedin.com/company/<slug>/) instead of /sales/company/<id>.
+ *
+ *  Falls back to classic only on 400/404 (shape rejection). Auth/5xx/network
+ *  errors propagate so we hear about real failures instead of papering. */
 export async function searchCompany(query: string): Promise<CompanyMatch | null> {
   const accountId = env("UNIPILE_LINKEDIN_ACCOUNT_ID");
   const accountQ = encodeURIComponent(accountId);
   const q = query.trim();
   if (!q) return null;
 
-  // Sales Navigator company search first; fall back to classic on 400/404
-  // since some DSN versions don't expose Sales Nav under this shape.
-  const bodies: Array<{ path: string; body: Record<string, unknown> }> = [
+  const bodies: Array<{ body: Record<string, unknown> }> = [
     {
-      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
         api: "sales_navigator",
         category: "companies",
@@ -322,7 +368,6 @@ export async function searchCompany(query: string): Promise<CompanyMatch | null>
       },
     },
     {
-      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
       body: {
         api: "classic",
         category: "companies",
@@ -330,39 +375,27 @@ export async function searchCompany(query: string): Promise<CompanyMatch | null>
         limit: 1,
       },
     },
-    {
-      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
-      body: {
-        category: "companies",
-        keywords: q,
-        limit: 1,
-      },
-    },
   ];
 
+  const path = `/api/v1/linkedin/search?account_id=${accountQ}`;
   let lastErr: unknown = null;
-  for (const { path, body } of bodies) {
+  for (const { body } of bodies) {
     try {
       const r = await request<SearchListResponse>("POST", path, body);
       const items = r.items ?? r.data ?? r.results ?? [];
-      if (!items.length) {
-        // Endpoint accepted the body — empty result means no match.
-        return null;
-      }
+      if (!items.length) continue;
       const first = items[0];
+      const numericId = pickNumericId(first, ["id", "company_id", "provider_id"]);
       return {
-        urn: pickStr(first, ["urn", "company_urn", "id", "linkedin_urn", "provider_id"]),
-        url: pickStr(first, ["url", "profile_url", "linkedin_url", "company_url", "public_url"]),
+        numericId,
+        id: numericId !== null ? String(numericId) : pickStr(first, ["id"]),
+        url: pickStr(first, ["profile_url", "url", "linkedin_url", "company_url", "public_url"]),
         name: pickStr(first, ["name", "display_name", "title"]),
-        id: pickStr(first, ["id", "company_id", "provider_id"]),
       };
     } catch (e) {
       lastErr = e;
       const msg = String(e);
-      // Only try the next body shape on 400 (bad params) or 404 (route
-      // doesn't exist for THIS shape). Anything else (401, 403, 5xx,
-      // network) is fatal — don't keep guessing.
-      const isShapeRejection = /400|404/.test(msg);
+      const isShapeRejection = /\b(400|404)\b/.test(msg);
       if (!isShapeRejection) break;
     }
   }
@@ -378,97 +411,70 @@ export interface EmployeeMatch {
   provider_id?: string;
 }
 
-/** List decision-makers at a LinkedIn company. Uses Sales Navigator lead
- *  search to enforce strict current_company filtering. Tries title-filtered
- *  first (most precise) → falls back to Sales Nav with NO title filter if
- *  the precise query returns 0 (covers companies where employees use
- *  off-the-list titles like "Director of Operations" or "Senior Buyer") →
- *  falls back to classic search on shape rejection. Empty result on the
- *  broadest body shape is treated as a real "no employees indexed". */
+/** List decision-makers at a LinkedIn company via Sales Navigator lead
+ *  search. Verified body shape (from Unipile docs):
+ *
+ *    POST /api/v1/linkedin/search?account_id=...
+ *    {
+ *      "api": "sales_navigator",
+ *      "category": "people",
+ *      "company": { "include": [<numericCompanyId>] },
+ *      "limit": <N>
+ *    }
+ *
+ *  `company.include` takes BARE INTEGER LinkedIn company IDs — not URN
+ *  strings. Sending strings or URNs caused the filter to be silently
+ *  ignored on prior attempts (Unipile returned a generic default result
+ *  set for every company query).
+ *
+ *  We don't include a `role` filter in the body. The docs only show
+ *  `role: [{ keywords, priority, scope }]` under the `recruiter` API, not
+ *  `sales_navigator` — sending it here would be unverified guessing.
+ *  Instead we pull ~3x the desired result count and filter client-side
+ *  against DECISION_MAKER_TITLES (case-insensitive headline substring),
+ *  then take the first `limit`. Slightly more API cost per company, but
+ *  zero spec guesswork. */
 export async function getCompanyEmployees(
-  companyUrnOrId: string,
+  numericCompanyId: number,
   limit = 10,
 ): Promise<EmployeeMatch[]> {
+  if (!Number.isFinite(numericCompanyId) || numericCompanyId <= 0) {
+    throw new Error(
+      `getCompanyEmployees: numericCompanyId must be a positive integer, got ${numericCompanyId}`,
+    );
+  }
   const accountId = env("UNIPILE_LINKEDIN_ACCOUNT_ID");
   const accountQ = encodeURIComponent(accountId);
-  const companyValue = companyUrnOrId;
 
-  // Ordered from most-precise to broadest. The loop accepts ANY non-empty
-  // result as the final answer; empty results fall through to the next
-  // shape. Shape rejections (400/404) also fall through.
-  const bodies: Array<{ label: string; path: string; body: Record<string, unknown> }> = [
-    {
-      label: "sales_nav+titles",
-      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
-      body: {
-        api: "sales_navigator",
-        category: "people",
-        current_companies: [companyValue],
-        job_titles: DECISION_MAKER_TITLES,
-        limit,
-      },
-    },
-    {
-      label: "sales_nav+no_titles",
-      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
-      body: {
-        api: "sales_navigator",
-        category: "people",
-        current_companies: [companyValue],
-        limit,
-      },
-    },
-    {
-      label: "classic+current_companies",
-      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
-      body: {
-        api: "classic",
-        category: "people",
-        keywords: "",
-        current_companies: [companyValue],
-        limit,
-      },
-    },
-    {
-      label: "classic+current_company",
-      path: `/api/v1/linkedin/search?account_id=${accountQ}`,
-      body: {
-        category: "people",
-        current_company: companyValue,
-        limit,
-      },
-    },
-  ];
+  const fetchLimit = Math.max(limit * 3, 30);
+  const body = {
+    api: "sales_navigator",
+    category: "people",
+    company: { include: [numericCompanyId] },
+    limit: fetchLimit,
+  };
 
-  let lastErr: unknown = null;
-  for (const { path, body } of bodies) {
-    try {
-      const r = await request<SearchListResponse>("POST", path, body);
-      const items = r.items ?? r.data ?? r.results ?? [];
-      if (items.length === 0) {
-        // Empty result on this shape — fall through to the next, less-strict
-        // body. If all return empty, getCompanyEmployees returns [].
-        continue;
-      }
-      return items.slice(0, limit).map((p) => ({
-        name: pickStr(p, ["name", "full_name", "display_name", "first_name_last_name"]),
-        headline: pickStr(p, ["headline", "title", "occupation"]),
-        profile_url: pickStr(p, [
-          "profile_url",
-          "url",
-          "linkedin_url",
-          "public_profile_url",
-          "public_url",
-        ]),
-        provider_id: pickStr(p, ["provider_id", "id", "member_urn", "public_identifier"]),
-      }));
-    } catch (e) {
-      lastErr = e;
-      const msg = String(e);
-      const isShapeRejection = /400|404/.test(msg);
-      if (!isShapeRejection) break;
-    }
-  }
-  if (lastErr) throw lastErr;
-  return [];
+  const r = await request<SearchListResponse>(
+    "POST",
+    `/api/v1/linkedin/search?account_id=${accountQ}`,
+    body,
+  );
+  const items = r.items ?? r.data ?? r.results ?? [];
+
+  const filtered = items.filter((p) =>
+    headlineMatchesDecisionMaker(pickStr(p, ["headline", "title", "occupation"])),
+  );
+
+  return filtered.slice(0, limit).map((p) => ({
+    name: pickStr(p, ["name", "full_name", "display_name", "first_name_last_name"]),
+    headline: pickStr(p, ["headline", "title", "occupation"]),
+    profile_url: pickStr(p, [
+      "public_profile_url",
+      "linkedin_url",
+      "public_url",
+      "profile_url",
+      "url",
+    ]),
+    provider_id: pickStr(p, ["member_urn", "public_identifier", "id", "provider_id"]),
+  }));
 }

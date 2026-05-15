@@ -58,7 +58,7 @@ async function tryMatch(seller: SellerRow): Promise<CompanyMatch | null> {
   for (const q of candidates) {
     try {
       const match = await searchCompany(q);
-      if (match?.urn || match?.id || match?.url) return match;
+      if (match && (match.numericId !== null || match.url)) return match;
     } catch (e) {
       logger.warn("searchCompany failed", { seller_id: seller.id, query: q, error: String(e) });
       // Surface the error to the caller so a hard auth/rate-limit failure
@@ -189,7 +189,7 @@ export const enrichProspects = task({
         return { ok: false, importId, matched, no_match: noMatch, failed, error: msg };
       }
 
-      if (!match || (!match.urn && !match.id && !match.url)) {
+      if (!match || (match.numericId === null && !match.url)) {
         await client
           .from("sellers")
           .update({
@@ -211,20 +211,42 @@ export const enrichProspects = task({
         continue;
       }
 
-      const companyId = match.urn ?? match.id ?? "";
+      // We store the numeric LinkedIn company ID (stringified) in
+      // `linkedin_company_urn` to preserve the existing column shape,
+      // even though it's not technically a URN. The Sales Nav people
+      // filter `company.include` requires the bare integer.
+      const numericId = match.numericId;
+      const companyIdString = numericId !== null ? String(numericId) : null;
       const companyUrl = match.url ?? null;
 
-      // Fetch employees.
+      // Fetch employees. Requires the numeric company ID — if the match
+      // came back without one (e.g. an exotic classic response shape), we
+      // record the company match but skip the employees lookup.
       let employees: EmployeeMatch[] = [];
+      if (numericId === null) {
+        await client
+          .from("sellers")
+          .update({
+            enrichment_status: "matched",
+            linkedin_company_urn: null,
+            linkedin_company_url: companyUrl,
+            enrichment_error: "company match has no numeric ID; skipped employees lookup",
+            enriched_at: new Date().toISOString(),
+          })
+          .eq("id", seller.id);
+        matched += 1;
+        await sleep(PER_CALL_SLEEP_MS);
+        continue;
+      }
       try {
-        employees = await getCompanyEmployees(companyId, EMPLOYEES_PER_COMPANY);
+        employees = await getCompanyEmployees(numericId, EMPLOYEES_PER_COMPANY);
       } catch (e) {
         // 429 → keep seller pending (the company match we just stored
         // will be redone on retry, which is fine), cool down, bail.
         if (isRateLimitError(e)) {
           logger.warn("rate limit hit on employees lookup, pausing", {
             seller_id: seller.id,
-            companyId,
+            companyId: numericId,
             matched,
             no_match: noMatch,
           });
@@ -247,7 +269,7 @@ export const enrichProspects = task({
         }
         logger.warn("getCompanyEmployees failed", {
           seller_id: seller.id,
-          companyId,
+          companyId: numericId,
           error: String(e),
         });
         // Treat as matched-but-no-employees rather than failing the whole
@@ -258,7 +280,7 @@ export const enrichProspects = task({
           .from("sellers")
           .update({
             enrichment_status: "matched",
-            linkedin_company_urn: match.urn ?? null,
+            linkedin_company_urn: companyIdString,
             linkedin_company_url: companyUrl,
             enrichment_error: `employees: ${(e as Error).message}`.slice(0, 500),
             enriched_at: new Date().toISOString(),
@@ -298,7 +320,7 @@ export const enrichProspects = task({
         .from("sellers")
         .update({
           enrichment_status: "matched",
-          linkedin_company_urn: match.urn ?? null,
+          linkedin_company_urn: companyIdString,
           linkedin_company_url: companyUrl,
           enriched_at: new Date().toISOString(),
         })
