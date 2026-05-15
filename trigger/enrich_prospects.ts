@@ -23,11 +23,23 @@ import {
  * (don't fail the whole import).
  */
 
-const PER_CALL_SLEEP_MS = 2000;
+// Sales Nav rate limits trip faster than classic — back off conservatively.
+const PER_CALL_SLEEP_MS = 5000;
+// One cool-down breath after a 429 before bailing to manual retry.
+const RATE_LIMIT_COOLDOWN_MS = 60_000;
 // Sales Navigator unlocks more than the 5 "featured employees" cap.
 // 10 keeps API cost reasonable while covering founder + commerce/marketing
 // leadership for typical Amazon seller brands.
 const EMPLOYEES_PER_COMPANY = 10;
+
+// Detect Unipile's rate-limit response. When this fires we keep the
+// seller in 'pending' state (so a re-run picks it up) and bail the
+// import gracefully — don't mark the import 'failed' which would block
+// the operator's re-fire.
+function isRateLimitError(e: unknown): boolean {
+  const msg = String((e as Error)?.message ?? e ?? "");
+  return /429|too_many_requests|too many requests|rate.limit/i.test(msg);
+}
 
 interface SellerRow {
   id: string;
@@ -130,6 +142,37 @@ export const enrichProspects = task({
         match = await tryMatch(seller);
       } catch (e) {
         const msg = (e as Error).message ?? String(e);
+
+        // 429 rate limit — leave seller pending, cool down briefly, then
+        // bail the import gracefully (status='queued' so the operator's
+        // re-fire / next cron picks it up without manual reset).
+        if (isRateLimitError(e)) {
+          logger.warn("rate limit hit, pausing import", {
+            seller_id: seller.id,
+            error: msg,
+            matched,
+            no_match: noMatch,
+          });
+          await new Promise((r) => setTimeout(r, RATE_LIMIT_COOLDOWN_MS));
+          await client
+            .from("seller_imports")
+            .update({
+              status: "queued",
+              error: `Paused at seller ${seller.seller_name ?? seller.id} after ${matched + noMatch} processed: ${msg.slice(0, 300)}`,
+            })
+            .eq("id", importId);
+          return {
+            ok: false,
+            importId,
+            matched,
+            no_match: noMatch,
+            failed,
+            error: `rate_limited: ${msg}`,
+          };
+        }
+
+        // Hard fail (auth, persistent 5xx) — bail the whole run so the
+        // operator can fix the root cause before more rows burn.
         await client
           .from("sellers")
           .update({
@@ -139,8 +182,6 @@ export const enrichProspects = task({
           })
           .eq("id", seller.id);
         failed += 1;
-        // Hard fail (auth, persistent 5xx) — bail the whole run so the
-        // operator can fix the root cause before more rows burn.
         await client
           .from("seller_imports")
           .update({ status: "failed", error: msg.slice(0, 500) })
@@ -178,14 +219,41 @@ export const enrichProspects = task({
       try {
         employees = await getCompanyEmployees(companyId, EMPLOYEES_PER_COMPANY);
       } catch (e) {
+        // 429 → keep seller pending (the company match we just stored
+        // will be redone on retry, which is fine), cool down, bail.
+        if (isRateLimitError(e)) {
+          logger.warn("rate limit hit on employees lookup, pausing", {
+            seller_id: seller.id,
+            companyId,
+            matched,
+            no_match: noMatch,
+          });
+          await new Promise((r) => setTimeout(r, RATE_LIMIT_COOLDOWN_MS));
+          await client
+            .from("seller_imports")
+            .update({
+              status: "queued",
+              error: `Paused at seller ${seller.seller_name ?? seller.id} after ${matched + noMatch} processed: ${(e as Error).message?.slice(0, 300)}`,
+            })
+            .eq("id", importId);
+          return {
+            ok: false,
+            importId,
+            matched,
+            no_match: noMatch,
+            failed,
+            error: `rate_limited: ${(e as Error).message}`,
+          };
+        }
         logger.warn("getCompanyEmployees failed", {
           seller_id: seller.id,
           companyId,
           error: String(e),
         });
-        // Treat as no_match rather than failing the whole import — we
-        // still got the company match, the employees lookup just didn't
-        // produce. Operator can manually browse from the company URL.
+        // Treat as matched-but-no-employees rather than failing the whole
+        // import — we still got the company match, the employees lookup
+        // just didn't produce. Operator can manually browse from the
+        // company URL.
         await client
           .from("sellers")
           .update({
