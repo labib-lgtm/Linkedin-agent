@@ -6,6 +6,7 @@ import {
   type CompanyMatch,
   type EmployeeMatch,
 } from "./lib/unipile.js";
+import { fetchAmazonBrandName } from "./lib/amazon.js";
 
 /**
  * Prospect enrichment — iterates one seller_imports batch.
@@ -49,13 +50,38 @@ interface SellerRow {
   account_id: string;
   seller_name: string | null;
   business_name: string | null;
+  brand_name: string | null;
+  storefront_url: string | null;
   enrichment_status: string;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function tryMatch(seller: SellerRow): Promise<CompanyMatch | null> {
-  const candidates = [seller.seller_name, seller.business_name]
+/** Ensure we have a brand_name on the seller, scraping the Amazon
+ *  storefront if we don't already. Cached on the row so subsequent
+ *  enrichment runs skip the scrape. Returns the brand name (cached or
+ *  freshly scraped) or null if the storefront didn't yield one. */
+async function ensureBrandName(
+  seller: SellerRow,
+  client: ReturnType<typeof getServiceClient>,
+): Promise<string | null> {
+  if (seller.brand_name && seller.brand_name.trim().length > 0) {
+    return seller.brand_name.trim();
+  }
+  if (!seller.storefront_url) return null;
+  const scraped = await fetchAmazonBrandName(seller.storefront_url);
+  if (scraped) {
+    await client.from("sellers").update({ brand_name: scraped }).eq("id", seller.id);
+    return scraped;
+  }
+  return null;
+}
+
+async function tryMatch(seller: SellerRow, brandName: string | null): Promise<CompanyMatch | null> {
+  // Prefer the scraped brand name (specific, e.g. "BTween Girls Apparel")
+  // over the CSV's legal entity names (often generic, e.g. "Between LLC")
+  // which routinely match the wrong LinkedIn company.
+  const candidates = [brandName, seller.seller_name, seller.business_name]
     .map((s) => (s ?? "").trim())
     .filter((s) => s.length > 0);
   for (const q of candidates) {
@@ -116,7 +142,9 @@ export const enrichProspects = task({
 
     const { data: sellers, error: sErr } = await client
       .from("sellers")
-      .select("id, account_id, seller_name, business_name, enrichment_status")
+      .select(
+        "id, account_id, seller_name, business_name, brand_name, storefront_url, enrichment_status",
+      )
       .eq("import_id", importId)
       .eq("enrichment_status", "pending")
       .order("created_at", { ascending: true });
@@ -140,9 +168,13 @@ export const enrichProspects = task({
     let failed = 0;
 
     for (const seller of (sellers ?? []) as SellerRow[]) {
+      // Scrape the Amazon storefront brand name first (cached on the row
+      // after first scrape). This is our most-specific LinkedIn query.
+      const brandName = await ensureBrandName(seller, client);
+
       let match: CompanyMatch | null = null;
       try {
-        match = await tryMatch(seller);
+        match = await tryMatch(seller, brandName);
       } catch (e) {
         const msg = (e as Error).message ?? String(e);
 
