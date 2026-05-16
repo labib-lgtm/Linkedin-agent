@@ -139,7 +139,7 @@ export const refetchEmployees = task({
         await client
           .from("sellers")
           .update({
-            enrichment_error: `employees: ${(e as Error).message}`.slice(0, 500),
+            enrichment_error: `employees: ${(e as Error).message}`.slice(0, 5000),
             enriched_at: new Date().toISOString(),
           })
           .eq("id", seller.id);

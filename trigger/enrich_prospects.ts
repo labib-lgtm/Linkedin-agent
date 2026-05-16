@@ -285,7 +285,7 @@ export const enrichProspects = task({
             enrichment_status: "matched",
             linkedin_company_urn: companyIdString,
             linkedin_company_url: companyUrl,
-            enrichment_error: `employees: ${(e as Error).message}`.slice(0, 500),
+            enrichment_error: `employees: ${(e as Error).message}`.slice(0, 5000),
             enriched_at: new Date().toISOString(),
           })
           .eq("id", seller.id);

@@ -410,40 +410,36 @@ export interface EmployeeMatch {
   provider_id?: string;
 }
 
-/** Sales Nav people-search keyword expression for decision-makers.
- *  LinkedIn's native search supports OR / quoted phrases. We use this to
- *  EITHER do real title filtering at LinkedIn's side OR (at worst) just
- *  satisfy Unipile's schema requirement that `keywords` be present.
- *  Kept short to stay well under LinkedIn's keyword length limit. */
-const DECISION_MAKER_KEYWORDS =
-  'founder OR ceo OR cmo OR coo OR owner OR president OR marketing OR ecommerce OR "e-commerce"';
-
 /** List decision-makers at a LinkedIn company via Sales Navigator lead
- *  search. Verified body shape (from Unipile docs):
+ *  search. Body shape derived from the Unipile schema dump (returned by
+ *  the API in 400 errors — authoritative, more reliable than the rendered
+ *  docs examples which had number-vs-string ambiguity that cost us hours):
  *
  *    POST /api/v1/linkedin/search?account_id=...
  *    {
  *      "api": "sales_navigator",
  *      "category": "people",
- *      "keywords": "<required, supports LinkedIn OR/quoted-phrase syntax>",
- *      "company": { "include": [<numericCompanyId>] }
+ *      "company": { "include": ["<numericIdAsString>"] },
+ *      "role":    { "include": ["Founder", "CEO", ...] }
  *    }
  *
- *  Three gotchas from prior live debugging:
+ *  Critical gotchas from live debugging:
  *
- *  1. `company.include` takes BARE INTEGER LinkedIn company IDs — not URN
- *     strings. Sending strings or URNs caused the filter to be silently
- *     ignored.
- *  2. `keywords` is REQUIRED by Unipile's schema validator on the Sales
- *     Nav People shape. Omitting it returns
- *     `400 errors/invalid_parameters`. We pass a broad decision-maker
- *     OR-expression that doubles as a title pre-filter at LinkedIn's side.
- *  3. We don't include `role: [{ keywords, priority, scope }]`. The docs
- *     only document `role` under `recruiter`, not `sales_navigator`.
+ *  1. `company.include` items are STRINGS, not numbers. The schema is
+ *     `{ type: "string", pattern: ".+" }`. Sending `[<int>]` returns
+ *     `400 errors/invalid_parameters` despite the docs rendering integers
+ *     in the example body — the schema wins.
+ *  2. `role.include` accepts plain-text current job titles (per the
+ *     schema's "You can also set a plain text job title instead." note).
+ *     This is real title filtering at LinkedIn's side — better than the
+ *     keyword-string hack I tried earlier.
+ *  3. `keywords` is NOT required on this shape (`required: ["api","category"]`).
+ *     We omit it.
  *
  *  After Unipile returns, we filter client-side against
  *  DECISION_MAKER_TITLES (case-insensitive headline substring) as a
- *  precision pass, then take the first `limit`. */
+ *  precision pass — LinkedIn's title matching is fuzzy and may surface
+ *  related titles we don't want. */
 export async function getCompanyEmployees(
   numericCompanyId: number,
   limit = 10,
@@ -459,8 +455,8 @@ export async function getCompanyEmployees(
   const body = {
     api: "sales_navigator",
     category: "people",
-    keywords: DECISION_MAKER_KEYWORDS,
-    company: { include: [numericCompanyId] },
+    company: { include: [String(numericCompanyId)] },
+    role: { include: DECISION_MAKER_TITLES },
   };
 
   const r = await request<SearchListResponse>(
