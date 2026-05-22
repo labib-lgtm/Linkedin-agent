@@ -4,19 +4,24 @@ import {
   sendInvitation,
   getRelations,
   sendDm,
+  listChatMessages,
   resolveProviderId,
   identifierFromProfileUrl,
 } from "./lib/unipile.js";
 
 /**
- * Phase 2 of prospect warm-outreach: connection requests + acceptance
- * detection + DMs. Hybrid model — the operator approves each invite and DM
- * in the Outreach → Prospect sequence tab; these tasks just SEND the
- * approved ones, paced.
+ * Phase 2 + 3 of prospect warm-outreach: connection requests, acceptance
+ * detection, DMs, reply detection, and a follow-up bump. Hybrid model —
+ * the operator approves each invite and first DM in the Outreach →
+ * Prospect sequence tab; these tasks send the approved ones, paced.
  *
  *   send-prospect-invites      (hourly)  approved ready_to_invite → invited
- *   detect-accepted-invitations(every 4h) invited → connected (via relations)
- *   send-prospect-dms          (hourly)  approved connected → dm_sent
+ *                                        + auto follow-up DM (dm_sent, no
+ *                                          reply) is handled in send-dms
+ *   detect-accepted-invitations(every 4h) invited → connected (relations)
+ *                                        + dm_sent → responded (replies)
+ *   send-prospect-dms          (hourly)  approved connected → dm_sent;
+ *                                        also sends the no-reply follow-up
  *
  * LinkedIn caps invitations at ~80-100/day on paid accounts; we stay well
  * under. PROSPECT_OUTREACH_DRY_RUN=1 logs without sending.
@@ -26,6 +31,9 @@ const MAX_INVITES_PER_DAY = 15;
 const MAX_DMS_PER_DAY = 15;
 const PER_RUN_LIMIT = 5;
 const SEND_SLEEP_MS = 1500;
+// Follow-up bump: one gentle nudge if no reply after this many days.
+const FOLLOWUP_DELAY_DAYS = 4;
+const MAX_FOLLOWUPS = 1;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const isDryRun = () => process.env.PROSPECT_OUTREACH_DRY_RUN === "1";
@@ -173,7 +181,50 @@ export const detectAcceptedInvitations = schedules.task({
       }
     }
 
-    const summary = { connected, checked: invited.length, relations: relations.size };
+    // Reply detection: for dm_sent prospects, poll their chat — any message
+    // not from us (is_sender=false) means they replied. Hand off to the
+    // human: stage → responded, prospect.status → responded.
+    let replied = 0;
+    const { data: dmSent } = await client
+      .from("prospect_outreach")
+      .select("id, prospect_id, dm_chat_id")
+      .eq("stage", "dm_sent")
+      .not("dm_chat_id", "is", null);
+    for (const row of dmSent ?? []) {
+      const chatId = row.dm_chat_id as string;
+      try {
+        const msgs = await listChatMessages(chatId, 20);
+        const reply = msgs.find((m) => !m.is_sender && m.text.trim().length > 0);
+        if (reply) {
+          await client
+            .from("prospect_outreach")
+            .update({
+              stage: "responded",
+              replied_at: new Date().toISOString(),
+              reply_snippet: reply.text.slice(0, 300),
+            })
+            .eq("id", row.id as string);
+          await client
+            .from("prospects")
+            .update({ status: "responded" })
+            .eq("id", row.prospect_id as string);
+          replied += 1;
+        }
+      } catch (e) {
+        logger.warn("reply check failed", {
+          prospect_id: row.prospect_id,
+          error: (e as Error).message,
+        });
+      }
+    }
+
+    const summary = {
+      connected,
+      replied,
+      checked: invited.length,
+      dm_checked: dmSent?.length ?? 0,
+      relations: relations.size,
+    };
     logger.info("detect-accepted-invitations done", summary);
     return summary;
   },
@@ -231,10 +282,14 @@ export const sendProspectDms = schedules.task({
         continue;
       }
       try {
-        await sendDm({ recipientId: providerId, text });
+        const res = await sendDm({ recipientId: providerId, text });
         await client
           .from("prospect_outreach")
-          .update({ stage: "dm_sent", dm_sent_at: new Date().toISOString() })
+          .update({
+            stage: "dm_sent",
+            dm_sent_at: new Date().toISOString(),
+            dm_chat_id: res.chat_id ?? null, // polled later for replies
+          })
           .eq("id", row.id as string);
         sent += 1;
         budget -= 1;
@@ -248,7 +303,64 @@ export const sendProspectDms = schedules.task({
       }
     }
 
-    const summary = { sent, failed, dry };
+    // Follow-up bump: one gentle nudge to dm_sent prospects who haven't
+    // replied after FOLLOWUP_DELAY_DAYS. Auto-sent (they're already a
+    // connection who got an approved first DM) and capped at MAX_FOLLOWUPS.
+    let followups = 0;
+    if (budget > 0) {
+      const cutoff = new Date(Date.now() - FOLLOWUP_DELAY_DAYS * 86_400_000).toISOString();
+      const { data: fq } = await client
+        .from("prospect_outreach")
+        .select(
+          "id, prospect_id, provider_id, dm_sent_at, last_followup_at, followups_sent, dm_chat_id, prospect:prospects(name, linkedin_url, provider_id)",
+        )
+        .eq("stage", "dm_sent")
+        .eq("paused", false)
+        .lt("followups_sent", MAX_FOLLOWUPS)
+        .limit(PER_RUN_LIMIT);
+      for (const row of fq ?? []) {
+        if (budget <= 0) break;
+        const lastTouch =
+          (row.last_followup_at as string | null) ?? (row.dm_sent_at as string | null);
+        if (lastTouch && lastTouch > cutoff) continue; // too soon
+        const relP = relOf(row);
+        const providerId = await resolveId(row.provider_id as string | null, relP);
+        if (!providerId) {
+          failed += 1;
+          continue;
+        }
+        const rawName = Array.isArray(row.prospect)
+          ? (row.prospect[0] as { name?: string } | undefined)?.name
+          : (row.prospect as { name?: string } | null)?.name;
+        const fn = (rawName ?? "").trim().split(/\s+/)[0] || "there";
+        const text = `Hey ${fn}, floating this back up in case it got buried. No worries if the timing is off.`;
+        if (dry) {
+          logger.info("DRY RUN — would follow up", { prospect_id: row.prospect_id, text });
+          continue;
+        }
+        try {
+          await sendDm({ recipientId: providerId, text });
+          await client
+            .from("prospect_outreach")
+            .update({
+              followups_sent: (row.followups_sent as number) + 1,
+              last_followup_at: new Date().toISOString(),
+            })
+            .eq("id", row.id as string);
+          followups += 1;
+          budget -= 1;
+          await sleep(SEND_SLEEP_MS);
+        } catch (e) {
+          logger.warn("follow-up DM failed", {
+            prospect_id: row.prospect_id,
+            error: (e as Error).message,
+          });
+          failed += 1;
+        }
+      }
+    }
+
+    const summary = { sent, followups, failed, dry };
     logger.info("send-prospect-dms done", summary);
     return summary;
   },

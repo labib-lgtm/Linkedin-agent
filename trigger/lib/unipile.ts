@@ -107,6 +107,30 @@ export async function sendDm(args: {
   });
 }
 
+/** A message in a chat. `is_sender` true = our account sent it; false =
+ *  the other person (the prospect) sent it — i.e. a reply. */
+export interface ChatMessage {
+  is_sender: boolean;
+  text: string;
+  date: string | null;
+}
+
+/** List recent messages in a chat (most recent first). Used to detect a
+ *  prospect's reply to our DM: any message with is_sender=false. */
+export async function listChatMessages(chatId: string, limit = 20): Promise<ChatMessage[]> {
+  const accountQ = encodeURIComponent(env("UNIPILE_LINKEDIN_ACCOUNT_ID"));
+  const resp = await request<{ items?: Array<Record<string, unknown>>; data?: Array<Record<string, unknown>> }>(
+    "GET",
+    `/api/v1/chats/${encodeURIComponent(chatId)}/messages?account_id=${accountQ}&limit=${limit}`,
+  );
+  const items = resp.items ?? resp.data ?? [];
+  return items.map((m) => ({
+    is_sender: m.is_sender === true,
+    text: String(m.text ?? m.body ?? m.message ?? ""),
+    date: (m.date ?? m.timestamp ?? m.created_at ?? null) as string | null,
+  }));
+}
+
 /** Send a LinkedIn connection request (invitation).
  *  Endpoint per Unipile docs: POST /api/v1/users/invite with
  *  { provider_id, account_id, message }. The optional message is the

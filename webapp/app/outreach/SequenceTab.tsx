@@ -27,6 +27,9 @@ type SequenceRow = {
   dm_text: string | null;
   dm_approved: boolean;
   dm_sent_at: string | null;
+  replied_at: string | null;
+  reply_snippet: string | null;
+  followups_sent: number;
   prospect: {
     id: string;
     name: string | null;
@@ -43,6 +46,7 @@ const STAGE_TONE: Record<string, string> = {
   invited: "bg-amber-100 text-amber-800",
   connected: "bg-cyan-100 text-cyan-800",
   dm_sent: "bg-green-100 text-green-800",
+  responded: "bg-emerald-200 text-emerald-900",
   done: "bg-stone-100 text-stone-600",
 };
 
@@ -52,6 +56,7 @@ const STAGE_LABEL: Record<string, string> = {
   invited: "Invited",
   connected: "Connected",
   dm_sent: "DM sent",
+  responded: "Replied",
   done: "Done",
 };
 
@@ -229,6 +234,30 @@ export function SequenceTab() {
                       {r.prospect?.headline ? (
                         <div className="text-[11px] text-muted-foreground line-clamp-1">
                           {r.prospect.headline}
+                        </div>
+                      ) : null}
+                      {r.stage === "responded" && r.reply_snippet ? (
+                        <div className="mt-1 text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-1">
+                          <span className="font-semibold">Replied:</span> {r.reply_snippet}
+                          {r.prospect?.linkedin_url ? (
+                            <>
+                              {" "}
+                              <a
+                                href={r.prospect.linkedin_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                open chat
+                              </a>
+                            </>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      {r.stage === "dm_sent" && r.followups_sent > 0 ? (
+                        <div className="mt-0.5 text-[10px] text-muted-foreground">
+                          followed up · awaiting reply
                         </div>
                       ) : null}
                     </td>
