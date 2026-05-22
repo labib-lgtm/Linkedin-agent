@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { shortDate } from "@/lib/utils";
+import { Loader2, RefreshCw, Star, Trash2 } from "lucide-react";
+import { cn, shortDate } from "@/lib/utils";
 
 type Competitor = {
   id: string;
@@ -32,11 +32,48 @@ const ROLE_TONE: Record<string, string> = {
   topic_source: "bg-amber-100 text-amber-800",
 };
 
-export function CompetitorRow({ competitor }: { competitor: Competitor }) {
+// Deterministic avatar background from the identifier so each creator keeps
+// a stable color across renders.
+const AVATAR_TONES = [
+  "bg-blue-100 text-blue-700",
+  "bg-violet-100 text-violet-700",
+  "bg-amber-100 text-amber-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-rose-100 text-rose-700",
+  "bg-cyan-100 text-cyan-700",
+  "bg-indigo-100 text-indigo-700",
+  "bg-orange-100 text-orange-700",
+];
+
+function avatarTone(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_TONES[h % AVATAR_TONES.length];
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/[\s-]+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+export function CompetitorRow({
+  competitor,
+  maxTopScore,
+}: {
+  competitor: Competitor;
+  maxTopScore: number;
+}) {
   const router = useRouter();
   const [analyzing, setAnalyzing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [togglingSelf, setTogglingSelf] = useState(false);
+
+  const name = competitor.display_name || competitor.identifier;
+  const analyzed = competitor.post_count > 0;
+  const scorePct =
+    maxTopScore > 0 ? Math.max(2, Math.round((competitor.top_score / maxTopScore) * 100)) : 0;
 
   async function toggleSelf() {
     setTogglingSelf(true);
@@ -74,7 +111,7 @@ export function CompetitorRow({ competitor }: { competitor: Competitor }) {
   }
 
   async function remove() {
-    if (!confirm(`Stop tracking ${competitor.display_name || competitor.identifier}?`)) return;
+    if (!confirm(`Stop tracking ${name}?`)) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/competitors/${competitor.id}`, { method: "DELETE" });
@@ -90,61 +127,158 @@ export function CompetitorRow({ competitor }: { competitor: Competitor }) {
 
   return (
     <tr
-      className={
-        competitor.is_self
-          ? "border-b border-border last:border-0 bg-lynx-green/5 ring-1 ring-lynx-green/40"
-          : "border-b border-border last:border-0"
-      }
+      className={cn(
+        "border-b border-border last:border-0 hover:bg-muted/30 transition-colors",
+        competitor.is_self && "bg-lynx-green/5 ring-1 ring-inset ring-lynx-green/40",
+      )}
     >
-      <td className="py-3 pr-3">
-        <div className="flex items-center gap-2">
-          {competitor.is_self ? (
-            <span
-              title="This is your own profile — pinned in Compare as the baseline"
-              className="text-amber-500 text-sm leading-none"
-            >
-              ★
-            </span>
-          ) : null}
-          <Link href={`/competitors/${competitor.id}`} className="font-medium hover:underline">
-            {competitor.display_name || competitor.identifier}
-          </Link>
+      {/* Creator */}
+      <td className="py-2.5 px-3">
+        <div className="flex items-center gap-2.5">
+          <span
+            className={cn(
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
+              avatarTone(competitor.identifier),
+            )}
+            aria-hidden
+          >
+            {initials(name)}
+          </span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              {competitor.is_self ? (
+                <Star
+                  className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400"
+                  aria-label="Your own profile"
+                />
+              ) : null}
+              <Link
+                href={`/competitors/${competitor.id}`}
+                className="truncate font-medium hover:underline"
+              >
+                {name}
+              </Link>
+            </div>
+            <div className="truncate text-xs text-muted-foreground font-mono">
+              {competitor.identifier}
+            </div>
+          </div>
         </div>
-        <div className="text-xs text-muted-foreground font-mono">{competitor.identifier}</div>
       </td>
-      <td className="py-3 pr-3">
+
+      {/* Role */}
+      <td className="py-2.5 px-3">
         <span
-          className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-            ROLE_TONE[competitor.role] ?? "bg-gray-100 text-gray-700"
-          }`}
+          className={cn(
+            "inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold",
+            ROLE_TONE[competitor.role] ?? "bg-gray-100 text-gray-700",
+          )}
         >
           {ROLE_LABEL[competitor.role] ?? competitor.role}
         </span>
       </td>
-      <td className="py-3 pr-3 text-sm tabular-nums">{competitor.post_count}</td>
-      <td className="py-3 pr-3 text-sm tabular-nums">{Math.round(competitor.top_score)}</td>
-      <td className="py-3 pr-3 text-xs text-muted-foreground">
-        {competitor.last_analyzed_at ? shortDate(competitor.last_analyzed_at) : "never"}
+
+      {/* Posts */}
+      <td className="py-2.5 px-3 text-right text-sm tabular-nums">
+        {analyzed ? (
+          competitor.post_count.toLocaleString()
+        ) : (
+          <span className="text-muted-foreground">0</span>
+        )}
       </td>
-      <td className="py-3 pr-3 text-right">
-        <div className="inline-flex gap-2">
-          <Button
-            size="sm"
-            variant={competitor.is_self ? "default" : "outline"}
+
+      {/* Top score with relative bar */}
+      <td className="py-2.5 px-3">
+        {analyzed ? (
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-lynx-green"
+                style={{ width: `${scorePct}%` }}
+              />
+            </div>
+            <span className="text-sm tabular-nums">
+              {Math.round(competitor.top_score).toLocaleString()}
+            </span>
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        )}
+      </td>
+
+      {/* Last analyzed */}
+      <td className="py-2.5 px-3 text-xs">
+        {competitor.last_analyzed_at ? (
+          <span className="text-muted-foreground">{shortDate(competitor.last_analyzed_at)}</span>
+        ) : (
+          <span className="italic text-muted-foreground/60">never</span>
+        )}
+      </td>
+
+      {/* Actions — compact icon buttons */}
+      <td className="py-2.5 px-3">
+        <div className="flex items-center justify-end gap-1">
+          <IconButton
             onClick={toggleSelf}
-            disabled={togglingSelf}
-            title={competitor.is_self ? "Currently marked as self" : "Mark as self (pin in Compare)"}
+            busy={togglingSelf}
+            title={competitor.is_self ? "Marked as self — click to clear" : "Mark as self (pin in Compare)"}
+            active={competitor.is_self}
           >
-            {togglingSelf ? "..." : competitor.is_self ? "★ Self" : "Mark self"}
-          </Button>
-          <Button size="sm" variant="outline" onClick={analyze} disabled={analyzing}>
-            {analyzing ? "..." : competitor.post_count === 0 ? "Analyze" : "Re-analyze"}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={remove} disabled={deleting}>
-            Remove
-          </Button>
+            <Star className={cn("h-4 w-4", competitor.is_self && "fill-current")} />
+          </IconButton>
+          <IconButton
+            onClick={analyze}
+            busy={analyzing}
+            title={analyzed ? "Re-analyze (refetch posts)" : "Analyze (fetch posts)"}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </IconButton>
+          <IconButton
+            onClick={remove}
+            busy={deleting}
+            title="Stop tracking"
+            danger
+          >
+            <Trash2 className="h-4 w-4" />
+          </IconButton>
         </div>
       </td>
     </tr>
+  );
+}
+
+function IconButton({
+  children,
+  onClick,
+  busy,
+  title,
+  active,
+  danger,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  busy?: boolean;
+  title: string;
+  active?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      title={title}
+      aria-label={title}
+      className={cn(
+        "inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:opacity-50",
+        active
+          ? "bg-lynx-green/15 text-lynx-charcoal hover:bg-lynx-green/25"
+          : danger
+            ? "text-muted-foreground hover:bg-red-50 hover:text-red-600"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+      )}
+    >
+      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : children}
+    </button>
   );
 }
