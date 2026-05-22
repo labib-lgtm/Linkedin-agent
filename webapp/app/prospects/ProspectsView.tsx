@@ -96,6 +96,14 @@ export function ProspectsView() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [sortBy, setSortBy] = useState<SortKey>("seller");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [colFilters, setColFilters] = useState({
+    seller: "",
+    enrich: "",
+    category: "",
+    location: "",
+  });
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(100); // 0 = show all
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -147,8 +155,27 @@ export function ProspectsView() {
     return c;
   }, [sellers]);
 
+  const filtered = useMemo(() => {
+    const f = colFilters;
+    const seller = f.seller.trim().toLowerCase();
+    const location = f.location.trim().toLowerCase();
+    return sellers.filter((s) => {
+      if (seller) {
+        const hay = `${s.seller_name ?? ""} ${s.business_name ?? ""}`.toLowerCase();
+        if (!hay.includes(seller)) return false;
+      }
+      if (f.enrich && s.enrichment_status !== f.enrich) return false;
+      if (f.category && (s.category ?? "") !== f.category) return false;
+      if (location) {
+        const loc = `${s.city ?? ""} ${s.state ?? ""} ${s.country ?? ""}`.toLowerCase();
+        if (!loc.includes(location)) return false;
+      }
+      return true;
+    });
+  }, [sellers, colFilters]);
+
   const sorted = useMemo(() => {
-    const copy = [...sellers];
+    const copy = [...filtered];
     const dir = sortDir === "asc" ? 1 : -1;
     copy.sort((a, b) => {
       let av: string | number | null = null;
@@ -183,7 +210,21 @@ export function ProspectsView() {
       return 0;
     });
     return copy;
-  }, [sellers, sortBy, sortDir]);
+  }, [filtered, sortBy, sortDir]);
+
+  // Pagination over the filtered + sorted set.
+  const effectiveSize = pageSize === 0 ? sorted.length || 1 : pageSize;
+  const totalPages = Math.max(1, Math.ceil(sorted.length / effectiveSize));
+  const safePage = Math.min(page, totalPages - 1);
+  const pageRows = useMemo(
+    () => sorted.slice(safePage * effectiveSize, safePage * effectiveSize + effectiveSize),
+    [sorted, safePage, effectiveSize],
+  );
+
+  // Reset to the first page whenever the view's shape changes.
+  useEffect(() => {
+    setPage(0);
+  }, [colFilters, sortBy, sortDir, pageSize, importFilter, statusFilter]);
 
   function toggleSort(key: SortKey) {
     if (sortBy === key) {
@@ -376,6 +417,7 @@ export function ProspectsView() {
           </CardContent>
         </Card>
       ) : (
+        <>
         <div className="overflow-x-auto -mx-4 sm:mx-0 border border-border rounded-lg">
           <table className="min-w-full text-sm">
             <thead className="bg-muted/40 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -418,9 +460,69 @@ export function ProspectsView() {
                 <th className="px-3 py-2 font-semibold hidden lg:table-cell">Location</th>
                 <th className="px-3 py-2 font-semibold text-center">Prospects</th>
               </tr>
+              <tr className="border-t border-border bg-background/60">
+                <th></th>
+                <th className="px-2 py-1.5">
+                  <input
+                    type="text"
+                    value={colFilters.seller}
+                    onChange={(e) =>
+                      setColFilters((f) => ({ ...f, seller: e.target.value }))
+                    }
+                    placeholder="Filter…"
+                    className="w-full text-[11px] font-normal normal-case bg-background border border-border rounded px-1.5 py-1"
+                  />
+                </th>
+                <th className="px-2 py-1.5">
+                  <select
+                    value={colFilters.enrich}
+                    onChange={(e) =>
+                      setColFilters((f) => ({ ...f, enrich: e.target.value }))
+                    }
+                    className="w-full text-[11px] font-normal normal-case bg-background border border-border rounded px-1 py-1"
+                  >
+                    <option value="">All</option>
+                    <option value="matched">Matched</option>
+                    <option value="no_match">No match</option>
+                    <option value="failed">Failed</option>
+                    <option value="pending">Pending</option>
+                  </select>
+                </th>
+                <th className="px-2 py-1.5">
+                  <select
+                    value={colFilters.category}
+                    onChange={(e) =>
+                      setColFilters((f) => ({ ...f, category: e.target.value }))
+                    }
+                    className="w-full text-[11px] font-normal normal-case bg-background border border-border rounded px-1 py-1"
+                  >
+                    <option value="">All</option>
+                    {categories.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th className="px-2 py-1.5 hidden lg:table-cell">
+                  <input
+                    type="text"
+                    value={colFilters.location}
+                    onChange={(e) =>
+                      setColFilters((f) => ({ ...f, location: e.target.value }))
+                    }
+                    placeholder="Filter…"
+                    className="w-full text-[11px] font-normal normal-case bg-background border border-border rounded px-1.5 py-1"
+                  />
+                </th>
+                <th></th>
+              </tr>
             </thead>
             <tbody>
-              {sorted.map((s) => (
+              {pageRows.map((s) => (
                 <SellerRow
                   key={s.id}
                   seller={s}
@@ -435,6 +537,57 @@ export function ProspectsView() {
             </tbody>
           </table>
         </div>
+        {/* Pagination */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1 text-[12px] text-muted-foreground">
+          <div>
+            {sorted.length === 0
+              ? "No matches"
+              : `Showing ${safePage * effectiveSize + 1}–${Math.min(
+                  safePage * effectiveSize + effectiveSize,
+                  sorted.length,
+                )} of ${sorted.length}`}
+            {sorted.length !== sellers.length
+              ? ` (filtered from ${sellers.length})`
+              : ""}
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1">
+              <span>Rows</span>
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="bg-background border border-border rounded px-1.5 py-0.5"
+              >
+                <option value={100}>100</option>
+                <option value={250}>250</option>
+                <option value={500}>500</option>
+                <option value={0}>All</option>
+              </select>
+            </label>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                disabled={safePage <= 0}
+                onClick={() => setPage(safePage - 1)}
+                className="px-2 py-1 rounded border border-border hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ‹ Prev
+              </button>
+              <span className="tabular-nums">
+                {safePage + 1} / {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={safePage >= totalPages - 1}
+                onClick={() => setPage(safePage + 1)}
+                className="px-2 py-1 rounded border border-border hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next ›
+              </button>
+            </div>
+          </div>
+        </div>
+        </>
       )}
 
       <ImportDialog

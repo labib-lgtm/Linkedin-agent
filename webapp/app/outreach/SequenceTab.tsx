@@ -68,6 +68,8 @@ export function SequenceTab() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const [stageFilter, setStageFilter] = useState("");
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -172,14 +174,65 @@ export function SequenceTab() {
     );
   }
 
+  const q = search.trim().toLowerCase();
+  const filtered = rows.filter((r) => {
+    if (stageFilter === "__action") {
+      if (!ACTIONABLE.has(r.stage)) return false;
+    } else if (stageFilter && r.stage !== stageFilter) {
+      return false;
+    }
+    if (q) {
+      const name = (r.prospect?.name ?? "").toLowerCase();
+      const company = (
+        r.prospect?.seller?.brand_name ||
+        r.prospect?.seller?.seller_name ||
+        r.prospect?.seller?.business_name ||
+        ""
+      ).toLowerCase();
+      if (!name.includes(q) && !company.includes(q)) return false;
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted-foreground">
         Comments auto-send to warm prospects up. Connection requests and DMs wait for your
         approval — expand a <span className="font-medium">Ready to invite</span> or{" "}
-        <span className="font-medium">Connected</span> row to review and approve. {rows.length} in
-        sequence.
+        <span className="font-medium">Connected</span> row to review and approve.
       </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={stageFilter}
+          onChange={(e) => setStageFilter(e.target.value)}
+          className="text-sm bg-background border border-border rounded px-2 py-1.5"
+        >
+          <option value="">All stages</option>
+          <option value="__action">Needs action</option>
+          <option value="engaging">Engaging</option>
+          <option value="ready_to_invite">Ready to invite</option>
+          <option value="invited">Invited</option>
+          <option value="connected">Connected</option>
+          <option value="dm_sent">DM sent</option>
+          <option value="responded">Replied</option>
+          <option value="done">Done</option>
+        </select>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search name or company…"
+          className="text-sm bg-background border border-border rounded px-2 py-1.5 min-w-[200px]"
+        />
+        <span className="text-[11px] text-muted-foreground">
+          {filtered.length === rows.length
+            ? `${rows.length} in sequence`
+            : `${filtered.length} of ${rows.length}`}
+        </span>
+      </div>
+      {filtered.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No prospects match this filter.</p>
+      ) : (
       <div className="overflow-x-auto rounded-lg border border-border bg-background">
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -193,7 +246,7 @@ export function SequenceTab() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {filtered.map((r) => {
               const company =
                 r.prospect?.seller?.brand_name ||
                 r.prospect?.seller?.seller_name ||
@@ -332,6 +385,7 @@ export function SequenceTab() {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }
