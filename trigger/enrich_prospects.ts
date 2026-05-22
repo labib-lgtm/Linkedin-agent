@@ -7,6 +7,7 @@ import {
   type EmployeeMatch,
 } from "./lib/unipile.js";
 import { fetchAmazonBrandName } from "./lib/amazon.js";
+import { generateJson } from "./lib/openrouter.js";
 
 /**
  * Prospect enrichment — iterates one seller_imports batch.
@@ -52,6 +53,9 @@ interface SellerRow {
   business_name: string | null;
   brand_name: string | null;
   storefront_url: string | null;
+  category: string | null;
+  city: string | null;
+  state: string | null;
   enrichment_status: string;
 }
 
@@ -99,6 +103,66 @@ async function tryMatch(seller: SellerRow, brandName: string | null): Promise<Co
   return null;
 }
 
+interface MatchVerdict {
+  ok: boolean;
+  reason: string;
+}
+
+// LLM gate between company-match and employee-fetch. LinkedIn's company
+// search returns its top keyword hit regardless of whether it's actually
+// the Amazon seller, so a generic name like "You Like We Supply" matches
+// "Supply Chain Visions". This asks a cheap model to confirm the matched
+// LinkedIn company really is the seller before we pull its employees.
+//
+// Fails OPEN: if the model errors/times out we keep the match (tagged as
+// unverified) rather than discard a possibly-good match on a transient
+// blip. The whole point is to cut obvious mismatches, not gate on uptime.
+async function verifyCompanyMatch(
+  seller: SellerRow,
+  match: CompanyMatch,
+): Promise<MatchVerdict> {
+  const sellerLoc = [seller.city, seller.state].filter(Boolean).join(", ");
+  const user = [
+    "AMAZON SELLER",
+    `  Brand / store name: ${seller.brand_name || seller.seller_name || "(unknown)"}`,
+    `  Legal/business name: ${seller.business_name || "(unknown)"}`,
+    `  Product category: ${seller.category || "(unknown)"}`,
+    `  Location: ${sellerLoc || "(unknown)"}`,
+    "",
+    "LINKEDIN COMPANY (top search result)",
+    `  Name: ${match.name || "(unknown)"}`,
+    `  Industry: ${match.industry || "(unknown)"}`,
+    `  Location: ${match.location || "(unknown)"}`,
+    `  About: ${(match.summary || "(none)").slice(0, 300)}`,
+    "",
+    "Is this LinkedIn company the SAME business as the Amazon seller?",
+  ].join("\n");
+
+  try {
+    const verdict = await generateJson<{ match: boolean; reason?: string }>({
+      system:
+        "You verify whether a LinkedIn company is the same business as an Amazon seller. " +
+        "Amazon sellers are consumer-product brands (apparel, beauty, health, home, electronics, etc.). " +
+        "Be STRICT. Answer false when: the names don't clearly correspond (sharing one generic word " +
+        "like 'Supply', 'Wonder', 'Trade', 'Global' is NOT a match); the LinkedIn industry is incompatible " +
+        "with selling physical consumer goods on Amazon (e.g. IT services, software, logistics, staffing, " +
+        "consulting, marketing agency); or it's clearly a large unrelated corporation. Answer true only " +
+        'when you are confident they are the same company. Output JSON {"match": boolean, "reason": string}.',
+      user,
+      temperature: 0,
+      maxTokens: 200,
+      timeoutMs: 12_000,
+    });
+    return { ok: verdict.match === true, reason: (verdict.reason ?? "").slice(0, 300) };
+  } catch (e) {
+    logger.warn("verifyCompanyMatch failed (failing open)", {
+      seller_id: seller.id,
+      error: String(e),
+    });
+    return { ok: true, reason: `unverified (LLM error: ${(e as Error).message})`.slice(0, 300) };
+  }
+}
+
 export const enrichProspects = task({
   id: "enrich-seller-imports",
   maxDuration: 60 * 60, // 1h
@@ -143,7 +207,7 @@ export const enrichProspects = task({
     const { data: sellers, error: sErr } = await client
       .from("sellers")
       .select(
-        "id, account_id, seller_name, business_name, brand_name, storefront_url, enrichment_status",
+        "id, account_id, seller_name, business_name, brand_name, storefront_url, category, city, state, enrichment_status",
       )
       .eq("import_id", importId)
       .eq("enrichment_status", "pending")
@@ -273,6 +337,34 @@ export const enrichProspects = task({
         await sleep(PER_CALL_SLEEP_MS);
         continue;
       }
+
+      // LLM gate: confirm the matched LinkedIn company is actually this
+      // seller before spending a Sales Nav call + writing prospects.
+      // Catches keyword-collision mismatches (e.g. "You Like We Supply"
+      // → "Supply Chain Visions").
+      const verdict = await verifyCompanyMatch(seller, match);
+      if (!verdict.ok) {
+        await client
+          .from("sellers")
+          .update({
+            enrichment_status: "no_match",
+            linkedin_company_urn: null,
+            linkedin_company_url: null,
+            enrichment_error: `rejected match "${match.name ?? "?"}": ${verdict.reason}`.slice(0, 500),
+            enriched_at: new Date().toISOString(),
+          })
+          .eq("id", seller.id);
+        noMatch += 1;
+        logger.info("verification rejected match", {
+          seller_id: seller.id,
+          seller: seller.brand_name || seller.seller_name,
+          rejected_company: match.name,
+          reason: verdict.reason,
+        });
+        await sleep(PER_CALL_SLEEP_MS);
+        continue;
+      }
+
       try {
         employees = await getCompanyEmployees(numericId, EMPLOYEES_PER_COMPANY);
       } catch (e) {

@@ -265,6 +265,9 @@ export interface CompanyMatch {
   id?: string;
   url?: string;
   name?: string;
+  industry?: string;
+  location?: string;
+  summary?: string;
 }
 
 interface SearchListResponse {
@@ -390,6 +393,9 @@ export async function searchCompany(query: string): Promise<CompanyMatch | null>
         id: numericId !== null ? String(numericId) : pickStr(first, ["id"]),
         url: pickStr(first, ["profile_url", "url", "linkedin_url", "company_url", "public_url"]),
         name: pickStr(first, ["name", "display_name", "title"]),
+        industry: pickStr(first, ["industry"]),
+        location: pickStr(first, ["location", "headquarters"]),
+        summary: pickStr(first, ["summary", "description", "tagline"]),
       };
     } catch (e) {
       lastErr = e;
