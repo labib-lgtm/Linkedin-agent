@@ -142,13 +142,21 @@ async function verifyCompanyMatch(
     const verdict = await generateJson<{ match: boolean; reason?: string }>({
       model: "moonshotai/kimi-k2.5",
       system:
-        "You verify whether a LinkedIn company is the same business as an Amazon seller. " +
-        "Amazon sellers are consumer-product brands (apparel, beauty, health, home, electronics, etc.). " +
-        "Be STRICT. Answer false when: the names don't clearly correspond (sharing one generic word " +
-        "like 'Supply', 'Wonder', 'Trade', 'Global' is NOT a match); the LinkedIn industry is incompatible " +
-        "with selling physical consumer goods on Amazon (e.g. IT services, software, logistics, staffing, " +
-        "consulting, marketing agency); or it's clearly a large unrelated corporation. Answer true only " +
-        'when you are confident they are the same company. Output JSON {"match": boolean, "reason": string}.',
+        "You verify whether a LinkedIn company is the SAME business as a small Amazon consumer-product " +
+        "seller (apparel, beauty, health, supplements, home, kitchen, electronics, accessories, etc.).\n\n" +
+        "Answer FALSE (reject) if ANY of these hold:\n" +
+        "- The names only share a generic word, an abbreviation, or initials. Examples of NON-matches: " +
+        "'Beverly Hills MD' vs 'MD Anderson Cancer Center' (both contain 'MD' but unrelated); " +
+        "'You Like We Supply' vs 'Supply Chain Visions'; 'Wonder Products Store' vs 'Wonder Suite'. " +
+        "A real match has the DISTINCTIVE brand name clearly corresponding, not just a shared token.\n" +
+        "- The LinkedIn company is an institution or service business that does not sell physical " +
+        "consumer products on Amazon: hospitals / healthcare, universities / schools, government, " +
+        "banks / finance, IT / software, logistics, staffing, consulting, marketing or ad agencies.\n" +
+        "- The LinkedIn company is large or well-known (thousands of employees, a famous institution). " +
+        "A small Amazon seller is never a major corporation or institution.\n\n" +
+        "Answer TRUE only when the brand name clearly corresponds AND the company plausibly sells " +
+        "consumer products. When uncertain, answer FALSE. " +
+        'Output JSON {"match": boolean, "reason": string}.',
       user,
       temperature: 0,
       maxTokens: 200,
