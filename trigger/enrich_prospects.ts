@@ -164,6 +164,50 @@ async function verifyCompanyMatch(
   }
 }
 
+// Second LLM pass — screen the people Sales Nav returned for a (verified)
+// company down to genuine current decision-makers. The company filter
+// includes brand ambassadors, UGC creators, freelancers, and people whose
+// real job is elsewhere; this drops them. One batched call per company.
+//
+// Fails OPEN on error (keep all). When the model returns a valid verdict
+// we respect it even if it keeps none — "right company, no decision-makers
+// among the returned set" is an accurate outcome, not a bug.
+async function filterDecisionMakers(
+  companyName: string,
+  industry: string | undefined,
+  employees: EmployeeMatch[],
+): Promise<EmployeeMatch[]> {
+  if (employees.length === 0) return employees;
+  const list = employees
+    .map((e, i) => `${i}. ${e.name ?? "(no name)"} — ${e.headline ?? "(no headline)"}`)
+    .join("\n");
+  try {
+    const res = await generateJson<{ keep: number[] }>({
+      model: "moonshotai/kimi-k2.5",
+      system:
+        "You screen LinkedIn people returned for a company, keeping only genuine current " +
+        "decision-makers actually EMPLOYED there. KEEP: founders, owners, CEO/CMO/COO/CGO and other " +
+        "C-level, presidents, VPs, and heads/directors/managers of marketing, ecommerce, growth, " +
+        "brand, or operations whose role is clearly at the target company. REMOVE: brand ambassadors, " +
+        "'biggest fan' / UGC creators / influencers, freelancers and contractors, agency staff, and " +
+        "anyone whose headline shows their primary role is a DIFFERENT company. When unsure, remove. " +
+        'Output JSON {"keep": [<indices of people to keep>]}.',
+      user: `Target company: ${companyName}${industry ? ` (${industry})` : ""}\n\nPeople:\n${list}`,
+      temperature: 0,
+      maxTokens: 200,
+      timeoutMs: 12_000,
+    });
+    const keepSet = new Set((res.keep ?? []).filter((n) => Number.isInteger(n) && n >= 0));
+    return employees.filter((_, i) => keepSet.has(i));
+  } catch (e) {
+    logger.warn("filterDecisionMakers failed (keeping all)", {
+      companyName,
+      error: String(e),
+    });
+    return employees;
+  }
+}
+
 export const enrichProspects = task({
   id: "enrich-seller-imports",
   maxDuration: 60 * 60, // 1h
@@ -418,6 +462,15 @@ export const enrichProspects = task({
         await sleep(PER_CALL_SLEEP_MS);
         continue;
       }
+
+      // Second LLM pass: screen the returned people. Sales Nav's company
+      // filter includes ambassadors / UGC creators / contractors who list
+      // the brand but aren't decision-makers. Keep only genuine ones.
+      employees = await filterDecisionMakers(
+        match.name || brandName || seller.seller_name || "",
+        match.industry,
+        employees,
+      );
 
       // Insert prospects (deduped by seller_id + provider_id).
       const rows = employees
