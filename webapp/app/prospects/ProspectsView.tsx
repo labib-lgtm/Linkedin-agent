@@ -101,6 +101,7 @@ export function ProspectsView() {
     enrich: "",
     category: "",
     location: "",
+    prospects: "", // "" = all, "has" = ≥1 prospect, "none" = no prospects
   });
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(100); // 0 = show all
@@ -169,6 +170,11 @@ export function ProspectsView() {
       if (location) {
         const loc = `${s.city ?? ""} ${s.state ?? ""} ${s.country ?? ""}`.toLowerCase();
         if (!loc.includes(location)) return false;
+      }
+      if (f.prospects) {
+        const has = (s.prospects?.length ?? 0) > 0;
+        if (f.prospects === "has" && !has) return false;
+        if (f.prospects === "none" && has) return false;
       }
       return true;
     });
@@ -518,7 +524,19 @@ export function ProspectsView() {
                     className="w-full text-[11px] font-normal normal-case bg-background border border-border rounded px-1.5 py-1"
                   />
                 </th>
-                <th></th>
+                <th className="px-2 py-1.5">
+                  <select
+                    value={colFilters.prospects}
+                    onChange={(e) =>
+                      setColFilters((f) => ({ ...f, prospects: e.target.value }))
+                    }
+                    className="w-full text-[11px] font-normal normal-case bg-background border border-border rounded px-1 py-1"
+                  >
+                    <option value="">All</option>
+                    <option value="has">Has prospects</option>
+                    <option value="none">None</option>
+                  </select>
+                </th>
               </tr>
             </thead>
             <tbody>
