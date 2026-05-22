@@ -140,6 +140,7 @@ async function verifyCompanyMatch(
 
   try {
     const verdict = await generateJson<{ match: boolean; reason?: string }>({
+      model: "moonshotai/kimi-k2.5",
       system:
         "You verify whether a LinkedIn company is the same business as an Amazon seller. " +
         "Amazon sellers are consumer-product brands (apparel, beauty, health, home, electronics, etc.). " +
