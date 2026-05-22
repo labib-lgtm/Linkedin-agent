@@ -110,7 +110,7 @@ export async function POST(
 
   // 4. Re-fire the enrichment task.
   try {
-    const handle = await tasks.trigger("enrich-seller-imports", { importId: id });
+    const handle = await tasks.trigger("enrich-seller-imports", { importId: id, budget: 200 });
     await supabase
       .from("seller_imports")
       .update({ status: "processing" })

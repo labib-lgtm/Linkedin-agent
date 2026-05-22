@@ -238,7 +238,7 @@ export const enrichProspects = task({
   id: "enrich-seller-imports",
   maxDuration: 60 * 60, // 1h
   run: async (
-    payload: { importId: string },
+    payload: { importId: string; budget?: number },
     { ctx },
   ): Promise<{
     ok: boolean;
@@ -248,7 +248,11 @@ export const enrichProspects = task({
     failed: number;
     error?: string;
   }> => {
-    const { importId } = payload;
+    // `budget` caps Sales Nav calls (getCompanyEmployees) this run, so the
+    // daily batch scheduler can pace ~200/day under LinkedIn's ~250 quota
+    // and resume the same import the next day. Undefined = process all
+    // pending (manual ↻ re-enrich / single-import flow).
+    const { importId, budget } = payload;
     const client = getServiceClient();
     logger.info("enrich-seller-imports start", { runId: ctx.run.id, importId });
 
@@ -301,8 +305,16 @@ export const enrichProspects = task({
     let matched = 0;
     let noMatch = 0;
     let failed = 0;
+    let salesNavCalls = 0;
+    let hitBudget = false;
 
     for (const seller of (sellers ?? []) as SellerRow[]) {
+      // Stop once this run has spent its Sales Nav budget; the daily
+      // scheduler resumes the remaining pending sellers tomorrow.
+      if (budget !== undefined && salesNavCalls >= budget) {
+        hitBudget = true;
+        break;
+      }
       // Scrape the Amazon storefront brand name first (cached on the row
       // after first scrape). This is our most-specific LinkedIn query.
       const brandName = await ensureBrandName(seller, client);
@@ -439,6 +451,7 @@ export const enrichProspects = task({
       }
 
       try {
+        salesNavCalls += 1; // counts toward the daily budget
         employees = await getCompanyEmployees(numericId, EMPLOYEES_PER_COMPANY);
       } catch (e) {
         // 429 → keep seller pending (the company match we just stored
@@ -539,12 +552,39 @@ export const enrichProspects = task({
       await sleep(PER_CALL_SLEEP_MS);
     }
 
-    // Final tally.
+    // Accurate cumulative count: all sellers in the import no longer pending.
+    const { count: doneCount } = await client
+      .from("sellers")
+      .select("id", { count: "exact", head: true })
+      .eq("import_id", importId)
+      .neq("enrichment_status", "pending");
+
+    if (hitBudget) {
+      // Budget reached with pending sellers remaining — pause as 'queued'
+      // so the daily scheduler picks it up tomorrow.
+      await client
+        .from("seller_imports")
+        .update({
+          status: "queued",
+          enriched_count: doneCount ?? matched + noMatch + failed,
+          error: `Daily batch: ${salesNavCalls} Sales Nav calls used (${matched} matched, ${noMatch} no_match). Resumes next batch.`,
+        })
+        .eq("id", importId);
+      logger.info("enrich-seller-imports budget reached", {
+        importId,
+        salesNavCalls,
+        matched,
+        no_match: noMatch,
+      });
+      return { ok: true, importId, matched, no_match: noMatch, failed };
+    }
+
+    // All pending processed.
     await client
       .from("seller_imports")
       .update({
         status: "completed",
-        enriched_count: matched + noMatch + failed,
+        enriched_count: doneCount ?? matched + noMatch + failed,
         completed_at: new Date().toISOString(),
       })
       .eq("id", importId);

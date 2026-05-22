@@ -147,13 +147,13 @@ export function ImportDialog({
                 id="row-limit"
                 type="number"
                 min={1}
-                max={1000}
+                max={6000}
                 value={limit}
                 onChange={(e) => setLimit(e.target.value)}
               />
               <p className="text-[10px] text-muted-foreground">
-                Cap at 1,000 for pilot. Default 200 for first runs — validate match quality
-                before scaling.
+                Up to 6,000. Import the whole book — the daily enrich batch paces it at ~200/day
+                under LinkedIn&apos;s Sales Nav quota. Use 200 first to validate match quality.
               </p>
             </div>
             <div className="flex justify-end gap-2 pt-2">

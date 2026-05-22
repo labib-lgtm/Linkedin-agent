@@ -9,7 +9,10 @@ export const maxDuration = 30;
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB — fits 6,000+ rows easily
 const DEFAULT_LIMIT = 200;
-const HARD_LIMIT = 1000;
+// Import the full book in one go; the daily-enrich scheduler paces the
+// actual enrichment at ~200 Sales Nav calls/day, so a large pending
+// backlog is fine (it just drains over days).
+const HARD_LIMIT = 6000;
 
 // Case-insensitive header lookup. The Google-Sheet export has clean headers
 // but real-world CSVs vary; this trims whitespace and ignores case.
@@ -189,7 +192,13 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const handle = await tasks.trigger("enrich-seller-imports", { importId: importRow.id });
+    // Budget the initial run too, so a large import processes one safe
+    // batch immediately, then the daily-enrich scheduler drains the rest
+    // at ~200 Sales Nav calls/day without hitting the 1h maxDuration.
+    const handle = await tasks.trigger("enrich-seller-imports", {
+      importId: importRow.id,
+      budget: 200,
+    });
     await supabase
       .from("seller_imports")
       .update({ status: "processing" })
