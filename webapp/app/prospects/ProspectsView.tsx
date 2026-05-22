@@ -232,6 +232,51 @@ export function ProspectsView() {
     setPage(0);
   }, [colFilters, sortBy, sortDir, pageSize, importFilter, statusFilter]);
 
+  // Prospects in the current filtered view that aren't enrolled yet — the
+  // candidates for a one-click bulk add.
+  const enrollableIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const s of filtered) {
+      for (const p of s.prospects ?? []) {
+        if ((p.prospect_outreach?.length ?? 0) === 0) ids.push(p.id);
+      }
+    }
+    return ids;
+  }, [filtered]);
+
+  async function addAllToSequence() {
+    if (enrollableIds.length === 0) return;
+    if (
+      !confirm(
+        `Add ${enrollableIds.length} prospect${enrollableIds.length === 1 ? "" : "s"} from the current view to the outreach sequence?`,
+      )
+    )
+      return;
+    try {
+      const res = await fetch("/api/prospects/outreach/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prospect_ids: enrollableIds }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+      const idSet = new Set(enrollableIds);
+      setSellers((prev) =>
+        prev.map((s) => ({
+          ...s,
+          prospects: s.prospects.map((p) =>
+            idSet.has(p.id)
+              ? { ...p, prospect_outreach: [{ stage: "engaging", paused: false }] }
+              : p,
+          ),
+        })),
+      );
+      toast.success(`Added ${data.enrolled} to sequence`);
+    } catch (e) {
+      toast.error(`Add all failed: ${(e as Error).message}`);
+    }
+  }
+
   function toggleSort(key: SortKey) {
     if (sortBy === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -387,13 +432,25 @@ export function ProspectsView() {
             </span>
           ) : null}
         </div>
-        <Button
-          size="sm"
-          onClick={() => setDialogOpen(true)}
-          className="bg-lynx-green text-lynx-charcoal hover:bg-lynx-green/90"
-        >
-          + Import sellers
-        </Button>
+        <div className="flex items-center gap-2">
+          {enrollableIds.length > 0 ? (
+            <button
+              type="button"
+              onClick={addAllToSequence}
+              title="Enroll every not-yet-added prospect in the current view into the outreach sequence"
+              className="text-sm px-3 py-1.5 rounded border border-lynx-green/50 bg-lynx-green/10 text-lynx-charcoal font-medium hover:bg-lynx-green/20"
+            >
+              + Add all to sequence ({enrollableIds.length})
+            </button>
+          ) : null}
+          <Button
+            size="sm"
+            onClick={() => setDialogOpen(true)}
+            className="bg-lynx-green text-lynx-charcoal hover:bg-lynx-green/90"
+          >
+            + Import sellers
+          </Button>
+        </div>
       </div>
 
       {/* Status strip */}
