@@ -110,10 +110,10 @@ export function Sidebar() {
         </button>
         <Link
           href="/"
-          className="font-heading text-base font-bold tracking-tight text-lynx-charcoal"
+          className="font-heading flex items-center gap-2 text-base font-bold tracking-tight text-lynx-charcoal"
         >
-          <span className="rounded bg-lynx-green px-1.5 py-0.5 text-sm">Lynx</span>{" "}
-          LinkedIn Agent
+          <img src="/lynx-mark.png" alt="Lynx Media" className="h-7 w-auto shrink-0" />
+          <span>LinkedIn Agent</span>
         </Link>
         <AccountSwitcher />
       </div>
@@ -143,10 +143,10 @@ export function Sidebar() {
         <div className="flex items-center justify-between gap-2 px-3 py-3 border-b border-border min-h-14">
           <Link
             href="/"
-            className="font-heading font-bold tracking-tight text-lynx-charcoal flex items-center gap-1.5 min-w-0"
+            className="font-heading font-bold tracking-tight text-lynx-charcoal flex items-center gap-2 min-w-0"
             title="Lynx LinkedIn Agent"
           >
-            <span className="rounded bg-lynx-green px-1.5 py-0.5 text-base shrink-0">Lynx</span>
+            <img src="/lynx-mark.png" alt="Lynx Media" className="h-8 w-auto shrink-0" />
             {!collapsed ? (
               <span className="text-sm truncate">LinkedIn Agent</span>
             ) : null}
