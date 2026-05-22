@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   let q = supabase
     .from("sellers")
     .select(
-      "*, prospects(id, name, headline, linkedin_url, provider_id, status, notes, created_at)",
+      "*, prospects(id, name, headline, linkedin_url, provider_id, status, notes, created_at, prospect_outreach(stage, paused))",
     )
     .eq("account_id", accountId)
     .order("created_at", { ascending: false })

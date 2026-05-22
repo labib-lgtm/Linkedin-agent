@@ -15,6 +15,7 @@ type Prospect = {
   status: "new" | "contacted" | "responded" | "converted" | "archived";
   notes: string | null;
   created_at: string;
+  prospect_outreach?: { stage: string; paused: boolean }[] | null;
 };
 
 type Seller = {
@@ -256,6 +257,34 @@ export function ProspectsView() {
     }
   }
 
+  async function toggleSequence(p: Prospect, enroll: boolean) {
+    try {
+      const res = await fetch(`/api/prospects/${p.id}/outreach`, {
+        method: enroll ? "POST" : "DELETE",
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d?.error ?? `HTTP ${res.status}`);
+      }
+      setSellers((prev) =>
+        prev.map((s) => ({
+          ...s,
+          prospects: s.prospects.map((x) =>
+            x.id === p.id
+              ? {
+                  ...x,
+                  prospect_outreach: enroll ? [{ stage: "engaging", paused: false }] : [],
+                }
+              : x,
+          ),
+        })),
+      );
+      toast.success(enroll ? "Added to sequence" : "Removed from sequence");
+    } catch (e) {
+      toast.error(`Sequence update failed: ${(e as Error).message}`);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Top bar */}
@@ -400,6 +429,7 @@ export function ProspectsView() {
                     setExpanded((prev) => ({ ...prev, [s.id]: !prev[s.id] }))
                   }
                   onProspectStatus={updateProspectStatus}
+                  onToggleSequence={toggleSequence}
                 />
               ))}
             </tbody>
@@ -461,11 +491,13 @@ function SellerRow({
   expanded,
   onToggle,
   onProspectStatus,
+  onToggleSequence,
 }: {
   seller: Seller;
   expanded: boolean;
   onToggle: () => void;
   onProspectStatus: (p: Prospect, status: Prospect["status"]) => void;
+  onToggleSequence: (p: Prospect, enroll: boolean) => void;
 }) {
   const tone = ENRICH_TONE[seller.enrichment_status];
   const growthVal = seller.growth_3mo;
@@ -532,7 +564,11 @@ function SellerRow({
         <tr className="border-t border-border bg-muted/20">
           <td></td>
           <td colSpan={8} className="px-3 py-3">
-            <ExpandedDetail seller={seller} onProspectStatus={onProspectStatus} />
+            <ExpandedDetail
+              seller={seller}
+              onProspectStatus={onProspectStatus}
+              onToggleSequence={onToggleSequence}
+            />
           </td>
         </tr>
       ) : null}
@@ -543,9 +579,11 @@ function SellerRow({
 function ExpandedDetail({
   seller,
   onProspectStatus,
+  onToggleSequence,
 }: {
   seller: Seller;
   onProspectStatus: (p: Prospect, status: Prospect["status"]) => void;
+  onToggleSequence: (p: Prospect, enroll: boolean) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -603,6 +641,23 @@ function ExpandedDetail({
                 ) : null}
               </div>
               <div className="flex items-center gap-1.5">
+                {(() => {
+                  const enrolled = (p.prospect_outreach?.length ?? 0) > 0;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => onToggleSequence(p, !enrolled)}
+                      title={enrolled ? "In outreach sequence — click to remove" : "Add to outreach sequence"}
+                      className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border transition-colors ${
+                        enrolled
+                          ? "border-lynx-green/50 bg-lynx-green/15 text-lynx-charcoal hover:bg-lynx-green/25"
+                          : "border-border text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {enrolled ? "✓ Sequence" : "+ Sequence"}
+                    </button>
+                  );
+                })()}
                 <span
                   className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${PROSPECT_STATUS_TONE[p.status]}`}
                 >

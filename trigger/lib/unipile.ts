@@ -474,3 +474,148 @@ export async function getCompanyEmployees(
     provider_id: pickStr(p, ["member_urn", "public_identifier", "id", "provider_id"]),
   }));
 }
+
+/* ----------------------------------------------------------------------
+ * Person post-fetching (ported from webapp/lib/unipile.ts).
+ *
+ * Used by the prospect-engagement worker to track a person's recent
+ * LinkedIn posts so we can comment on them. LinkedIn provider IDs start
+ * with "ACo" and are the canonical user key; a vanity slug from a
+ * /in/<slug>/ URL must be resolved to a provider_id before /posts works.
+ * -------------------------------------------------------------------- */
+
+export interface UnipilePost {
+  id?: string;
+  social_id?: string;
+  urn?: string;
+  text?: string;
+  body?: string;
+  commentary?: string;
+  date?: string;
+  posted_at?: string;
+  created_at?: string;
+  reaction_counter?: number;
+  comment_counter?: number;
+  repost_counter?: number;
+  [key: string]: unknown;
+}
+
+export interface NormalizedProspectPost {
+  post_id: string;
+  posted_at: string | null;
+  text: string | null;
+  reactions: number;
+  comments: number;
+  reposts: number;
+  raw: UnipilePost;
+}
+
+function isProviderId(s: string): boolean {
+  return s.startsWith("ACo") && s.length > 5;
+}
+
+/** Extract a LinkedIn handle (or pass through a provider_id) from a
+ *  profile URL or bare string. Returns null if nothing usable. */
+export function identifierFromProfileUrl(url: string): string | null {
+  const trimmed = (url ?? "").trim();
+  if (!trimmed) return null;
+  const m = /linkedin\.com\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?in\/([^/?#\s]+)/i.exec(trimmed);
+  if (m) return decodeURIComponent(m[1]);
+  if (/^[a-z0-9][a-z0-9_-]{2,}$/i.test(trimmed)) return trimmed;
+  if (/^ACo[A-Za-z0-9_-]{4,}$/.test(trimmed)) return trimmed;
+  return null;
+}
+
+/** Convert Unipile's varied date formats (numeric epoch, ISO, or relative
+ *  like "13h"/"2mo") to an absolute ISO string, or null. */
+function safeIsoDate(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number") {
+    const ms = value > 1e12 ? value : value * 1000;
+    const d = new Date(ms);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  const s = String(value).trim();
+  const rel = /^(\d+)\s*(s|m|h|d|w|mo|y)$/i.exec(s);
+  if (rel) {
+    const n = Number(rel[1]);
+    const unit = rel[2].toLowerCase();
+    const ms: Record<string, number> = {
+      s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000,
+      w: 604_800_000, mo: 2_592_000_000, y: 31_536_000_000,
+    };
+    if (Number.isFinite(n) && ms[unit]) {
+      return new Date(Date.now() - n * ms[unit]).toISOString();
+    }
+  }
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+/** Resolve a vanity slug (or provider_id) to the canonical provider_id.
+ *  Pass-through if already an ACo… id. */
+export async function resolveProviderId(handleOrId: string): Promise<string> {
+  const trimmed = (handleOrId ?? "").trim();
+  if (!trimmed) throw new Error("resolveProviderId: empty identifier");
+  if (isProviderId(trimmed)) return trimmed;
+  const accountQ = encodeURIComponent(env("UNIPILE_LINKEDIN_ACCOUNT_ID"));
+  const profile = await request<Record<string, unknown>>(
+    "GET",
+    `/api/v1/users/${encodeURIComponent(trimmed)}?account_id=${accountQ}&linkedin_sections=*`,
+  );
+  const pid =
+    (typeof profile.provider_id === "string" && profile.provider_id) ||
+    (typeof profile.id === "string" && profile.id.startsWith("ACo") ? (profile.id as string) : null);
+  if (!pid) {
+    throw new Error(`resolveProviderId: could not resolve "${trimmed}"`);
+  }
+  return pid;
+}
+
+/** Fetch a person's recent posts. Accepts a handle, profile URL, or
+ *  provider_id; resolves to a provider_id first when needed. Returns the
+ *  normalized posts plus the resolved providerId (cache it on the caller). */
+export async function fetchUserPosts(
+  handleOrId: string,
+  opts: { maxPosts?: number; pageSize?: number; providerId?: string } = {},
+): Promise<{ posts: NormalizedProspectPost[]; providerId: string }> {
+  const accountQ = encodeURIComponent(env("UNIPILE_LINKEDIN_ACCOUNT_ID"));
+  const providerId =
+    opts.providerId && isProviderId(opts.providerId)
+      ? opts.providerId
+      : await resolveProviderId(handleOrId);
+  const maxPosts = opts.maxPosts ?? 20;
+  const pageSize = opts.pageSize ?? Math.min(maxPosts, 50);
+
+  const raw: UnipilePost[] = [];
+  let cursor: string | undefined;
+  let safety = 10;
+  while (raw.length < maxPosts && safety-- > 0) {
+    let path = `/api/v1/users/${encodeURIComponent(providerId)}/posts?account_id=${accountQ}&limit=${pageSize}`;
+    if (cursor) path += `&cursor=${encodeURIComponent(cursor)}`;
+    const resp = await request<{
+      items?: UnipilePost[];
+      data?: UnipilePost[];
+      cursor?: string;
+      next_cursor?: string;
+      paging?: { cursors?: { after?: string } };
+    }>("GET", path);
+    const items = resp.items ?? resp.data ?? [];
+    raw.push(...items);
+    cursor = resp.cursor ?? resp.next_cursor ?? resp.paging?.cursors?.after;
+    if (!cursor || items.length === 0) break;
+  }
+
+  const posts = raw.slice(0, maxPosts).map((p) => ({
+    post_id:
+      String(p.social_id ?? p.urn ?? p.id ?? "").trim() ||
+      `unknown-${Math.random().toString(36).slice(2, 10)}`,
+    posted_at: safeIsoDate(p.date ?? p.posted_at ?? p.created_at ?? null),
+    text: (p.text ?? p.body ?? p.commentary ?? null) as string | null,
+    reactions: Number(p.reaction_counter ?? 0) || 0,
+    comments: Number(p.comment_counter ?? 0) || 0,
+    reposts: Number(p.repost_counter ?? 0) || 0,
+    raw: p,
+  }));
+  return { posts, providerId };
+}

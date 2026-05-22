@@ -1,4 +1,4 @@
-import { OutreachQueue } from "./OutreachQueue";
+import { OutreachTabs } from "./OutreachTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -11,12 +11,12 @@ export default function OutreachPage() {
             Outreach
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            AI-drafted comments on competitor posts. Approve to queue, the bot posts at most
-            5/day per account with mandatory 2h gaps.
+            Comment queue: AI-drafted comments on competitor posts (approve to queue, ≤5/day per
+            account, 2h gaps). Prospect sequence: warm-up engagement on enrolled prospects.
           </p>
         </div>
       </div>
-      <OutreachQueue />
+      <OutreachTabs />
     </div>
   );
 }
