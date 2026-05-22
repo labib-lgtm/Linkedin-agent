@@ -1,7 +1,7 @@
 import { logger, task } from "@trigger.dev/sdk/v3";
 import { getServiceClient } from "./lib/supabase.js";
 import {
-  searchCompany,
+  searchCompanies,
   getCompanyEmployees,
   type CompanyMatch,
   type EmployeeMatch,
@@ -13,16 +13,20 @@ import { generateJson } from "./lib/openrouter.js";
  * Prospect enrichment — iterates one seller_imports batch.
  *
  * Triggered imperatively by POST /api/prospects/imports after a CSV
- * upload. Loops the imports's seller rows, runs:
- *   1. searchCompany(seller_name) → fallback searchCompany(business_name)
- *   2. If matched: getCompanyEmployees(urn, limit=5)
- *   3. Upsert each employee into prospects (unique on seller_id+provider_id)
- *   4. Mark seller matched / no_match / failed
- *   5. Increment seller_imports.enriched_count
+ * upload. Loops the import's seller rows, runs:
+ *   1. ensureBrandName — scrape the Amazon storefront for the real brand
+ *      display name (cached on the row); our most-specific LinkedIn query.
+ *   2. gatherCandidates — search LinkedIn for the top 5 companies by name.
+ *   3. selectBestMatch — LLM picks the correct candidate among same-name
+ *      collisions (by industry + location), or rejects all → no_match.
+ *   4. getCompanyEmployees — Sales Nav people search for the chosen company.
+ *   5. filterDecisionMakers — LLM drops ambassadors / non-decision-makers.
+ *   6. Upsert survivors into prospects (unique on seller_id+provider_id),
+ *      mark seller matched / no_match / failed, bump enriched_count.
  *
- * Pacing: 2s between Unipile calls. 200 rows × ~10s ≈ 33 min — well
- * inside the 1h maxDuration. On any per-seller error, log and continue
- * (don't fail the whole import).
+ * Pacing: ~10s between Unipile calls. 200 rows ≈ ~50 min — inside the 1h
+ * maxDuration. 429s pause the import gracefully (status='queued'); other
+ * hard errors fail the run so the operator can fix the root cause.
  */
 
 // Sales Nav rate limits trip fast on LinkedIn's side (~250 searches/day on
@@ -81,47 +85,59 @@ async function ensureBrandName(
   return null;
 }
 
-async function tryMatch(seller: SellerRow, brandName: string | null): Promise<CompanyMatch | null> {
-  // Prefer the scraped brand name (specific, e.g. "BTween Girls Apparel")
-  // over the CSV's legal entity names (often generic, e.g. "Between LLC")
-  // which routinely match the wrong LinkedIn company.
-  const candidates = [brandName, seller.seller_name, seller.business_name]
+// Collect candidate LinkedIn companies for a seller. Tries the scraped
+// brand name first (specific, e.g. "BTween Girls Apparel"), then the CSV's
+// legal names. Returns the candidate set from the FIRST query that yields
+// usable results — top 5, so the selector can disambiguate same-name
+// collisions (e.g. two different "Arc Solutions"). Throws on hard
+// auth/rate-limit failures so they aren't masked as no_match.
+async function gatherCandidates(
+  seller: SellerRow,
+  brandName: string | null,
+): Promise<CompanyMatch[]> {
+  const queries = [brandName, seller.seller_name, seller.business_name]
     .map((s) => (s ?? "").trim())
     .filter((s) => s.length > 0);
-  for (const q of candidates) {
+  for (const q of queries) {
     try {
-      const match = await searchCompany(q);
-      if (match && (match.numericId !== null || match.url)) return match;
+      const results = await searchCompanies(q, 5);
+      const usable = results.filter((c) => c.numericId !== null || c.url);
+      if (usable.length > 0) return usable;
     } catch (e) {
-      logger.warn("searchCompany failed", { seller_id: seller.id, query: q, error: String(e) });
-      // Surface the error to the caller so a hard auth/rate-limit failure
-      // doesn't get masked as "no_match" silently.
+      logger.warn("searchCompanies failed", { seller_id: seller.id, query: q, error: String(e) });
       throw e;
     }
     await sleep(PER_CALL_SLEEP_MS);
   }
-  return null;
+  return [];
 }
 
-interface MatchVerdict {
-  ok: boolean;
+interface MatchSelection {
+  match: CompanyMatch | null;
   reason: string;
 }
 
-// LLM gate between company-match and employee-fetch. LinkedIn's company
-// search returns its top keyword hit regardless of whether it's actually
-// the Amazon seller, so a generic name like "You Like We Supply" matches
-// "Supply Chain Visions". This asks a cheap model to confirm the matched
-// LinkedIn company really is the seller before we pull its employees.
+// LLM selector between company-search and employee-fetch. Given the seller
+// and several candidate LinkedIn companies (names collide — "Arc Solutions"
+// returns both a consulting firm and the welding manufacturer), pick the
+// ONE that's actually the seller, using industry + location to
+// disambiguate, or reject all.
 //
-// Fails OPEN: if the model errors/times out we keep the match (tagged as
-// unverified) rather than discard a possibly-good match on a transient
-// blip. The whole point is to cut obvious mismatches, not gate on uptime.
-async function verifyCompanyMatch(
+// Fails OPEN to the top candidate: if the model errors/times out we keep
+// result #1 (tagged unverified) rather than discard a possibly-good match
+// on a transient blip.
+async function selectBestMatch(
   seller: SellerRow,
-  match: CompanyMatch,
-): Promise<MatchVerdict> {
+  candidates: CompanyMatch[],
+): Promise<MatchSelection> {
+  if (candidates.length === 0) return { match: null, reason: "no candidates" };
   const sellerLoc = [seller.city, seller.state].filter(Boolean).join(", ");
+  const list = candidates
+    .map(
+      (c, i) =>
+        `${i}. ${c.name || "(no name)"} | industry: ${c.industry || "?"} | location: ${c.location || "?"} | about: ${(c.summary || "").slice(0, 140)}`,
+    )
+    .join("\n");
   const user = [
     "AMAZON SELLER",
     `  Brand / store name: ${seller.brand_name || seller.seller_name || "(unknown)"}`,
@@ -129,46 +145,48 @@ async function verifyCompanyMatch(
     `  Product category: ${seller.category || "(unknown)"}`,
     `  Location: ${sellerLoc || "(unknown)"}`,
     "",
-    "LINKEDIN COMPANY (top search result)",
-    `  Name: ${match.name || "(unknown)"}`,
-    `  Industry: ${match.industry || "(unknown)"}`,
-    `  Location: ${match.location || "(unknown)"}`,
-    `  About: ${(match.summary || "(none)").slice(0, 300)}`,
+    "CANDIDATE LINKEDIN COMPANIES",
+    list,
     "",
-    "Is this LinkedIn company the SAME business as the Amazon seller?",
+    "Pick the index of the ONE candidate that is the same business as this Amazon seller, or -1 if none qualify.",
   ].join("\n");
 
   try {
-    const verdict = await generateJson<{ match: boolean; reason?: string }>({
+    const res = await generateJson<{ index: number; reason?: string }>({
       model: "moonshotai/kimi-k2.5",
       system:
-        "You verify whether a LinkedIn company is the SAME business as a small Amazon consumer-product " +
-        "seller (apparel, beauty, health, supplements, home, kitchen, electronics, accessories, etc.).\n\n" +
-        "Answer FALSE (reject) if ANY of these hold:\n" +
-        "- The names only share a generic word, an abbreviation, or initials. Examples of NON-matches: " +
-        "'Beverly Hills MD' vs 'MD Anderson Cancer Center' (both contain 'MD' but unrelated); " +
-        "'You Like We Supply' vs 'Supply Chain Visions'; 'Wonder Products Store' vs 'Wonder Suite'. " +
-        "A real match has the DISTINCTIVE brand name clearly corresponding, not just a shared token.\n" +
-        "- The LinkedIn company is an institution or service business that does not sell physical " +
-        "consumer products on Amazon: hospitals / healthcare, universities / schools, government, " +
-        "banks / finance, IT / software, logistics, staffing, consulting, marketing or ad agencies.\n" +
-        "- The LinkedIn company is large or well-known (thousands of employees, a famous institution). " +
-        "A small Amazon seller is never a major corporation or institution.\n\n" +
-        "Answer TRUE only when the brand name clearly corresponds AND the company plausibly sells " +
-        "consumer products. When uncertain, answer FALSE. " +
-        'Output JSON {"match": boolean, "reason": string}.',
+        "You match a small Amazon consumer-product seller (apparel, beauty, health, supplements, " +
+        "home, kitchen, electronics, accessories, automotive parts, etc.) to the correct LinkedIn " +
+        "company from a numbered candidate list. Several candidates may share a name — use industry, " +
+        "location, and description to pick the RIGHT one.\n\n" +
+        "Pick a candidate's index ONLY if its DISTINCTIVE brand name clearly corresponds to the seller " +
+        "AND it plausibly makes/sells physical consumer products. Location is a strong signal — Amazon " +
+        "sellers usually match their HQ city/state.\n\n" +
+        "Return -1 (no match) if none qualify, including when candidates only share a generic word, " +
+        "abbreviation, or initials with the seller (e.g. 'Beverly Hills MD' vs 'MD Anderson Cancer " +
+        "Center'; 'You Like We Supply' vs 'Supply Chain Visions'), or are institutions / service " +
+        "businesses (hospitals, universities, government, finance, IT, logistics, staffing, consulting, " +
+        "agencies) or large well-known organizations. When uncertain, return -1.\n\n" +
+        'Output JSON {"index": <number>, "reason": <string>}.',
       user,
       temperature: 0,
       maxTokens: 200,
       timeoutMs: 12_000,
     });
-    return { ok: verdict.match === true, reason: (verdict.reason ?? "").slice(0, 300) };
+    const idx = res.index;
+    if (typeof idx === "number" && idx >= 0 && idx < candidates.length) {
+      return { match: candidates[idx], reason: (res.reason ?? "").slice(0, 300) };
+    }
+    return { match: null, reason: (res.reason ?? "no candidate matched").slice(0, 300) };
   } catch (e) {
-    logger.warn("verifyCompanyMatch failed (failing open)", {
+    logger.warn("selectBestMatch failed (falling back to top candidate)", {
       seller_id: seller.id,
       error: String(e),
     });
-    return { ok: true, reason: `unverified (LLM error: ${(e as Error).message})`.slice(0, 300) };
+    return {
+      match: candidates[0],
+      reason: `unverified (LLM error: ${(e as Error).message})`.slice(0, 300),
+    };
   }
 }
 
@@ -289,9 +307,9 @@ export const enrichProspects = task({
       // after first scrape). This is our most-specific LinkedIn query.
       const brandName = await ensureBrandName(seller, client);
 
-      let match: CompanyMatch | null = null;
+      let candidates: CompanyMatch[] = [];
       try {
-        match = await tryMatch(seller, brandName);
+        candidates = await gatherCandidates(seller, brandName);
       } catch (e) {
         const msg = (e as Error).message ?? String(e);
 
@@ -341,7 +359,8 @@ export const enrichProspects = task({
         return { ok: false, importId, matched, no_match: noMatch, failed, error: msg };
       }
 
-      if (!match || (match.numericId === null && !match.url)) {
+      // No company candidates at all → no_match.
+      if (candidates.length === 0) {
         await client
           .from("sellers")
           .update({
@@ -363,6 +382,34 @@ export const enrichProspects = task({
         continue;
       }
 
+      // LLM picks the right candidate among same-name collisions (or
+      // rejects all). Replaces blind trust in LinkedIn's #1 result —
+      // "Arc Solutions" returns both a consulting firm and the welding
+      // manufacturer that's the actual seller.
+      const selection = await selectBestMatch(seller, candidates);
+      const match = selection.match;
+      if (!match) {
+        await client
+          .from("sellers")
+          .update({
+            enrichment_status: "no_match",
+            linkedin_company_urn: null,
+            linkedin_company_url: null,
+            enrichment_error: `no candidate matched (${candidates.length} considered): ${selection.reason}`.slice(0, 500),
+            enriched_at: new Date().toISOString(),
+          })
+          .eq("id", seller.id);
+        noMatch += 1;
+        logger.info("selection rejected all candidates", {
+          seller_id: seller.id,
+          seller: seller.brand_name || seller.seller_name,
+          candidates: candidates.map((c) => c.name),
+          reason: selection.reason,
+        });
+        await sleep(PER_CALL_SLEEP_MS);
+        continue;
+      }
+
       // We store the numeric LinkedIn company ID (stringified) in
       // `linkedin_company_urn` to preserve the existing column shape,
       // even though it's not technically a URN. The Sales Nav people
@@ -371,9 +418,9 @@ export const enrichProspects = task({
       const companyIdString = numericId !== null ? String(numericId) : null;
       const companyUrl = match.url ?? null;
 
-      // Fetch employees. Requires the numeric company ID — if the match
-      // came back without one (e.g. an exotic classic response shape), we
-      // record the company match but skip the employees lookup.
+      // Fetch employees. Requires the numeric company ID — if the chosen
+      // candidate came back without one (e.g. an exotic classic response
+      // shape), record the company match but skip the employees lookup.
       let employees: EmployeeMatch[] = [];
       if (numericId === null) {
         await client
@@ -387,33 +434,6 @@ export const enrichProspects = task({
           })
           .eq("id", seller.id);
         matched += 1;
-        await sleep(PER_CALL_SLEEP_MS);
-        continue;
-      }
-
-      // LLM gate: confirm the matched LinkedIn company is actually this
-      // seller before spending a Sales Nav call + writing prospects.
-      // Catches keyword-collision mismatches (e.g. "You Like We Supply"
-      // → "Supply Chain Visions").
-      const verdict = await verifyCompanyMatch(seller, match);
-      if (!verdict.ok) {
-        await client
-          .from("sellers")
-          .update({
-            enrichment_status: "no_match",
-            linkedin_company_urn: null,
-            linkedin_company_url: null,
-            enrichment_error: `rejected match "${match.name ?? "?"}": ${verdict.reason}`.slice(0, 500),
-            enriched_at: new Date().toISOString(),
-          })
-          .eq("id", seller.id);
-        noMatch += 1;
-        logger.info("verification rejected match", {
-          seller_id: seller.id,
-          seller: seller.brand_name || seller.seller_name,
-          rejected_company: match.name,
-          reason: verdict.reason,
-        });
         await sleep(PER_CALL_SLEEP_MS);
         continue;
       }

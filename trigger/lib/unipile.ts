@@ -344,68 +344,53 @@ export const DECISION_MAKER_TITLES = [
   "Ecommerce Manager",
 ];
 
-/** Search LinkedIn for a company by name. Returns the top match (with
- *  numeric LinkedIn company ID) or null.
+/** Search LinkedIn for companies by name. Returns up to `limit` candidate
+ *  matches (top result first), each with its numeric LinkedIn company ID.
+ *
+ *  Returns MULTIPLE candidates because company names collide: a search for
+ *  "Arc Solutions" returns both a consulting firm and the welding/plasma
+ *  manufacturer that's the actual Amazon seller. The caller picks the right
+ *  one (by industry/location) instead of blindly trusting result #1.
  *
  *  Uses Unipile's `classic` company search ONLY — not Sales Navigator.
  *  Both return the same numeric LinkedIn company ID under `id`, which is
  *  all we need to feed into the Sales Nav people search filter
  *  (`company.include`). Classic has a much higher rate-limit budget on
  *  LinkedIn's side, so we reserve our Sales Nav quota (~250/day on
- *  Standard tier) exclusively for `getCompanyEmployees` where the strict
- *  current-company filter actually matters.
+ *  Standard tier) exclusively for `getCompanyEmployees`.
  *
  *  Classic company response shape per docs:
  *    { type: "COMPANY", id: "165158", name, profile_url,
  *      industry, location, followers_count, job_offers_count }
- *  `profile_url` uses the slug form (linkedin.com/company/<slug>/).
  *
  *  Auth/5xx/429 errors propagate so we hear about real failures instead
  *  of silently turning a rate-limit into a no_match. */
-export async function searchCompany(query: string): Promise<CompanyMatch | null> {
+export async function searchCompanies(query: string, limit = 5): Promise<CompanyMatch[]> {
   const accountId = env("UNIPILE_LINKEDIN_ACCOUNT_ID");
   const accountQ = encodeURIComponent(accountId);
   const q = query.trim();
-  if (!q) return null;
-
-  const bodies: Array<{ body: Record<string, unknown> }> = [
-    {
-      body: {
-        api: "classic",
-        category: "companies",
-        keywords: q,
-        limit: 1,
-      },
-    },
-  ];
+  if (!q) return [];
 
   const path = `/api/v1/linkedin/search?account_id=${accountQ}`;
-  let lastErr: unknown = null;
-  for (const { body } of bodies) {
-    try {
-      const r = await request<SearchListResponse>("POST", path, body);
-      const items = r.items ?? r.data ?? r.results ?? [];
-      if (!items.length) continue;
-      const first = items[0];
-      const numericId = pickNumericId(first, ["id", "company_id", "provider_id"]);
-      return {
-        numericId,
-        id: numericId !== null ? String(numericId) : pickStr(first, ["id"]),
-        url: pickStr(first, ["profile_url", "url", "linkedin_url", "company_url", "public_url"]),
-        name: pickStr(first, ["name", "display_name", "title"]),
-        industry: pickStr(first, ["industry"]),
-        location: pickStr(first, ["location", "headquarters"]),
-        summary: pickStr(first, ["summary", "description", "tagline"]),
-      };
-    } catch (e) {
-      lastErr = e;
-      const msg = String(e);
-      const isShapeRejection = /\b(400|404)\b/.test(msg);
-      if (!isShapeRejection) break;
-    }
-  }
-  if (lastErr) throw lastErr;
-  return null;
+  const r = await request<SearchListResponse>("POST", path, {
+    api: "classic",
+    category: "companies",
+    keywords: q,
+    limit,
+  });
+  const items = r.items ?? r.data ?? r.results ?? [];
+  return items.slice(0, limit).map((item) => {
+    const numericId = pickNumericId(item, ["id", "company_id", "provider_id"]);
+    return {
+      numericId,
+      id: numericId !== null ? String(numericId) : pickStr(item, ["id"]),
+      url: pickStr(item, ["profile_url", "url", "linkedin_url", "company_url", "public_url"]),
+      name: pickStr(item, ["name", "display_name", "title"]),
+      industry: pickStr(item, ["industry"]),
+      location: pickStr(item, ["location", "headquarters"]),
+      summary: pickStr(item, ["summary", "description", "tagline"]),
+    };
+  });
 }
 
 /** Result shape for an employee/profile match. */
