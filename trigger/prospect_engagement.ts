@@ -6,6 +6,12 @@ import {
   identifierFromProfileUrl,
   postComment,
 } from "./lib/unipile.js";
+import { enrichProspects } from "./enrich_prospects.js";
+
+// Sales Nav calls per daily batch — under LinkedIn's ~250/day quota. The
+// daily enrich kick-off rides on the track-prospect-posts schedule (folded
+// in to stay under the Trigger.dev 10-schedule cap).
+const DAILY_ENRICH_BUDGET = 200;
 
 /**
  * Phase 1 of prospect warm-outreach: track enrolled prospects' posts and
@@ -158,6 +164,29 @@ export const trackProspectPosts = schedules.task({
   run: async (_payload, { ctx }) => {
     const client = getServiceClient();
     logger.info("track-prospect-posts start", { runId: ctx.run.id });
+
+    // Daily batched seller enrichment kick-off (folded in here to stay
+    // under the 10-schedule cap). Fire BEFORE post-tracking so it always
+    // runs even if tracking errors. Picks the oldest import with pending
+    // sellers and runs the enrich task with a Sales Nav budget; the enrich
+    // task pauses at the budget and resumes next day.
+    try {
+      const { data: pending } = await client
+        .from("sellers")
+        .select("import_id")
+        .eq("enrichment_status", "pending")
+        .order("created_at", { ascending: true })
+        .limit(1);
+      const importId = pending?.[0]?.import_id as string | undefined;
+      if (importId) {
+        const handle = await enrichProspects.trigger({ importId, budget: DAILY_ENRICH_BUDGET });
+        logger.info("daily enrich batch fired", { importId, runId: handle.id, budget: DAILY_ENRICH_BUDGET });
+      } else {
+        logger.info("daily enrich: nothing pending");
+      }
+    } catch (e) {
+      logger.warn("daily enrich kick-off failed", { error: (e as Error).message });
+    }
 
     const { data: enrolled, error } = await client
       .from("prospect_outreach")
