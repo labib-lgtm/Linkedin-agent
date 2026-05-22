@@ -107,6 +107,60 @@ export async function sendDm(args: {
   });
 }
 
+/** Send a LinkedIn connection request (invitation).
+ *  Endpoint per Unipile docs: POST /api/v1/users/invite with
+ *  { provider_id, account_id, message }. The optional message is the
+ *  connection note (LinkedIn caps it ~200-300 chars). */
+export async function sendInvitation(args: {
+  providerId: string;
+  message?: string;
+}): Promise<{ id?: string; invitation_id?: string }> {
+  const body: Record<string, unknown> = {
+    provider_id: args.providerId,
+    account_id: env("UNIPILE_LINKEDIN_ACCOUNT_ID"),
+  };
+  if (args.message && args.message.trim()) body.message = args.message.trim();
+  return request("POST", `/api/v1/users/invite`, body);
+}
+
+/** List the account's LinkedIn relations (connections), most recent first.
+ *  Used to detect accepted invitations: a prospect's cached provider_id
+ *  appearing here means they accepted. Response shape isn't formally
+ *  documented, so we extract the member id defensively from each item. */
+export async function getRelations(limit = 200): Promise<string[]> {
+  const accountQ = encodeURIComponent(env("UNIPILE_LINKEDIN_ACCOUNT_ID"));
+  const ids = new Set<string>();
+  let cursor: string | undefined;
+  let safety = 10;
+  while (ids.size < limit && safety-- > 0) {
+    let path = `/api/v1/users/relations?account_id=${accountQ}&limit=${Math.min(limit, 100)}`;
+    if (cursor) path += `&cursor=${encodeURIComponent(cursor)}`;
+    const resp = await request<{
+      items?: Array<Record<string, unknown>>;
+      data?: Array<Record<string, unknown>>;
+      relations?: Array<Record<string, unknown>>;
+      cursor?: string;
+      next_cursor?: string;
+      paging?: { cursors?: { after?: string } };
+    }>("GET", path);
+    const items = resp.items ?? resp.data ?? resp.relations ?? [];
+    for (const it of items) {
+      const id = pickStr(it, [
+        "member_id",
+        "provider_id",
+        "member_urn",
+        "id",
+        "public_identifier",
+        "user_provider_id",
+      ]);
+      if (id) ids.add(id);
+    }
+    cursor = resp.cursor ?? resp.next_cursor ?? resp.paging?.cursors?.after;
+    if (!cursor || items.length === 0) break;
+  }
+  return [...ids];
+}
+
 /** Comment on a published post. Shape from live Unipile responses:
  *    { id, post_id, post_urn, date, text,
  *      author: "Display Name",                       // string, NOT object
