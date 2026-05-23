@@ -14,6 +14,25 @@ export default function NewAnglePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [hookSeed, setHookSeed] = useState("");
+  const [angleId, setAngleId] = useState("");
+  const [weekAssigned, setWeekAssigned] = useState("");
+
+  // Auto-suggest the next angle id (YYYY-WNN-AXX) for the current week. The
+  // field stays editable — this is just a sensible default.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/angles/next-id")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled || !d) return;
+        if (d.next_id) setAngleId((cur) => cur || d.next_id);
+        if (d.week_assigned) setWeekAssigned((cur) => cur || d.week_assigned);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // "Draft this style" stashes the full breakout post in sessionStorage and
   // navigates here with ?seed=1. Pull it into the hook seed, then clear it.
@@ -85,6 +104,8 @@ export default function NewAnglePage() {
                 id="angle_id"
                 name="angle_id"
                 placeholder="2026-W19-A01"
+                value={angleId}
+                onChange={(e) => setAngleId(e.target.value)}
                 required
               />
               <p className="text-xs text-muted-foreground">
@@ -153,6 +174,8 @@ export default function NewAnglePage() {
                   id="week_assigned"
                   name="week_assigned"
                   placeholder="2026-W19"
+                  value={weekAssigned}
+                  onChange={(e) => setWeekAssigned(e.target.value)}
                 />
               </div>
             </div>
