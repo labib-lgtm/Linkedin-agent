@@ -7,6 +7,7 @@
   "scripts": {
     "trigger:dev": "trigger dev",
     "trigger:deploy": "trigger deploy",
+    "trigger:deploy:native": "trigger deploy --native-build-server",
     "trigger:login": "trigger login",
     "trigger:logout": "trigger logout"
   },
