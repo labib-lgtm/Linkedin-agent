@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { breakoutPosts, colorFor, type AggregatePost } from "@/lib/competitor-aggregate";
 
 type Row = {
@@ -29,6 +29,20 @@ const FORMAT_LABEL: Record<string, string> = {
 // content; the alpha is in posts that surprised even the author. We render
 // at most 6 cards so the section stays scannable on a single screen.
 export function Breakouts({ rows, limit = 6 }: { rows: Row[]; limit?: number }) {
+  const router = useRouter();
+
+  // Stash the full post body so the new-angle form can prefill the hook seed.
+  // sessionStorage (not a query param) so arbitrarily long posts carry over
+  // without URL-length limits.
+  function draftThisStyle(fullText: string) {
+    try {
+      sessionStorage.setItem("angle_seed", fullText);
+    } catch {
+      // sessionStorage can throw in private mode; the form just opens blank.
+    }
+    router.push("/angles/new?seed=1");
+  }
+
   const breakouts = useMemo(() => {
     const byId: Record<string, string> = Object.fromEntries(rows.map((r, i) => [r.id, String(i)]));
     void byId; // index for color lookup mirrored below
@@ -104,12 +118,13 @@ export function Breakouts({ rows, limit = 6 }: { rows: Row[]; limit?: number }) 
               >
                 View on LinkedIn →
               </a>
-              <Link
-                href={`/angles/new?seed=${encodeURIComponent(b.excerpt.slice(0, 120))}`}
+              <button
+                type="button"
+                onClick={() => draftThisStyle(b.full_text || b.excerpt)}
                 className="font-semibold hover:text-lynx-charcoal"
               >
                 Draft this style →
-              </Link>
+              </button>
             </div>
           </div>
         );

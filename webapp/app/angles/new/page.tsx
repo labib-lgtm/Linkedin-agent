@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,19 @@ export default function NewAnglePage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [hookSeed, setHookSeed] = useState("");
+
+  // "Draft this style" stashes the full breakout post in sessionStorage and
+  // navigates here with ?seed=1. Pull it into the hook seed, then clear it.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!new URLSearchParams(window.location.search).has("seed")) return;
+    const seed = sessionStorage.getItem("angle_seed");
+    if (seed) {
+      setHookSeed(seed);
+      sessionStorage.removeItem("angle_seed");
+    }
+  }, []);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -117,7 +130,9 @@ export default function NewAnglePage() {
               <Textarea
                 id="hook_seed"
                 name="hook_seed"
-                rows={3}
+                rows={hookSeed ? 8 : 3}
+                value={hookSeed}
+                onChange={(e) => setHookSeed(e.target.value)}
                 placeholder="The 3-line operator's note..."
               />
             </div>

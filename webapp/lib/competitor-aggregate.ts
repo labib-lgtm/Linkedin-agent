@@ -51,6 +51,7 @@ export type BreakoutPost = TopPost & {
   competitor_name: string;
   multiplier: number;            // score / author 90d median
   word_count: number;
+  full_text: string;             // untruncated post body (for "Draft this style")
 };
 
 // Format types we render. 'none' = text-only post.
@@ -277,6 +278,7 @@ export function breakoutPosts(
         posted_at: p.posted_at,
         score: Math.round(score),
         excerpt: (p.text ?? "").slice(0, 220),
+        full_text: p.text ?? "",
         media_type: p.media_type,
         media_urls: p.media_urls,
         competitor_id: c.id,
