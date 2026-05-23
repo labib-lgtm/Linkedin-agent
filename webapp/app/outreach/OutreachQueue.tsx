@@ -88,6 +88,7 @@ export function OutreachQueue() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
       setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...data.outbound } : d)));
+      if ("draft_comment" in patch) toast.success("Comment updated");
     } catch (e) {
       toast.error(`Update failed: ${(e as Error).message}`);
     }
@@ -169,7 +170,11 @@ export function OutreachQueue() {
           onPatch={patchDraft}
           onApprove={approve}
         />
-        <DraftColumn title={`Approved · ${approvedStatus.length}`} drafts={approvedStatus} />
+        <DraftColumn
+          title={`Approved · ${approvedStatus.length}`}
+          drafts={approvedStatus}
+          onPatch={patchDraft}
+        />
         <DraftColumn title={`Sent · ${sentStatus.length}`} drafts={sentStatus} />
       </section>
     </div>
@@ -218,7 +223,9 @@ function DraftRow({
   onApprove?: (id: string) => Promise<void>;
 }) {
   const [text, setText] = useState(draft.draft_comment ?? "");
-  const editable = draft.status === "draft" && !!onPatch;
+  // Editable while it's still a draft OR approved-but-not-yet-sent. The sender
+  // reads draft_comment at send time, so edits to a queued comment take effect.
+  const editable = (draft.status === "draft" || draft.status === "approved") && !!onPatch;
 
   return (
     <div
@@ -255,7 +262,7 @@ function DraftRow({
           {text || "(empty)"}
         </p>
       )}
-      {editable ? (
+      {draft.status === "draft" && onPatch ? (
         <div className="flex gap-1.5">
           <Button
             size="sm"
@@ -265,6 +272,20 @@ function DraftRow({
           >
             Approve
           </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onPatch?.(draft.id, { status: "rejected" })}
+            className="text-rose-700"
+          >
+            Reject
+          </Button>
+        </div>
+      ) : draft.status === "approved" && onPatch ? (
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-muted-foreground">
+            Queued — edits save automatically
+          </span>
           <Button
             size="sm"
             variant="ghost"
