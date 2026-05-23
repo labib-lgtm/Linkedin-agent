@@ -159,33 +159,44 @@ Output strict JSON:
 
 export const trackProspectPosts = schedules.task({
   id: "track-prospect-posts",
-  cron: "0 6 * * *",
+  cron: "0 6,14,22 * * *",
   maxDuration: 60 * 10,
-  run: async (_payload, { ctx }) => {
+  run: async (payload, { ctx }) => {
     const client = getServiceClient();
-    logger.info("track-prospect-posts start", { runId: ctx.run.id });
+    // Post-tracking runs 3x/day (06:00, 14:00, 22:00 UTC) so a prospect's new
+    // post is picked up within hours, not a full day. The daily seller-enrich
+    // batch is folded in here (to stay under the 10-schedule cap) but must
+    // fire only ONCE per day — gate it to the morning run.
+    const enrichHour = payload.timestamp.getUTCHours() < 12;
+    logger.info("track-prospect-posts start", {
+      runId: ctx.run.id,
+      hour: payload.timestamp.getUTCHours(),
+      enrich: enrichHour,
+    });
 
     // Daily batched seller enrichment kick-off (folded in here to stay
     // under the 10-schedule cap). Fire BEFORE post-tracking so it always
     // runs even if tracking errors. Picks the oldest import with pending
     // sellers and runs the enrich task with a Sales Nav budget; the enrich
     // task pauses at the budget and resumes next day.
-    try {
-      const { data: pending } = await client
-        .from("sellers")
-        .select("import_id")
-        .eq("enrichment_status", "pending")
-        .order("created_at", { ascending: true })
-        .limit(1);
-      const importId = pending?.[0]?.import_id as string | undefined;
-      if (importId) {
-        const handle = await enrichProspects.trigger({ importId, budget: DAILY_ENRICH_BUDGET });
-        logger.info("daily enrich batch fired", { importId, runId: handle.id, budget: DAILY_ENRICH_BUDGET });
-      } else {
-        logger.info("daily enrich: nothing pending");
+    if (enrichHour) {
+      try {
+        const { data: pending } = await client
+          .from("sellers")
+          .select("import_id")
+          .eq("enrichment_status", "pending")
+          .order("created_at", { ascending: true })
+          .limit(1);
+        const importId = pending?.[0]?.import_id as string | undefined;
+        if (importId) {
+          const handle = await enrichProspects.trigger({ importId, budget: DAILY_ENRICH_BUDGET });
+          logger.info("daily enrich batch fired", { importId, runId: handle.id, budget: DAILY_ENRICH_BUDGET });
+        } else {
+          logger.info("daily enrich: nothing pending");
+        }
+      } catch (e) {
+        logger.warn("daily enrich kick-off failed", { error: (e as Error).message });
       }
-    } catch (e) {
-      logger.warn("daily enrich kick-off failed", { error: (e as Error).message });
     }
 
     const { data: enrolled, error } = await client
