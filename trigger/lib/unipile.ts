@@ -655,7 +655,12 @@ export async function resolveProviderId(handleOrId: string): Promise<string> {
  *  normalized posts plus the resolved providerId (cache it on the caller). */
 export async function fetchUserPosts(
   handleOrId: string,
-  opts: { maxPosts?: number; pageSize?: number; providerId?: string } = {},
+  opts: {
+    maxPosts?: number;
+    pageSize?: number;
+    providerId?: string;
+    authoredOnly?: boolean;
+  } = {},
 ): Promise<{ posts: NormalizedProspectPost[]; providerId: string }> {
   const accountQ = encodeURIComponent(env("UNIPILE_LINKEDIN_ACCOUNT_ID"));
   const providerId =
@@ -684,7 +689,22 @@ export async function fetchUserPosts(
     if (!cursor || items.length === 0) break;
   }
 
-  const posts = raw.slice(0, maxPosts).map((p) => ({
+  // When authoredOnly, drop reshares/reposts: the /users/{id}/posts feed
+  // includes content the user reposted, where `author` is the ORIGINAL poster
+  // (a company, news org, or peer). Commenting on those lands on the original
+  // author's post, not the prospect's own content. Keep only original posts the
+  // prospect actually wrote (not a repost, and authored by this provider_id).
+  const authoredOnly = opts.authoredOnly ?? false;
+  const considered = authoredOnly
+    ? raw.filter((p) => {
+        if (p.is_repost === true) return false;
+        const a = p.author as { id?: string } | string | undefined;
+        const authorId = typeof a === "object" && a ? a.id : undefined;
+        return !authorId || authorId === providerId;
+      })
+    : raw;
+
+  const posts = considered.slice(0, maxPosts).map((p) => ({
     post_id:
       String(p.social_id ?? p.urn ?? p.id ?? "").trim() ||
       `unknown-${Math.random().toString(36).slice(2, 10)}`,

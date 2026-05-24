@@ -352,7 +352,10 @@ export const trackProspectPosts = schedules.task({
       }
 
       try {
-        const { posts, providerId } = await fetchUserPosts(identifier, { maxPosts: 20 });
+        const { posts, providerId } = await fetchUserPosts(identifier, {
+          maxPosts: 20,
+          authoredOnly: true, // never track the prospect's reshares of others' posts
+        });
         // Cache the resolved provider_id so we skip resolution next run.
         if (providerId && providerId !== row.provider_id) {
           await client
