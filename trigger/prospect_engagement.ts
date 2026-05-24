@@ -37,7 +37,27 @@ const PER_PROSPECT_COOLDOWN_DAYS = 3;
 const POST_FRESHNESS_DAYS = 14;
 const TRACK_SLEEP_MS = 400;
 
+// Bound classifier LLM calls per cron run so a backlog of personal posts can't
+// blow up cost. Candidates past the cap simply wait for the next run.
+const MAX_CLASSIFY_PER_RUN = 6;
+
+// Length-shape randomizer — forces structural diversity so 30 comments in a row
+// don't all read as the same AI three-beat. One is picked per draft.
+const LENGTH_SHAPES = [
+  "fragment (3-8 words, no period needed)",
+  "one short sentence",
+  "one genuine question",
+  "two short sentences",
+  "a reaction word or two then a question",
+] as const;
+
+// Temperature variance per draft call — same anti-uniformity reason.
+const TEMP_RANGE = { min: 0.5, max: 0.9 };
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const pick = <T>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
+const randomTemp = () => TEMP_RANGE.min + Math.random() * (TEMP_RANGE.max - TEMP_RANGE.min);
 
 function isDryRun(): boolean {
   return process.env.PROSPECT_OUTREACH_DRY_RUN === "1";
@@ -130,29 +150,127 @@ async function loadVoiceSamples(
   return samples.slice(0, limit);
 }
 
-// Mirrors webapp commentReplySystemPrompt (lib/prompts.ts) — kept in sync.
-function commentSystemPrompt(b: BusinessProfile, samples: string[]): string {
+interface AppropriatenessVerdict {
+  appropriate: boolean;
+  reason: string;
+}
+
+// Tone-safety gate. Runs BEFORE drafting on the selected candidate. Decides
+// whether an UNINVITED comment from a B2B marketing agency would be welcome and
+// natural on this post, or unwelcome / opportunistic / off-topic.
+//
+// FAILS CLOSED: any error, timeout, malformed verdict, or uncertainty is treated
+// as NOT appropriate (skip). A missed comment costs nothing; a tone-deaf
+// auto-comment on someone's baby photo is the exact harm we are preventing.
+async function classifyAppropriateness(postText: string): Promise<AppropriatenessVerdict> {
+  const text = (postText ?? "").trim();
+  if (text.length < 30) {
+    return { appropriate: false, reason: "too short to engage substantively" };
+  }
+  try {
+    const res = await generateJson<{ appropriate?: boolean; reason?: string }>({
+      model: "moonshotai/kimi-k2.5",
+      system:
+        "You are a strict gate deciding whether an UNINVITED comment from a B2B " +
+        "marketing agency would be welcome and natural on a LinkedIn post. The agency " +
+        "comments cold, to warm up a prospect. A wrong yes is far worse than a wrong no.\n\n" +
+        "Answer false (NOT appropriate) if the post is any of: personal, family, kids, " +
+        "pregnancy, or parenting; a holiday or celebration (Mother's Day, Father's Day, " +
+        "birthdays, anniversaries, religious holidays); health, illness, injury, loss, grief, " +
+        "death, or a memorial; politics, religion, or activism; an emotional or vulnerable " +
+        "disclosure; a job loss, layoff, or firing; humor, satire, comedy, or a joke bit (even " +
+        "from a professional creator); a sensitive wellbeing or mental-health topic; NOT written " +
+        "in English; or anything where a stranger agency dropping a comment would look " +
+        "opportunistic, salesy, or tone-deaf.\n\n" +
+        "Answer true (appropriate) ONLY for ordinary professional, business, industry, product, " +
+        "ecommerce, marketing, or operational content where a knowledgeable peer commenting is " +
+        "natural and expected.\n\n" +
+        "When in doubt, answer false.\n\n" +
+        'Output JSON {"appropriate": <boolean>, "reason": "<short reason>"}.',
+      user: ["Post:", text.slice(0, 2500)].join("\n"),
+      temperature: 0,
+      maxTokens: 150,
+      timeoutMs: 12_000,
+    });
+    if (typeof res.appropriate !== "boolean") {
+      return { appropriate: false, reason: "classifier returned no boolean verdict" };
+    }
+    return { appropriate: res.appropriate, reason: (res.reason ?? "").slice(0, 300) };
+  } catch (e) {
+    return { appropriate: false, reason: `classifier_error: ${(e as Error).message}`.slice(0, 300) };
+  }
+}
+
+// Persist a skip so the post is never re-classified or commented, and bump the
+// per-prospect skip counter (surfaces "all their posts are personal" prospects).
+async function persistSkip(
+  client: ReturnType<typeof getServiceClient>,
+  post: { id: unknown; prospect_id: unknown },
+  reason: string,
+  outreachByProspect: Map<string, { id: unknown; appropriate_skip_count?: unknown }>,
+): Promise<void> {
+  await client
+    .from("prospect_posts")
+    .update({ skipped: true, skip_reason: reason, skipped_at: new Date().toISOString() })
+    .eq("id", post.id as string);
+  const o = outreachByProspect.get(post.prospect_id as string);
+  if (o) {
+    const next = ((o.appropriate_skip_count as number) ?? 0) + 1;
+    await client
+      .from("prospect_outreach")
+      .update({ appropriate_skip_count: next })
+      .eq("id", o.id as string);
+    o.appropriate_skip_count = next; // keep the in-run map consistent
+  }
+}
+
+// Genuine-engagement comment prompt for the AUTO-SEND prospect warm-up.
+// Deliberately omits the business name/description/audience and any stats —
+// those produced the pitch-on-a-baby-photo and fabricated-number incidents.
+// Voice samples are used for TONE/vocabulary only. The appropriateness gate has
+// already confirmed the post is ordinary professional content before we get here.
+// `lengthShape` is randomized per call to break structural uniformity.
+function commentSystemPrompt(b: BusinessProfile, samples: string[], lengthShape: string): string {
   const samplesBlock =
     samples.length > 0
       ? samples.map((s, i) => `[Sample ${i + 1}]\n${s.slice(0, 700)}`).join("\n\n")
-      : "(No prior posts. Match voice rules below.)";
-  return `You write LinkedIn comments for ${b.name}.
+      : "(No prior posts. Use the rules below.)";
+  return `You are leaving a LinkedIn comment to start a genuine peer conversation. You are NOT selling and you are NOT performing professionalism.
 
-Business: ${b.description}
-Audience: ${b.audience}
-Voice: ${b.voice}
+Read the post first. Identify what it is actually about and what your honest reaction would be if a peer sent it to you on Slack. Write that reaction.
+
+If you have no genuine reaction, if the only thing you could say is "Great point!" or some variation, output {"text": ""} and we will skip the post. Forcing a comment is worse than skipping.
+
+Hard rules:
+- Engage with the SPECIFIC substance of their post. React to their actual point or ask one genuine question.
+- Do NOT pitch, promote, or mention your company, services, clients, results, or revenue.
+- NEVER invent or cite statistics, percentages, dollar amounts, or specific outcomes, not about yourself, not about their business. No "we've seen 12-18%", no "$29M", no "studies show".
+- Do NOT force an Amazon, PPC, or business angle. Their topic, their terms.
+- It is fine, often better, to admit something is outside your expertise and ask a real question instead of asserting authority.
+- If the post is casual or funny, match that register. Do not respond to a joke with a structured business observation.
+- If the post is short, your comment should be short.
+
+Length and shape:
+- Length varies with what you actually have to say. The target shape for THIS comment is: ${lengthShape}.
+- A fragment is fine. Starting lowercase is fine. Dropping the final period is fine. Two thoughts joined by a comma instead of a period is fine.
+- Do not pad to sound complete. Do not be more formal than the post.
+
+Banned openers and fillers (never use any of these):
+"Great point", "Great post", "Love this", "This resonates", "Couldn't agree more", "Such a good reminder", "Thanks for sharing", "100%", "+1", "So true", "Spot on", "Well said", "This!", "Curious to hear more", "I'd love to know more about", "Would love your thoughts".
+
+Banned structures:
+- The three-beat "observation, then reframe, then question" pattern. Pick one beat.
+- Tricolons (three parallel adjectives or phrases in a row).
+- Em-dashes, asterisks, hash characters.
+
+Voice samples (if provided) show vocabulary and register only. Do not match their length, sentence count, or structure. Do not lift any claims, numbers, tactics, or topics from them. Your comment's shape comes from the post you're responding to.
 
 Voice samples:
 ${samplesBlock}
 
-You receive the original post in the user message. Write a 1-3 sentence comment that:
-- Adds something specific (number, named tactic, named tool, named outcome) — not "Great post!"
-- References the original post directly
-- Sounds like the voice samples — same sentence length, same punctuation density
-- No em-dashes, asterisks, hash characters, or generic LinkedIn voice
+Voice: ${b.voice}
 
-Output strict JSON:
-{ "text": "your comment, <= 320 chars" }`;
+Output: { "text": "<= 320 chars" } or { "text": "" } to skip.`;
 }
 
 // ---- Task 1: track posts ------------------------------------------------
@@ -294,7 +412,7 @@ export const commentOnProspectPosts = schedules.task({
     // Eligible prospects: engaging, not paused, still under comment target.
     const { data: outreach, error: oErr } = await client
       .from("prospect_outreach")
-      .select("id, prospect_id, account_id, comments_made, comments_target")
+      .select("id, prospect_id, account_id, comments_made, comments_target, appropriate_skip_count")
       .eq("stage", "engaging")
       .eq("paused", false);
     if (oErr) {
@@ -348,6 +466,7 @@ export const commentOnProspectPosts = schedules.task({
       .from("prospect_posts")
       .select("id, prospect_id, account_id, post_id, text, engagement_score, posted_at")
       .eq("commented", false)
+      .eq("skipped", false)
       .in("prospect_id", eligibleIds)
       .gte("posted_at", freshAgo)
       .order("engagement_score", { ascending: false })
@@ -357,45 +476,97 @@ export const commentOnProspectPosts = schedules.task({
       return { sent: 0, error: pErr.message };
     }
 
-    const target = (posts ?? []).find((p) => {
+    // Walk candidates best-engagement-first. Each one that clears cheap pacing
+    // gets the appropriateness gate (bounded per run); the first post that passes
+    // the gate AND yields a non-empty draft becomes the comment. Inappropriate
+    // posts and drafter-declines are persisted as skipped so they're never
+    // reconsidered.
+    const business = await loadBusinessProfile(client);
+    const lengthShape = pick(LENGTH_SHAPES);
+    let target: NonNullable<typeof posts>[number] | null = null;
+    let commentText = "";
+    let classifyCount = 0;
+    let budgetHit = false;
+
+    for (const p of posts ?? []) {
       const aid = p.account_id as string;
-      if ((sentToday[aid] ?? 0) >= MAX_PER_DAY) return false;
-      if (cooldownSet.has(p.prospect_id as string)) return false;
+      if ((sentToday[aid] ?? 0) >= MAX_PER_DAY) continue;
+      if (cooldownSet.has(p.prospect_id as string)) continue;
       const text = (p.text as string | null) ?? "";
-      return text.trim().length > 30;
-    });
-    if (!target) {
-      logger.info("no eligible post this cycle");
-      return { sent: 0, skipped: "no_target" };
+      if (text.trim().length <= 30) continue;
+
+      if (classifyCount >= MAX_CLASSIFY_PER_RUN) {
+        budgetHit = true;
+        logger.info("classify budget reached", { cap: MAX_CLASSIFY_PER_RUN });
+        break;
+      }
+      classifyCount += 1;
+
+      const verdict = await classifyAppropriateness(text);
+      if (!verdict.appropriate) {
+        logger.info("candidate skipped by appropriateness gate", {
+          prospect_id: p.prospect_id,
+          post_id: p.post_id,
+          reason: verdict.reason,
+          dry,
+        });
+        if (!dry) await persistSkip(client, p, verdict.reason, outreachByProspect);
+        continue;
+      }
+
+      // Appropriate — draft. A drafter decline ({ text: "" }) or a draft error
+      // also skips this post; try the next candidate.
+      const samples = await loadVoiceSamples(client, aid, 3);
+      let draft = "";
+      try {
+        const res = await generateJson<{ text?: string }>({
+          system: commentSystemPrompt(business, samples, lengthShape),
+          user: [
+            "Here is the post:",
+            "",
+            "---",
+            text,
+            "---",
+            "",
+            'In one internal sentence, identify what this post is actually about and what your honest reaction is. Then write the comment as that reaction, following the shape and rules in the system prompt. If your honest reaction is "I don\'t really have anything genuine to add here," output {"text": ""}.',
+            "",
+            `Target shape for this comment: ${lengthShape}.`,
+            "",
+            "No em-dashes, no asterisks, no hashtags, no banned openers. Do not pitch. Do not mention your own company, clients, or results. Do not invent any numbers.",
+          ].join("\n"),
+          model: "anthropic/claude-haiku-4-5",
+          temperature: randomTemp(),
+          maxTokens: 300,
+          timeoutMs: 20_000,
+        });
+        draft = sanitizeComment((res.text ?? "").trim());
+      } catch (e) {
+        logger.warn("comment draft failed", {
+          post_id: p.post_id,
+          error: (e as Error).message,
+        });
+        continue; // transient draft error — leave the post for a later run
+      }
+
+      if (!draft) {
+        logger.info("drafter declined candidate", {
+          prospect_id: p.prospect_id,
+          post_id: p.post_id,
+          dry,
+        });
+        if (!dry) await persistSkip(client, p, "drafter_declined", outreachByProspect);
+        continue;
+      }
+
+      target = p;
+      commentText = draft;
+      break;
     }
 
-    // Draft the comment.
-    const accountId = target.account_id as string;
-    const business = await loadBusinessProfile(client);
-    const samples = await loadVoiceSamples(client, accountId, 3);
-    let commentText: string;
-    try {
-      const res = await generateJson<{ text?: string }>({
-        system: commentSystemPrompt(business, samples),
-        user: [
-          "Original post:",
-          (target.text as string | null) ?? "(no text)",
-          "",
-          "Write a 1-3 sentence comment that adds value (specific number, named tactic, named tool, or named outcome). Match the voice samples. No em-dashes, asterisks, or hashtags.",
-        ].join("\n"),
-        model: "anthropic/claude-haiku-4-5",
-        temperature: 0.6,
-        maxTokens: 300,
-        timeoutMs: 20_000,
-      });
-      commentText = sanitizeComment((res.text ?? "").trim());
-    } catch (e) {
-      logger.warn("comment draft failed", { error: (e as Error).message });
-      return { sent: 0, error: `draft_failed: ${(e as Error).message}` };
-    }
-    if (!commentText) {
-      logger.warn("empty comment draft");
-      return { sent: 0, skipped: "empty_draft" };
+    if (!target) {
+      const reason = budgetHit ? "no_target_budget_hit" : "no_target";
+      logger.info("no appropriate post this cycle", { classified: classifyCount, reason });
+      return { sent: 0, skipped: reason, classified: classifyCount };
     }
 
     if (dry) {
@@ -403,6 +574,7 @@ export const commentOnProspectPosts = schedules.task({
         prospect_id: target.prospect_id,
         post_id: target.post_id,
         comment: commentText,
+        shape: lengthShape,
       });
       return { sent: 0, dry: true, draft: commentText };
     }
