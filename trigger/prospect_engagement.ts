@@ -44,11 +44,10 @@ const MAX_CLASSIFY_PER_RUN = 6;
 // Length-shape randomizer — forces structural diversity so 30 comments in a row
 // don't all read as the same AI three-beat. One is picked per draft.
 const LENGTH_SHAPES = [
-  "fragment (3-8 words, no period needed)",
-  "one short sentence",
-  "one genuine question",
-  "two short sentences",
-  "a reaction word or two then a question",
+  "a fragment, 3 to 8 words, no period",
+  "one short sentence, 15 words max",
+  "one short question",
+  "a quick reaction then a short question",
 ] as const;
 
 // Temperature variance per draft call — same anti-uniformity reason.
@@ -251,9 +250,10 @@ Hard rules:
 - If the post is short, your comment should be short.
 
 Length and shape:
-- Length varies with what you actually have to say. The target shape for THIS comment is: ${lengthShape}.
-- A fragment is fine. Starting lowercase is fine. Dropping the final period is fine. Two thoughts joined by a comma instead of a period is fine.
-- Do not pad to sound complete. Do not be more formal than the post.
+- Keep it SHORT. One line. Never a paragraph. One sentence is the norm; two short ones is the absolute ceiling. If you are writing a third sentence, delete it.
+- The target shape for THIS comment is: ${lengthShape}.
+- A fragment is fine. Starting lowercase is fine. Dropping the final period is fine.
+- Do not explain, do not build an argument, do not pad to sound complete. React the way you'd type a quick reply on your phone.
 
 Banned openers and fillers (never use any of these):
 "Great point", "Great post", "Love this", "This resonates", "Couldn't agree more", "Such a good reminder", "Thanks for sharing", "100%", "+1", "So true", "Spot on", "Well said", "This!", "Curious to hear more", "I'd love to know more about", "Would love your thoughts".
@@ -270,7 +270,7 @@ ${samplesBlock}
 
 Voice: ${b.voice}
 
-Output: { "text": "<= 320 chars" } or { "text": "" } to skip.`;
+Output: { "text": "<= 200 chars, one line" } or { "text": "" } to skip.`;
 }
 
 // ---- Task 1: track posts ------------------------------------------------
@@ -531,7 +531,7 @@ export const commentOnProspectPosts = schedules.task({
             text,
             "---",
             "",
-            'In one internal sentence, identify what this post is actually about and what your honest reaction is. Then write the comment as that reaction, following the shape and rules in the system prompt. If your honest reaction is "I don\'t really have anything genuine to add here," output {"text": ""}.',
+            'Write the comment now as your honest reaction, following the shape and rules in the system prompt. Output only the JSON, never your reasoning. If you have nothing genuine to add, output {"text": ""}.',
             "",
             `Target shape for this comment: ${lengthShape}.`,
             "",
@@ -539,7 +539,7 @@ export const commentOnProspectPosts = schedules.task({
           ].join("\n"),
           model: "anthropic/claude-haiku-4-5",
           temperature: randomTemp(),
-          maxTokens: 300,
+          maxTokens: 120,
           timeoutMs: 20_000,
         });
         draft = sanitizeComment((res.text ?? "").trim());
