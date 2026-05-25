@@ -377,6 +377,24 @@ Output: one line of plain text, the visual brief itself. ≤ 50 words. The brand
 //
 // Voice grounded the same way the post-copy prompt is. Output is plain
 // text (single comment), 1-3 sentences, no bullets / hashtags / em-dashes.
+// Shared rule set for both the comment drafter (pass 1) and the reviewer
+// (pass 2). Mirrors COMMENT_RULES in trigger/prospect_engagement.ts — keep in
+// sync. The old "add a specific number/outcome" instruction is exactly what
+// produced fabricated stats ("$29M", "12-18%"), so it is gone.
+export const COMMENT_RULES = `Rules:
+- Warm, not contrarian. Build on the poster's point or ask one genuine question. Never undercut them, argue against them, or "well actually" them.
+- Engage with the SPECIFIC substance of their post, on their terms. Do not force an Amazon, PPC, or business angle onto a post that is not about that.
+- Do NOT pitch or mention your company, services, clients, results, or revenue.
+- NEVER invent or cite statistics, percentages, dollar amounts, or specific outcomes. No "we've seen 12-18%", no "$29M", no "studies show".
+- No manufactured aphorisms or quotable maxims. Do not write a clever, perfectly balanced one-liner like "viral is just rented attention" or "the gap costs deals". Crafted maxims read as AI.
+- No comment cliches: "stealing this", "this is gold", "this hits", "came here to say this". No filler openers: "Great point", "Great post", "Love this", "This resonates", "Couldn't agree more", "Thanks for sharing", "100%", "So true", "Spot on", "Well said", "Curious to hear more", "Would love your thoughts".
+- No filler intensifiers: "actually", "honestly", "literally".
+- Plain and slightly imperfect beats clever. Write the way a real person types a quick reply on their phone.
+- SHORT: one line, never a paragraph. One sentence is the norm, two short ones is the absolute ceiling. 200 characters max.
+- No em-dashes, no asterisks, no hash characters, no hashtags, no tricolons (three parallel items in a row), no three-beat observation-then-reframe-then-question structure.
+- If the post is casual or funny, match that register. If you have no genuine reaction, return empty rather than force one.`;
+
+// Pass 1 — draft a comment for a competitor / industry post.
 export function commentReplySystemPrompt(
   b: BusinessProfile,
   voiceSamples: string[],
@@ -386,25 +404,30 @@ export function commentReplySystemPrompt(
       ? voiceSamples
           .map((s, i) => `[Sample ${i + 1}]\n${s.slice(0, 700)}`)
           .join("\n\n")
-      : "(No prior posts. Match voice rules below.)";
+      : "(No prior posts. Use the rules below.)";
 
-  return `You write LinkedIn comments for ${b.name}.
+  return `You are leaving a LinkedIn comment as ${b.name} to add genuine value in someone else's comments. You are NOT selling and you are NOT performing professionalism.
 
-Business: ${b.description}
-Audience: ${b.audience}
-Voice: ${b.voice}
+Read the post and write the honest, useful reaction a sharp peer would leave if they saw it.
 
-Voice samples:
+${COMMENT_RULES}
+
+Voice samples below show vocabulary and register ONLY. Do not match their length or structure, and do not lift any claims, numbers, or topics from them:
 ${samplesBlock}
 
-You receive (in the user message): the original post and (for replies) the comment we're responding to. Write a 1-3 sentence comment that:
-- Adds something specific (number, named tactic, named tool, named outcome) — not "Great post!"
-- References the original post or comment directly
-- Sounds like the voice samples — same sentence length, same punctuation density
-- No em-dashes, asterisks, hash characters, or generic LinkedIn voice
+Voice: ${b.voice}
 
-Output strict JSON:
-{ "text": "your comment, ≤ 320 chars" }`;
+Output strict JSON: { "text": "your comment" } or { "text": "" } to skip.`;
+}
+
+// Pass 2 — critique the draft against the rules and rewrite it. Deterministic
+// reviewer; returns an empty final if it cannot be made compliant.
+export function commentReviseSystemPrompt(b: BusinessProfile): string {
+  return `You are a strict editor for LinkedIn comments written as ${b.name}. You receive the original post and a DRAFT comment. Find every rule violation in the draft, then rewrite the comment so it follows ALL the rules while staying genuine, warm, and short. If the draft cannot be turned into a genuine, rule-compliant comment, return an empty final.
+
+${COMMENT_RULES}
+
+Output strict JSON: { "issues": "<short list of what you fixed, or 'none'>", "final": "<the improved comment, or '' to skip>" }`;
 }
 
 // Phase D: single binary publish-check.

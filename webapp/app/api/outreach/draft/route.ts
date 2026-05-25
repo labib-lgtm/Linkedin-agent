@@ -2,12 +2,23 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { generateJson, OpenRouterError } from "@/lib/openrouter";
 import { getBusinessProfile } from "@/lib/business";
-import { commentReplySystemPrompt } from "@/lib/prompts";
+import { commentReplySystemPrompt, commentReviseSystemPrompt } from "@/lib/prompts";
 import { getVoiceSamples } from "@/lib/voice";
 import { getActiveAccountId } from "@/lib/active-account";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+
+// Belt-and-suspenders strip of the banned characters even though the prompt
+// forbids them.
+function sanitizeComment(text: string): string {
+  return text
+    .replace(/[—–]/g, "-")
+    .replace(/\*/g, "")
+    .replace(/#/g, "")
+    .replace(/\s+\n/g, "\n")
+    .trim();
+}
 
 // POST /api/outreach/draft
 //
@@ -44,19 +55,22 @@ export async function POST(req: NextRequest) {
     getVoiceSamples(accountId, 3),
   ]);
 
+  const postText = (post.text as string | null) ?? "(no text)";
+
+  // Pass 1 — draft.
   let result: { text?: string };
   try {
     result = await generateJson<{ text?: string }>({
       system: commentReplySystemPrompt(business, samples),
       user: [
-        "Original post (do NOT reply to a comment, just to this post):",
-        (post.text as string | null) ?? "(no text)",
+        "Original post (reply to this post, not to a comment):",
+        postText,
         "",
-        "Write a 1-3 sentence comment that adds value (specific number, named tactic, named tool, named outcome). Match voice samples.",
+        'Write the comment now as your honest, useful reaction, following the rules. Output only the JSON. If you have nothing genuine to add, output {"text": ""}.',
       ].join("\n"),
       model: "anthropic/claude-haiku-4-5",
       temperature: 0.6,
-      maxTokens: 400,
+      maxTokens: 150,
       timeoutMs: 20_000,
       retryFastFailures: true,
     });
@@ -73,9 +87,35 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const text = (result.text ?? "").trim();
-  if (!text) {
+  const draft = sanitizeComment((result.text ?? "").trim());
+  if (!draft) {
     return NextResponse.json({ error: "empty_draft" }, { status: 502 });
+  }
+
+  // Pass 2 — critique + revise against the rules. On any reviewer failure, keep
+  // the pass-1 draft (it already went through the rule-laden drafter prompt).
+  let text = draft;
+  try {
+    const rev = await generateJson<{ issues?: string; final?: string }>({
+      system: commentReviseSystemPrompt(business),
+      user: [
+        "Original post:",
+        "---",
+        postText.slice(0, 2000),
+        "---",
+        "",
+        "Draft comment:",
+        draft,
+      ].join("\n"),
+      model: "anthropic/claude-haiku-4-5",
+      temperature: 0,
+      maxTokens: 250,
+      timeoutMs: 20_000,
+    });
+    const revised = sanitizeComment((rev.final ?? "").trim());
+    if (revised) text = revised; // empty final => reviewer found it unsalvageable; keep draft for the human to judge
+  } catch {
+    // keep draft
   }
 
   const { data: inserted, error: insErr } = await supabase
