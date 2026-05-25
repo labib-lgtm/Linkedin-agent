@@ -19,7 +19,7 @@ export async function GET() {
         "invite_message, invite_approved, invite_sent_at, connected_at, dm_text, dm_approved, dm_sent_at, " +
         "replied_at, reply_snippet, followups_sent, " +
         "prospect:prospects(id, name, headline, linkedin_url, status, " +
-        "seller:sellers(seller_name, brand_name, business_name, linkedin_company_url))",
+        "seller:sellers(seller_name, brand_name, business_name, linkedin_company_url, storefront_url))",
     )
     .eq("account_id", accountId)
     .order("enrolled_at", { ascending: false });

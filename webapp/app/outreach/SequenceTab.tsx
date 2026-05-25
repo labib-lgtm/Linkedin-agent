@@ -9,6 +9,7 @@ type Seller = {
   brand_name: string | null;
   business_name: string | null;
   linkedin_company_url: string | null;
+  storefront_url: string | null;
 };
 
 type SequenceRow = {
@@ -247,10 +248,11 @@ export function SequenceTab() {
           </thead>
           <tbody>
             {filtered.map((r) => {
+              const seller = r.prospect?.seller ?? null;
               const company =
-                r.prospect?.seller?.brand_name ||
-                r.prospect?.seller?.seller_name ||
-                r.prospect?.seller?.business_name ||
+                seller?.brand_name ||
+                seller?.seller_name ||
+                seller?.business_name ||
                 "—";
               const actionable = ACTIONABLE.has(r.stage);
               const isOpen = !!expanded[r.id];
@@ -314,7 +316,36 @@ export function SequenceTab() {
                         </div>
                       ) : null}
                     </td>
-                    <td className="py-2.5 px-3 text-muted-foreground">{company}</td>
+                    <td className="py-2.5 px-3 text-muted-foreground">
+                      <div>{company}</div>
+                      {seller?.storefront_url || seller?.linkedin_company_url ? (
+                        <div
+                          className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {seller?.storefront_url ? (
+                            <a
+                              href={seller.storefront_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] text-blue-700 hover:underline"
+                            >
+                              Amazon store
+                            </a>
+                          ) : null}
+                          {seller?.linkedin_company_url ? (
+                            <a
+                              href={seller.linkedin_company_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] text-blue-700 hover:underline"
+                            >
+                              Company page
+                            </a>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </td>
                     <td className="py-2.5 px-3">
                       <span
                         className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${STAGE_TONE[r.stage] ?? "bg-gray-100 text-gray-700"}`}
