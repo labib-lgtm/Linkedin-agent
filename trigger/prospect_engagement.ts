@@ -229,48 +229,82 @@ async function persistSkip(
 // Voice samples are used for TONE/vocabulary only. The appropriateness gate has
 // already confirmed the post is ordinary professional content before we get here.
 // `lengthShape` is randomized per call to break structural uniformity.
+// Shared rule set — single source of truth for BOTH the drafter (pass 1) and
+// the reviewer (pass 2) so the two never drift. Everything learned this session:
+// short + de-pitched + no fabricated numbers, plus warm-not-contrarian, no
+// manufactured aphorisms/cliches, no filler, plain-beats-clever.
+const COMMENT_RULES = `Rules:
+- Warm, not contrarian. Build on the poster's point or ask one genuine question. Never undercut them, argue against them, or "well actually" them. This is someone we want a relationship with.
+- Engage with the SPECIFIC substance of their post, on their terms. Do not force an Amazon, PPC, or business angle onto a post that is not about that.
+- Do NOT pitch or mention your company, services, clients, results, or revenue.
+- NEVER invent or cite statistics, percentages, dollar amounts, or specific outcomes. No "we've seen 12-18%", no "$29M", no "studies show".
+- No manufactured aphorisms or quotable maxims. Do not write a clever, perfectly balanced one-liner like "viral is just rented attention" or "the unsexy answer that compounds". Crafted maxims read as AI.
+- No comment cliches: "stealing this", "this is gold", "this hits", "came here to say this". No filler openers: "Great point", "Great post", "Love this", "This resonates", "Couldn't agree more", "Thanks for sharing", "100%", "So true", "Spot on", "Well said", "Curious to hear more", "Would love your thoughts".
+- No filler intensifiers: "actually", "honestly", "literally".
+- Plain and slightly imperfect beats clever. Write the way a real person types a quick reply on their phone.
+- SHORT: one line, never a paragraph. One sentence is the norm, two short ones is the absolute ceiling. 200 characters max.
+- No em-dashes, no asterisks, no hash characters, no hashtags, no tricolons (three parallel items in a row), no three-beat observation-then-reframe-then-question structure.
+- If the post is casual or funny, match that register. If you have no genuine reaction, skip rather than force one.`;
+
+// Pass 1 — draft. lengthShape is randomized per call to break structural
+// uniformity. The appropriateness gate has already cleared the post.
 function commentSystemPrompt(b: BusinessProfile, samples: string[], lengthShape: string): string {
   const samplesBlock =
     samples.length > 0
       ? samples.map((s, i) => `[Sample ${i + 1}]\n${s.slice(0, 700)}`).join("\n\n")
       : "(No prior posts. Use the rules below.)";
-  return `You are leaving a LinkedIn comment to start a genuine peer conversation. You are NOT selling and you are NOT performing professionalism.
+  return `You are leaving a LinkedIn comment to start a genuine peer conversation with a potential client. You are NOT selling and you are NOT performing professionalism.
 
-Read the post first. Identify what it is actually about and what your honest reaction would be if a peer sent it to you on Slack. Write that reaction.
+Read the post and write the honest reaction you would give if a peer sent it to you on Slack.
 
-If you have no genuine reaction, if the only thing you could say is "Great point!" or some variation, output {"text": ""} and we will skip the post. Forcing a comment is worse than skipping.
+${COMMENT_RULES}
 
-Hard rules:
-- Engage with the SPECIFIC substance of their post. React to their actual point or ask one genuine question.
-- Do NOT pitch, promote, or mention your company, services, clients, results, or revenue.
-- NEVER invent or cite statistics, percentages, dollar amounts, or specific outcomes, not about yourself, not about their business. No "we've seen 12-18%", no "$29M", no "studies show".
-- Do NOT force an Amazon, PPC, or business angle. Their topic, their terms.
-- It is fine, often better, to admit something is outside your expertise and ask a real question instead of asserting authority.
-- If the post is casual or funny, match that register. Do not respond to a joke with a structured business observation.
-- If the post is short, your comment should be short.
+The target shape for THIS comment is: ${lengthShape}. A fragment is fine, starting lowercase is fine, dropping the final period is fine.
 
-Length and shape:
-- Keep it SHORT. One line. Never a paragraph. One sentence is the norm; two short ones is the absolute ceiling. If you are writing a third sentence, delete it.
-- The target shape for THIS comment is: ${lengthShape}.
-- A fragment is fine. Starting lowercase is fine. Dropping the final period is fine.
-- Do not explain, do not build an argument, do not pad to sound complete. React the way you'd type a quick reply on your phone.
-
-Banned openers and fillers (never use any of these):
-"Great point", "Great post", "Love this", "This resonates", "Couldn't agree more", "Such a good reminder", "Thanks for sharing", "100%", "+1", "So true", "Spot on", "Well said", "This!", "Curious to hear more", "I'd love to know more about", "Would love your thoughts".
-
-Banned structures:
-- The three-beat "observation, then reframe, then question" pattern. Pick one beat.
-- Tricolons (three parallel adjectives or phrases in a row).
-- Em-dashes, asterisks, hash characters.
-
-Voice samples (if provided) show vocabulary and register only. Do not match their length, sentence count, or structure. Do not lift any claims, numbers, tactics, or topics from them. Your comment's shape comes from the post you're responding to.
-
-Voice samples:
+Voice samples below show vocabulary and register ONLY. Do not match their length or structure, and do not lift any claims, numbers, or topics from them:
 ${samplesBlock}
 
 Voice: ${b.voice}
 
-Output: { "text": "<= 200 chars, one line" } or { "text": "" } to skip.`;
+Output strict JSON: { "text": "your comment" } or { "text": "" } to skip.`;
+}
+
+// Pass 2 — critique and revise. A deterministic reviewer (temp 0) checks the
+// draft against COMMENT_RULES, notes what it fixed, and rewrites. Returns an
+// empty final to skip. On reviewer error the caller falls back to the draft.
+async function reviseComment(
+  post: string,
+  draft: string,
+  lengthShape: string,
+): Promise<{ issues: string; final: string }> {
+  try {
+    const res = await generateJson<{ issues?: string; final?: string }>({
+      model: "anthropic/claude-haiku-4-5",
+      temperature: 0,
+      maxTokens: 250,
+      timeoutMs: 20_000,
+      system: `You are a strict editor for LinkedIn comments. You receive the original post and a DRAFT comment. Find every rule violation in the draft, then rewrite the comment so it follows ALL the rules while staying genuine, warm, and short. If the draft cannot be turned into a genuine, rule-compliant comment, return an empty final.
+
+${COMMENT_RULES}
+
+Output strict JSON: { "issues": "<short list of what you fixed, or 'none'>", "final": "<the improved comment, or '' to skip>" }`,
+      user: [
+        "Original post:",
+        "---",
+        post.slice(0, 2000),
+        "---",
+        "",
+        "Draft comment:",
+        draft,
+        "",
+        `Target shape: ${lengthShape}.`,
+      ].join("\n"),
+    });
+    return { issues: (res.issues ?? "").slice(0, 300), final: (res.final ?? "").trim() };
+  } catch (e) {
+    // Reviewer failed — keep the pass-1 draft rather than drop a usable comment.
+    return { issues: `reviser_error: ${(e as Error).message}`.slice(0, 300), final: draft };
+  }
 }
 
 // ---- Task 1: track posts ------------------------------------------------
@@ -561,8 +595,29 @@ export const commentOnProspectPosts = schedules.task({
         continue;
       }
 
+      // Pass 2: self-critique the draft against the rules and rewrite it.
+      const rev = await reviseComment(text, draft, lengthShape);
+      const finalText = sanitizeComment((rev.final ?? "").trim());
+      logger.info("comment draft + revise", {
+        prospect_id: p.prospect_id,
+        post_id: p.post_id,
+        draft,
+        issues: rev.issues,
+        final: finalText,
+      });
+
+      if (!finalText) {
+        logger.info("reviewer declined candidate", {
+          prospect_id: p.prospect_id,
+          post_id: p.post_id,
+          dry,
+        });
+        if (!dry) await persistSkip(client, p, "reviewer_declined", outreachByProspect);
+        continue;
+      }
+
       target = p;
-      commentText = draft;
+      commentText = finalText;
       break;
     }
 
