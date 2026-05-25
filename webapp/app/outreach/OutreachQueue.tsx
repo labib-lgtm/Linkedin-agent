@@ -113,8 +113,8 @@ export function OutreachQueue() {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {/* LEFT: Candidates from competitor_posts */}
-      <section className="rounded-xl border border-border bg-card p-4 space-y-3 max-h-[calc(100vh-220px)] overflow-y-auto">
-        <div className="flex items-center justify-between gap-3 sticky top-0 bg-card z-10 pb-2 border-b border-border">
+      <section className="rounded-xl border border-border bg-card p-4 flex flex-col max-h-[calc(100vh-220px)]">
+        <div className="flex items-center justify-between gap-3 pb-2 mb-3 border-b border-border">
           <h2 className="text-[10px] uppercase tracking-[0.18em] font-bold">
             Comment opportunities · last 14d
           </h2>
@@ -126,6 +126,7 @@ export function OutreachQueue() {
             ↻ refresh
           </button>
         </div>
+        <div className="space-y-3 overflow-y-auto pr-1">
         {loading ? (
           <div className="text-sm text-muted-foreground py-6 text-center">Loading…</div>
         ) : candidates.length === 0 ? (
@@ -160,6 +161,7 @@ export function OutreachQueue() {
             </div>
           ))
         )}
+        </div>
       </section>
 
       {/* RIGHT: Drafts queue (Draft → Approved → Sent) */}
