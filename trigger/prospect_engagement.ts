@@ -31,11 +31,18 @@ const DAILY_ENRICH_BUDGET = 200;
 
 // Conservative — this LinkedIn account also runs competitor commenting
 // (5/day), so prospect comments stay low to keep the combined volume safe.
-const MAX_PER_DAY = 3;
+const MAX_PER_DAY = 5;
 const MIN_GAP_HOURS = 2;
 const PER_PROSPECT_COOLDOWN_DAYS = 3;
 const POST_FRESHNESS_DAYS = 14;
 const TRACK_SLEEP_MS = 400;
+
+// If the appropriateness gate has rejected this many of a prospect's posts in
+// a row AND we've never commented on them, auto-pause the prospect. Their feed
+// is almost certainly off-fit (personal, family, etc.) and continuing to
+// classify their posts every run just burns budget. The "misfit" badge in the
+// Outreach UI surfaces them so the operator can review and unpause if wrong.
+const MISFIT_PAUSE_THRESHOLD = 5;
 
 // Bound classifier LLM calls per cron run so a backlog of personal posts can't
 // blow up cost. Candidates past the cap simply wait for the next run.
@@ -202,24 +209,37 @@ async function classifyAppropriateness(postText: string): Promise<Appropriatenes
 
 // Persist a skip so the post is never re-classified or commented, and bump the
 // per-prospect skip counter (surfaces "all their posts are personal" prospects).
+// Auto-pauses the prospect when MISFIT_PAUSE_THRESHOLD skips have hit with no
+// comments ever sent — at that point their feed is almost certainly off-fit
+// and continuing to classify their posts just burns budget.
 async function persistSkip(
   client: ReturnType<typeof getServiceClient>,
   post: { id: unknown; prospect_id: unknown },
   reason: string,
-  outreachByProspect: Map<string, { id: unknown; appropriate_skip_count?: unknown }>,
+  outreachByProspect: Map<
+    string,
+    { id: unknown; appropriate_skip_count?: unknown; comments_made?: unknown }
+  >,
 ): Promise<void> {
   await client
     .from("prospect_posts")
     .update({ skipped: true, skip_reason: reason, skipped_at: new Date().toISOString() })
     .eq("id", post.id as string);
   const o = outreachByProspect.get(post.prospect_id as string);
-  if (o) {
-    const next = ((o.appropriate_skip_count as number) ?? 0) + 1;
-    await client
-      .from("prospect_outreach")
-      .update({ appropriate_skip_count: next })
-      .eq("id", o.id as string);
-    o.appropriate_skip_count = next; // keep the in-run map consistent
+  if (!o) return;
+  const next = ((o.appropriate_skip_count as number) ?? 0) + 1;
+  const commentsMade = (o.comments_made as number) ?? 0;
+  const shouldPause = next >= MISFIT_PAUSE_THRESHOLD && commentsMade === 0;
+  const update: Record<string, unknown> = { appropriate_skip_count: next };
+  if (shouldPause) update.paused = true;
+  await client.from("prospect_outreach").update(update).eq("id", o.id as string);
+  o.appropriate_skip_count = next; // keep the in-run map consistent
+  if (shouldPause) {
+    logger.info("prospect auto-paused (misfit)", {
+      prospect_id: post.prospect_id,
+      skip_count: next,
+      threshold: MISFIT_PAUSE_THRESHOLD,
+    });
   }
 }
 

@@ -19,6 +19,7 @@ type SequenceRow = {
   paused: boolean;
   comments_made: number;
   comments_target: number;
+  appropriate_skip_count: number;
   last_comment_at: string | null;
   enrolled_at: string;
   invite_message: string | null;
@@ -63,6 +64,15 @@ const STAGE_LABEL: Record<string, string> = {
 
 // Stages with an operator action available behind the expand chevron.
 const ACTIONABLE = new Set(["ready_to_invite", "connected"]);
+
+// Mirror trigger/prospect_engagement.ts MISFIT_PAUSE_THRESHOLD. A prospect is
+// auto-paused as a "misfit" when their feed is consistently off-fit (personal,
+// holidays, etc.) — the appropriateness gate has rejected this many posts in a
+// row AND no comment has ever sent. Surfaced as a badge so the operator can
+// review and unpause if it's a false positive.
+const MISFIT_THRESHOLD = 5;
+const isMisfit = (r: SequenceRow) =>
+  r.paused && r.comments_made === 0 && (r.appropriate_skip_count ?? 0) >= MISFIT_THRESHOLD;
 
 export function SequenceTab() {
   const [rows, setRows] = useState<SequenceRow[]>([]);
@@ -179,6 +189,8 @@ export function SequenceTab() {
   const filtered = rows.filter((r) => {
     if (stageFilter === "__action") {
       if (!ACTIONABLE.has(r.stage)) return false;
+    } else if (stageFilter === "__misfit") {
+      if (!isMisfit(r)) return false;
     } else if (stageFilter && r.stage !== stageFilter) {
       return false;
     }
@@ -210,6 +222,7 @@ export function SequenceTab() {
         >
           <option value="">All stages</option>
           <option value="__action">Needs action</option>
+          <option value="__misfit">Misfit (auto-paused)</option>
           <option value="engaging">Engaging</option>
           <option value="ready_to_invite">Ready to invite</option>
           <option value="invited">Invited</option>
@@ -353,7 +366,16 @@ export function SequenceTab() {
                         {STAGE_LABEL[r.stage] ?? r.stage}
                       </span>
                       {r.paused ? (
-                        <span className="ml-1.5 text-[10px] text-muted-foreground">paused</span>
+                        isMisfit(r) ? (
+                          <span
+                            className="ml-1.5 inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-700"
+                            title={`Auto-paused: appropriateness gate skipped ${r.appropriate_skip_count} of this prospect's posts and no comment ever sent. Review the feed and unpause if this looks wrong.`}
+                          >
+                            misfit
+                          </span>
+                        ) : (
+                          <span className="ml-1.5 text-[10px] text-muted-foreground">paused</span>
+                        )
                       ) : null}
                     </td>
                     <td className="py-2.5 px-3 text-center tabular-nums">
