@@ -74,13 +74,55 @@ const MISFIT_THRESHOLD = 5;
 const isMisfit = (r: SequenceRow) =>
   r.paused && r.comments_made === 0 && (r.appropriate_skip_count ?? 0) >= MISFIT_THRESHOLD;
 
+// Stage progression order, used for the Stage column sort.
+const STAGE_ORDER: Record<string, number> = {
+  engaging: 0,
+  ready_to_invite: 1,
+  invited: 2,
+  connected: 3,
+  dm_sent: 4,
+  responded: 5,
+  done: 6,
+};
+
+type SortKey = "name" | "company" | "stage" | "comments";
+
+function companyOf(r: SequenceRow): string {
+  return (
+    r.prospect?.seller?.brand_name ||
+    r.prospect?.seller?.seller_name ||
+    r.prospect?.seller?.business_name ||
+    ""
+  );
+}
+
 export function SequenceTab() {
   const [rows, setRows] = useState<SequenceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [stageFilter, setStageFilter] = useState("");
+  const [activityFilter, setActivityFilter] = useState<"" | "has_comments" | "no_comments">("");
+  const [pausedFilter, setPausedFilter] = useState<"" | "hide" | "only">("");
   const [search, setSearch] = useState("");
+  // null = default sort (enrolled-desc). Clicking a column header cycles
+  // desc -> asc -> null on the same column, or sets desc on a new column.
+  const [sortBy, setSortBy] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  function cycleSort(key: SortKey) {
+    if (sortBy !== key) {
+      setSortBy(key);
+      setSortDir("desc");
+      return;
+    }
+    if (sortDir === "desc") {
+      setSortDir("asc");
+      return;
+    }
+    setSortBy(null);
+    setSortDir("desc");
+  }
 
   const load = useCallback(async () => {
     try {
@@ -194,18 +236,38 @@ export function SequenceTab() {
     } else if (stageFilter && r.stage !== stageFilter) {
       return false;
     }
+    if (activityFilter === "has_comments" && r.comments_made === 0) return false;
+    if (activityFilter === "no_comments" && r.comments_made > 0) return false;
+    if (pausedFilter === "hide" && r.paused) return false;
+    if (pausedFilter === "only" && !r.paused) return false;
     if (q) {
       const name = (r.prospect?.name ?? "").toLowerCase();
-      const company = (
-        r.prospect?.seller?.brand_name ||
-        r.prospect?.seller?.seller_name ||
-        r.prospect?.seller?.business_name ||
-        ""
-      ).toLowerCase();
+      const company = companyOf(r).toLowerCase();
       if (!name.includes(q) && !company.includes(q)) return false;
     }
     return true;
   });
+
+  const sorted = sortBy
+    ? [...filtered].sort((a, b) => {
+        let diff = 0;
+        switch (sortBy) {
+          case "name":
+            diff = (a.prospect?.name ?? "").localeCompare(b.prospect?.name ?? "");
+            break;
+          case "company":
+            diff = companyOf(a).localeCompare(companyOf(b));
+            break;
+          case "stage":
+            diff = (STAGE_ORDER[a.stage] ?? 99) - (STAGE_ORDER[b.stage] ?? 99);
+            break;
+          case "comments":
+            diff = a.comments_made - b.comments_made;
+            break;
+        }
+        return sortDir === "asc" ? diff : -diff;
+      })
+    : filtered; // default: API already returns enrolled-desc
 
   return (
     <div className="space-y-3">
@@ -231,6 +293,24 @@ export function SequenceTab() {
           <option value="responded">Replied</option>
           <option value="done">Done</option>
         </select>
+        <select
+          value={activityFilter}
+          onChange={(e) => setActivityFilter(e.target.value as typeof activityFilter)}
+          className="text-sm bg-background border border-border rounded px-2 py-1.5"
+        >
+          <option value="">All activity</option>
+          <option value="has_comments">Has comments</option>
+          <option value="no_comments">No comments yet</option>
+        </select>
+        <select
+          value={pausedFilter}
+          onChange={(e) => setPausedFilter(e.target.value as typeof pausedFilter)}
+          className="text-sm bg-background border border-border rounded px-2 py-1.5"
+        >
+          <option value="">All (paused + active)</option>
+          <option value="hide">Hide paused</option>
+          <option value="only">Only paused</option>
+        </select>
         <input
           type="text"
           value={search}
@@ -252,15 +332,15 @@ export function SequenceTab() {
           <thead className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="py-2.5 px-3 font-semibold w-6"></th>
-              <th className="py-2.5 px-3 font-semibold">Prospect</th>
-              <th className="py-2.5 px-3 font-semibold">Company</th>
-              <th className="py-2.5 px-3 font-semibold">Stage</th>
-              <th className="py-2.5 px-3 font-semibold text-center">Comments</th>
+              <SortHeader label="Prospect" sortKey="name" sortBy={sortBy} sortDir={sortDir} onClick={cycleSort} />
+              <SortHeader label="Company" sortKey="company" sortBy={sortBy} sortDir={sortDir} onClick={cycleSort} />
+              <SortHeader label="Stage" sortKey="stage" sortBy={sortBy} sortDir={sortDir} onClick={cycleSort} />
+              <SortHeader label="Comments" sortKey="comments" sortBy={sortBy} sortDir={sortDir} onClick={cycleSort} align="center" />
               <th className="py-2.5 px-3 font-semibold text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r) => {
+            {sorted.map((r) => {
               const seller = r.prospect?.seller ?? null;
               const company =
                 seller?.brand_name ||
@@ -440,6 +520,45 @@ export function SequenceTab() {
       </div>
       )}
     </div>
+  );
+}
+
+function SortHeader({
+  label,
+  sortKey,
+  sortBy,
+  sortDir,
+  onClick,
+  align = "left",
+}: {
+  label: string;
+  sortKey: SortKey;
+  sortBy: SortKey | null;
+  sortDir: "asc" | "desc";
+  onClick: (key: SortKey) => void;
+  align?: "left" | "center";
+}) {
+  const active = sortBy === sortKey;
+  const arrow = active ? (sortDir === "asc" ? "▲" : "▼") : "";
+  return (
+    <th
+      className={`py-2.5 px-3 font-semibold cursor-pointer select-none hover:text-foreground ${align === "center" ? "text-center" : ""}`}
+      onClick={() => onClick(sortKey)}
+      title={
+        active
+          ? sortDir === "desc"
+            ? "Click to sort ascending"
+            : "Click to clear sort"
+          : `Sort by ${label}`
+      }
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        <span className={`text-[9px] ${active ? "text-foreground" : "text-muted-foreground/40"}`}>
+          {arrow || "↕"}
+        </span>
+      </span>
+    </th>
   );
 }
 
