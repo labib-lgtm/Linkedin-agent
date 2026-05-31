@@ -516,22 +516,35 @@ export const commentOnProspectPosts = schedules.task({
       return { sent: 0, skipped: "min_gap" };
     }
 
-    // Candidate posts: uncommented, fresh, with real text, for eligible
-    // prospects not in cooldown — best engagement first.
+    // Candidate posts: uncommented, fresh, with real text — best engagement
+    // first. We DON'T push eligibleIds into a `.in()` filter on the server:
+    // with ~500 enrolled prospects the URL bloats past PostgREST's limit and
+    // the request fails at the transport layer ("TypeError: fetch failed").
+    // Instead we over-fetch the global top by engagement and filter to the
+    // eligible set client-side; with the eligibility ratio typically >95%
+    // this gives us the same top-50 with one small request.
+    const eligibleIdSet = new Set(eligibleIds);
     const freshAgo = new Date(Date.now() - POST_FRESHNESS_DAYS * 86_400_000).toISOString();
-    const { data: posts, error: pErr } = await client
+    const { data: rawPosts, error: pErr } = await client
       .from("prospect_posts")
       .select("id, prospect_id, account_id, post_id, text, engagement_score, posted_at")
       .eq("commented", false)
       .eq("skipped", false)
-      .in("prospect_id", eligibleIds)
       .gte("posted_at", freshAgo)
       .order("engagement_score", { ascending: false })
-      .limit(50);
+      .limit(200);
     if (pErr) {
       logger.error("candidate posts fetch failed", { error: pErr.message });
       return { sent: 0, error: pErr.message };
     }
+    const posts = (rawPosts ?? [])
+      .filter((p) => eligibleIdSet.has(p.prospect_id as string))
+      .slice(0, 50);
+    logger.info("candidates", {
+      raw: rawPosts?.length ?? 0,
+      eligible: posts.length,
+      eligibleProspects: eligibleIds.length,
+    });
 
     // Walk candidates best-engagement-first. Each one that clears cheap pacing
     // gets the appropriateness gate (bounded per run); the first post that passes
