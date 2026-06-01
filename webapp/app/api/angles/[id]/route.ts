@@ -10,6 +10,11 @@ const ALLOWED_FIELDS = new Set([
   "draft_body",
   "hook_chosen",
   "cta_keyword",
+  // Quick Post: composer attaches an uploaded creative at save time, which
+  // requires patching the format + the storage path the publish route reads.
+  "format",
+  "slide_image_paths",
+  "carousel_pdf_path",
 ]);
 
 export async function PATCH(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,33 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PILLAR_VALUES } from "@/lib/constants";
+
+type Creative = {
+  path: string;
+  format: "image" | "carousel";
+  mime: string;
+  filename: string;
+  bytes: number;
+  previewUrl: string | null;
+};
+
+const ACCEPTED_MIMES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "application/pdf",
+];
+
+function isAcceptedMime(mime: string): boolean {
+  return ACCEPTED_MIMES.includes(mime.toLowerCase());
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 const HOOK_STYLES = [
   { value: "question", label: "Question" },
@@ -41,6 +68,80 @@ export default function QuickPostPage() {
   const [draftBody, setDraftBody] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Creative upload state
+  const [creative, setCreative] = useState<Creative | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Object URLs leak unless revoked when replaced or on unmount.
+  useEffect(() => {
+    return () => {
+      if (creative?.previewUrl) URL.revokeObjectURL(creative.previewUrl);
+    };
+  }, [creative?.previewUrl]);
+
+  async function uploadFile(file: File) {
+    if (!isAcceptedMime(file.type)) {
+      toast.error(`'${file.type || "unknown"}' is not a supported file type.`);
+      return;
+    }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/angles/quick-upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.message ?? data?.error ?? `HTTP ${res.status}`);
+      }
+      // Revoke previous preview URL before swapping.
+      if (creative?.previewUrl) URL.revokeObjectURL(creative.previewUrl);
+      const previewUrl = data.format === "image" ? URL.createObjectURL(file) : null;
+      setCreative({
+        path: data.path,
+        format: data.format,
+        mime: data.mime,
+        filename: data.filename,
+        bytes: data.bytes,
+        previewUrl,
+      });
+      toast.success(`Attached: ${data.filename} (${formatBytes(data.bytes)})`);
+    } catch (e) {
+      toast.error(`Upload failed: ${(e as Error).message}`);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  function clearCreative() {
+    if (creative?.previewUrl) URL.revokeObjectURL(creative.previewUrl);
+    setCreative(null);
+  }
+
+  // Listen for paste events anywhere on the page so the user can Cmd+V an
+  // image from their clipboard (Slack screenshot, Figma export, etc).
+  useEffect(() => {
+    function onPaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          if (file && isAcceptedMime(file.type)) {
+            e.preventDefault();
+            void uploadFile(file);
+            return;
+          }
+        }
+      }
+    }
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-suggested angle id (YYYY-WNN-AXX). Pre-loaded once so Save can fire
   // without waiting for a network round trip.
@@ -117,7 +218,10 @@ export default function QuickPostPage() {
     setSaving(true);
     try {
       // Step 1 — create the angle row. Use the brief as the hook_seed so the
-      // operator can see what they originally typed when reviewing later.
+      // operator can see what they originally typed when reviewing later. Set
+      // format based on whether a creative was uploaded.
+      const targetFormat: "text" | "image" | "carousel" =
+        creative?.format ?? "text";
       const createRes = await fetch("/api/angles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -125,7 +229,7 @@ export default function QuickPostPage() {
           angle_id: angleId.trim(),
           status: "Drafted",
           pillar: pillar || null,
-          format: "text",
+          format: targetFormat,
           hook_seed: brief.trim().slice(0, 4000),
           cta_keyword: ctaKeyword.trim().toUpperCase() || null,
           week_assigned: weekAssigned || null,
@@ -136,12 +240,18 @@ export default function QuickPostPage() {
         throw new Error(createData?.error ?? `Create failed (${createRes.status})`);
       }
 
-      // Step 2 — patch with the composed body. (POST /api/angles doesn't
-      // accept draft_body in its allowed fields; PATCH does.)
+      // Step 2 — patch with the composed body + any uploaded creative path.
+      // (POST /api/angles doesn't accept these fields in its allow-list; PATCH does.)
+      const patch: Record<string, unknown> = { draft_body: draftBody.trim() };
+      if (creative?.format === "image") {
+        patch.slide_image_paths = { "1": creative.path };
+      } else if (creative?.format === "carousel") {
+        patch.carousel_pdf_path = creative.path;
+      }
       const patchRes = await fetch(`/api/angles/${encodeURIComponent(angleId.trim())}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ draft_body: draftBody.trim() }),
+        body: JSON.stringify(patch),
       });
       if (!patchRes.ok) {
         const patchData = await patchRes.json().catch(() => ({}));
@@ -278,6 +388,92 @@ export default function QuickPostPage() {
         </CardContent>
       </Card>
 
+      <Card className="mb-4">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Attach creative (optional)</CardTitle>
+            {creative ? (
+              <button
+                type="button"
+                onClick={clearCreative}
+                className="text-xs text-rose-700 hover:underline"
+              >
+                Remove
+              </button>
+            ) : null}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!creative ? (
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                const f = e.dataTransfer.files?.[0];
+                if (f) void uploadFile(f);
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              className={`rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-colors ${
+                dragOver
+                  ? "border-lynx-green bg-lynx-green/10"
+                  : "border-border hover:border-foreground/30 hover:bg-muted/40"
+              }`}
+            >
+              <p className="text-sm font-medium">
+                {uploading ? "Uploading…" : "Drop a file, click to browse, or paste (Cmd+V)"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Image: PNG, JPG, WebP (≤ 8 MB) → posts as a single-image post.<br />
+                Carousel: PDF (≤ 80 MB) → posts as a document carousel.
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void uploadFile(f);
+                }}
+              />
+            </div>
+          ) : (
+            <div className="flex items-start gap-4">
+              {creative.previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={creative.previewUrl}
+                  alt={creative.filename}
+                  className="w-32 h-32 object-cover rounded border border-border"
+                />
+              ) : (
+                <div className="w-32 h-32 rounded border border-border flex items-center justify-center bg-muted">
+                  <span className="text-3xl">📄</span>
+                </div>
+              )}
+              <div className="flex-1 min-w-0 text-sm space-y-1">
+                <div className="font-medium truncate">{creative.filename}</div>
+                <div className="text-xs text-muted-foreground">
+                  {creative.mime} · {formatBytes(creative.bytes)}
+                </div>
+                <div className="text-xs">
+                  Will publish as a{" "}
+                  <span className="font-semibold">
+                    {creative.format === "image" ? "single-image" : "carousel PDF"}
+                  </span>{" "}
+                  post.
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {draftBody ? (
         <Card>
           <CardHeader>
@@ -303,7 +499,8 @@ export default function QuickPostPage() {
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
                 Angle ID: <span className="font-mono">{angleId || "…"}</span> · Saves as
-                Drafted. From the angle page you can publish or attach a creative.
+                Drafted{creative ? ` with ${creative.format} attached` : ""}. Publish from the
+                angle page.
               </p>
               <Button type="button" variant="accent" onClick={saveAsDraft} disabled={saving}>
                 {saving ? "Saving…" : "Save & open angle"}
