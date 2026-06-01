@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
 import { STAGES, stageForStatus, type StageId } from "@/lib/constants";
 import { type Angle } from "@/lib/types";
@@ -66,6 +67,12 @@ export default async function KanbanPage({
           <span className="text-xs text-muted-foreground">
             {angles.length} total
           </span>
+          <Link
+            href="/angles/quick"
+            className="text-xs px-3 py-1.5 rounded border border-border hover:bg-muted transition-colors"
+          >
+            + Quick post
+          </Link>
           <GenerateAnglesButton />
         </div>
       </div>

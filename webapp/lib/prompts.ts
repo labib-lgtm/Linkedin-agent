@@ -430,6 +430,74 @@ ${COMMENT_RULES}
 Output strict JSON: { "issues": "<short list of what you fixed, or 'none'>", "final": "<the improved comment, or '' to skip>" }`;
 }
 
+// Quick Post composer — constrained generation from a user-supplied brief.
+//
+// Differs from postCopySystemPrompt: that one runs a full Concept Brief
+// pipeline (hook variants, role-tagged paragraphs, CTA archetype) for
+// weekly pillar posts. quickPostSystemPrompt is for posts the user already
+// has in mind — they give the brief, the hook style, and a char cap; we
+// return ONE polished post body matching exactly those constraints.
+export type QuickHookStyle =
+  | "question"
+  | "stat"
+  | "contrarian"
+  | "story"
+  | "how-to"
+  | "list";
+
+export const QUICK_HOOK_STYLES: { value: QuickHookStyle; label: string; example: string }[] = [
+  { value: "question", label: "Question", example: "What's the one PPC mistake even seasoned operators make in Q4?" },
+  { value: "stat", label: "Stat", example: "$3M in spend later, here's what I now check before touching a campaign." },
+  { value: "contrarian", label: "Contrarian", example: "Stop bidding on your own brand keywords. It's the most expensive habit in Amazon PPC." },
+  { value: "story", label: "Story", example: "Last Tuesday a client asked me why their ROAS dropped 40% overnight." },
+  { value: "how-to", label: "How-to", example: "Here's the exact 4-step process I use to audit a stalled PPC account." },
+  { value: "list", label: "List", example: "5 patterns I see in every $1M+ account that's still leaking budget." },
+];
+
+export function quickPostSystemPrompt(
+  b: BusinessProfile,
+  voiceSamples: string[],
+  opts: { hook_style: QuickHookStyle; char_limit: number },
+): string {
+  const samplesBlock =
+    voiceSamples.length > 0
+      ? voiceSamples.map((s, i) => `[Sample ${i + 1}]\n${s.slice(0, 900)}`).join("\n\n")
+      : "(No prior posts under this account. Match the voice rules below.)";
+
+  const hookExamples = QUICK_HOOK_STYLES.map(
+    (s) => `- ${s.label}: ${s.example}`,
+  ).join("\n");
+
+  return `You write a single LinkedIn post for ${b.name} from a user-supplied brief. The brief contains the substance; your job is to polish it into a publishable post that fits the user's exact constraints.
+
+Business: ${b.name}
+What we do: ${b.description}
+Audience: ${b.audience}
+
+Voice samples (match cadence, sentence length, punctuation density):
+${samplesBlock}
+
+Voice rules:
+${b.voice}
+
+Hard constraints — non-negotiable:
+- Total body must be STRICTLY UNDER ${opts.char_limit} characters (count Unicode chars including spaces and newlines).
+- Open with a "${opts.hook_style}" hook on the very first line. Hook style reference:
+${hookExamples}
+- The opening line of your output must clearly be a "${opts.hook_style}" hook in shape.
+- If the brief contains a specific number, named tactic, named tool, or concrete outcome, lead with it. Never bury the strongest specific.
+- Topic is whatever the brief says — client win, strategy take, observation, framework, lesson, anything. Do NOT force an Amazon/PPC angle if the brief is not about that.
+- No em-dashes, no asterisks, no hash characters, no hashtags, no tricolons (three parallel items), no three-beat observation-reframe-question structure.
+- No manufactured aphorisms ("X is just rented Y"). No clichés ("here's the thing", "let me explain", "drumroll please", "thrilled to announce"). No filler ("in today's fast-paced world", "it's no secret that").
+- No fabricated statistics or outcomes. Only use numbers the brief gives you.
+- Plain and slightly imperfect beats clever. Write the way an operator would type it.
+- Body is plain text. Short paragraphs separated by blank lines are fine. No markdown.
+
+Output strict JSON: { "body": "<the polished post body>" }
+
+If the brief is too thin to write anything genuine (one or two words, no substance), return { "body": "" }.`;
+}
+
 // Phase D: single binary publish-check.
 //
 // Per the roast — replaced the 5-axis Haiku-rubric (which would just
