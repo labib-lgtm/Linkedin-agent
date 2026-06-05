@@ -16,7 +16,7 @@ export async function GET() {
     .from("prospect_outreach")
     .select(
       "id, prospect_id, stage, paused, comments_made, comments_target, appropriate_skip_count, " +
-        "last_comment_at, enrolled_at, " +
+        "cold_invite, last_comment_at, enrolled_at, " +
         "invite_message, invite_approved, invite_sent_at, connected_at, dm_text, dm_approved, dm_sent_at, " +
         "replied_at, reply_snippet, followups_sent, " +
         "prospect:prospects(id, name, headline, linkedin_url, status, " +

@@ -20,6 +20,7 @@ type SequenceRow = {
   comments_made: number;
   comments_target: number;
   appropriate_skip_count: number;
+  cold_invite: boolean;
   last_comment_at: string | null;
   enrolled_at: string;
   invite_message: string | null;
@@ -233,6 +234,8 @@ export function SequenceTab() {
       if (!ACTIONABLE.has(r.stage)) return false;
     } else if (stageFilter === "__misfit") {
       if (!isMisfit(r)) return false;
+    } else if (stageFilter === "__cold") {
+      if (!r.cold_invite) return false;
     } else if (stageFilter && r.stage !== stageFilter) {
       return false;
     }
@@ -285,6 +288,7 @@ export function SequenceTab() {
           <option value="">All stages</option>
           <option value="__action">Needs action</option>
           <option value="__misfit">Misfit (auto-paused)</option>
+          <option value="__cold">Cold invite (inactive 30d)</option>
           <option value="engaging">Engaging</option>
           <option value="ready_to_invite">Ready to invite</option>
           <option value="invited">Invited</option>
@@ -456,6 +460,14 @@ export function SequenceTab() {
                         ) : (
                           <span className="ml-1.5 text-[10px] text-muted-foreground">paused</span>
                         )
+                      ) : null}
+                      {r.cold_invite ? (
+                        <span
+                          className="ml-1.5 inline-flex rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-sky-100 text-sky-800"
+                          title="Cold invite path: this prospect hadn't posted in 30+ days, so the bot skipped warm-up and promoted them straight to Ready to invite for your review."
+                        >
+                          cold
+                        </span>
                       ) : null}
                     </td>
                     <td className="py-2.5 px-3 text-center tabular-nums">

@@ -47,6 +47,14 @@ const TRACK_SLEEP_MS = 400;
 // Outreach UI surfaces them so the operator can review and unpause if wrong.
 const MISFIT_PAUSE_THRESHOLD = 5;
 
+// Skip-warm-up cold-invite path: if a prospect hasn't posted in this many
+// days AND has been enrolled for at least the grace period below, the
+// comment warm-up cannot land — auto-promote to ready_to_invite with
+// cold_invite=true so the operator can decide on a connection request
+// without the bot wasting cycles checking their silent feed.
+const INACTIVE_DAYS = 30;
+const INACTIVE_GRACE_DAYS = 7;
+
 // Bound classifier LLM calls per cron run so a backlog of personal posts can't
 // blow up cost. Candidates past the cap simply wait for the next run.
 const MAX_CLASSIFY_PER_RUN = 6;
@@ -452,7 +460,73 @@ export const trackProspectPosts = schedules.task({
       await sleep(TRACK_SLEEP_MS);
     }
 
-    const summary = { tracked, upserts, failed };
+    // Inactive cold-invite promotion. After the per-prospect post fetch
+    // above, look for engaging prospects whose feeds have been silent long
+    // enough that the comment warm-up cannot land. Move them to
+    // ready_to_invite with cold_invite=true so the operator can decide on
+    // a cold connection request. Operator-gated — the send worker still
+    // requires invite_approved=true before firing.
+    let coldPromoted = 0;
+    try {
+      const inactiveCutoff = new Date(
+        Date.now() - INACTIVE_DAYS * 86_400_000,
+      ).toISOString();
+      const enrolledCutoff = new Date(
+        Date.now() - INACTIVE_GRACE_DAYS * 86_400_000,
+      ).toISOString();
+
+      // Candidates: engaging, not paused, not already cold, enrolled long
+      // enough that the bot has had a fair shot at tracking + commenting.
+      const { data: candidates, error: candErr } = await client
+        .from("prospect_outreach")
+        .select("id, prospect_id")
+        .eq("stage", "engaging")
+        .eq("paused", false)
+        .eq("cold_invite", false)
+        .lte("enrolled_at", enrolledCutoff);
+      if (candErr) throw candErr;
+
+      if ((candidates?.length ?? 0) > 0) {
+        // Build the set of prospect_ids that have posted within the
+        // INACTIVE_DAYS window. Anything NOT in this set is silent.
+        // Single global query keeps the URL small (no .in() filter).
+        const { data: recentPosts, error: rpErr } = await client
+          .from("prospect_posts")
+          .select("prospect_id")
+          .gte("posted_at", inactiveCutoff);
+        if (rpErr) throw rpErr;
+        const recentActive = new Set(
+          (recentPosts ?? []).map((p) => p.prospect_id as string),
+        );
+
+        const inactiveIds = (candidates ?? [])
+          .filter((c) => !recentActive.has(c.prospect_id as string))
+          .map((c) => c.id as string);
+
+        for (const id of inactiveIds) {
+          const { error: upErr } = await client
+            .from("prospect_outreach")
+            .update({ stage: "ready_to_invite", cold_invite: true })
+            .eq("id", id);
+          if (upErr) {
+            logger.warn("cold-invite promote failed", { id, error: upErr.message });
+            continue;
+          }
+          coldPromoted += 1;
+        }
+        if (coldPromoted > 0) {
+          logger.info("cold-invite promotions", {
+            promoted: coldPromoted,
+            window_days: INACTIVE_DAYS,
+            grace_days: INACTIVE_GRACE_DAYS,
+          });
+        }
+      }
+    } catch (e) {
+      logger.warn("cold-invite promotion failed", { error: (e as Error).message });
+    }
+
+    const summary = { tracked, upserts, failed, coldPromoted };
     logger.info("track-prospect-posts done", summary);
     return summary;
   },
