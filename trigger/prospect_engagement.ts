@@ -29,9 +29,12 @@ const DAILY_ENRICH_BUDGET = 200;
  * PROSPECT_OUTREACH_DRY_RUN=1 to draft + log without posting.
  */
 
-// Conservative — this LinkedIn account also runs competitor commenting
-// (5/day), so prospect comments stay low to keep the combined volume safe.
-const MAX_PER_DAY = 5;
+// The same LinkedIn account also runs competitor commenting (5/day). With
+// prospect commenting at 10/day, combined ceiling is 15/day — still well
+// under the ~30/day soft behavioral ceiling for an active human user, with
+// the 2-hour min-gap + 3-day per-prospect cooldown + appropriateness filter
+// keeping each comment paced and on-topic.
+const MAX_PER_DAY = 10;
 const MIN_GAP_HOURS = 2;
 const PER_PROSPECT_COOLDOWN_DAYS = 3;
 const POST_FRESHNESS_DAYS = 14;
