@@ -19,6 +19,7 @@ const SERVICE_LABELS: Record<SettingService, string> = {
   supabase: "Supabase",
   google: "Google",
   business: "Business",
+  apollo: "Apollo.io",
 };
 
 const SERVICE_DESCRIPTIONS: Record<SettingService, string> = {
@@ -28,6 +29,8 @@ const SERVICE_DESCRIPTIONS: Record<SettingService, string> = {
     "Database. Editing service-role key disconnects the app — confirmation required, redeploy after save.",
   google: "OAuth client for Drive / Sheets (placeholder for now).",
   business: "Business profile — see the Business tab.",
+  apollo:
+    "Apollo.io API key used by the Outreach → Apollo prospects tab to enrich Amazon sellers with decision-maker contact info.",
 };
 
 export function IntegrationsPanel({
@@ -37,7 +40,7 @@ export function IntegrationsPanel({
   data: SettingsPayload;
   onChange: (next: SettingsPayload) => void;
 }) {
-  const services: SettingService[] = ["unipile", "openrouter", "supabase", "google"];
+  const services: SettingService[] = ["unipile", "openrouter", "apollo", "supabase", "google"];
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
