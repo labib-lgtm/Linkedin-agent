@@ -10,6 +10,8 @@ export interface SellerFilter {
   min_revenue?: number | null;
   max_revenue?: number | null;
   min_growth?: number | null;
+  max_growth?: number | null;
+  min_asins?: number | null;
   max_asins?: number | null;
   matched_only?: boolean;
   exclude_enrolled?: boolean;
@@ -32,6 +34,8 @@ export function parseFilterFromSearchParams(sp: URLSearchParams): SellerFilter {
     min_revenue: num(sp.get("min_revenue")),
     max_revenue: num(sp.get("max_revenue")),
     min_growth: num(sp.get("min_growth")),
+    max_growth: num(sp.get("max_growth")),
+    min_asins: num(sp.get("min_asins")),
     max_asins: num(sp.get("max_asins")),
     matched_only: bool(sp.get("matched_only")),
     exclude_enrolled: bool(sp.get("exclude_enrolled")),
@@ -47,6 +51,8 @@ export function parseFilterFromBody(body: unknown): SellerFilter {
     min_revenue: num(o.min_revenue),
     max_revenue: num(o.max_revenue),
     min_growth: num(o.min_growth),
+    max_growth: num(o.max_growth),
+    min_asins: num(o.min_asins),
     max_asins: num(o.max_asins),
     matched_only: bool(o.matched_only),
     exclude_enrolled: bool(o.exclude_enrolled),
@@ -69,6 +75,8 @@ export function applySellerFilter<T extends { eq: Function; gte: Function; lte: 
   if (f.min_revenue != null) q = q.gte("est_monthly_revenue", f.min_revenue);
   if (f.max_revenue != null) q = q.lte("est_monthly_revenue", f.max_revenue);
   if (f.min_growth != null) q = q.gte("growth_3mo", f.min_growth);
+  if (f.max_growth != null) q = q.lte("growth_3mo", f.max_growth);
+  if (f.min_asins != null) q = q.gte("num_asins", f.min_asins);
   if (f.max_asins != null) q = q.lte("num_asins", f.max_asins);
   if (f.matched_only) q = q.eq("enrichment_status", "matched");
   if (f.only_pending_filter) q = q.eq("apollo_filter_status", "pending");

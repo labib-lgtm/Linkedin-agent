@@ -11,6 +11,8 @@ type Filter = {
   min_revenue: string;
   max_revenue: string;
   min_growth: string;
+  max_growth: string;
+  min_asins: string;
   max_asins: string;
   matched_only: boolean;
   exclude_enrolled: boolean;
@@ -21,6 +23,8 @@ const EMPTY_FILTER: Filter = {
   min_revenue: "",
   max_revenue: "",
   min_growth: "",
+  max_growth: "",
+  min_asins: "",
   max_asins: "",
   matched_only: true,
   exclude_enrolled: false,
@@ -88,6 +92,8 @@ function filterToQuery(f: Filter): URLSearchParams {
   if (f.min_revenue) q.set("min_revenue", f.min_revenue);
   if (f.max_revenue) q.set("max_revenue", f.max_revenue);
   if (f.min_growth) q.set("min_growth", f.min_growth);
+  if (f.max_growth) q.set("max_growth", f.max_growth);
+  if (f.min_asins) q.set("min_asins", f.min_asins);
   if (f.max_asins) q.set("max_asins", f.max_asins);
   if (f.matched_only) q.set("matched_only", "1");
   if (f.exclude_enrolled) q.set("exclude_enrolled", "1");
@@ -249,13 +255,13 @@ export function ApolloProspectsTab() {
             </div>
             <div className="space-y-1">
               <label className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                Max ASIN count
+                Max 3-month growth %
               </label>
               <Input
                 type="number"
-                placeholder="50"
-                value={filter.max_asins}
-                onChange={(e) => setFilter({ ...filter, max_asins: e.target.value })}
+                placeholder="500"
+                value={filter.max_growth}
+                onChange={(e) => setFilter({ ...filter, max_growth: e.target.value })}
                 className="h-9 text-sm"
               />
             </div>
@@ -272,6 +278,32 @@ export function ApolloProspectsTab() {
                 className="h-9 text-sm"
               />
             </div>
+            <div className="space-y-1">
+              <label className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Min ASIN count
+              </label>
+              <Input
+                type="number"
+                placeholder="5"
+                value={filter.min_asins}
+                onChange={(e) => setFilter({ ...filter, min_asins: e.target.value })}
+                className="h-9 text-sm"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                Max ASIN count
+              </label>
+              <Input
+                type="number"
+                placeholder="50"
+                value={filter.max_asins}
+                onChange={(e) => setFilter({ ...filter, max_asins: e.target.value })}
+                className="h-9 text-sm"
+              />
+            </div>
+            {/* Spacer to keep the 3-col grid clean on the last row */}
+            <div className="hidden sm:block" />
           </div>
 
           <div className="flex flex-wrap gap-4 items-center">
