@@ -41,6 +41,12 @@ interface RunSummary {
  */
 export const enrichApolloSellers = task({
   id: "enrich-apollo-sellers",
+  // Concurrency = 1 so two operator clicks of Enrich don't race against
+  // Apollo's per-minute rate limit. Subsequent triggers queue and wait.
+  queue: {
+    name: "enrich-apollo",
+    concurrencyLimit: 1,
+  },
   maxDuration: 60 * 60, // 1h
   run: async (
     payload: { sellerIds: string[]; budget?: number },
@@ -125,14 +131,11 @@ export const enrichApolloSellers = task({
           summary.no_org_match += 1;
           continue;
         }
+        // Don't bail on null/0 employee_count — Apollo often returns null
+        // for legitimate orgs and we still want to try the people search
+        // (which is the authoritative "has decision-makers" signal). The
+        // empCount value here is just informational.
         const empCount = org.estimated_num_employees ?? 0;
-        if (empCount === 0) {
-          await markStatus(client, sellerId, "no_employees", 0);
-          summary.no_employees += 1;
-          continue;
-        }
-        // Persist the org-level info before moving on, so we keep state
-        // even if a later step throws.
         await markStatus(client, sellerId, "has_employees", empCount);
         summary.has_employees += 1;
 
@@ -212,12 +215,19 @@ export const enrichApolloSellers = task({
             await markStatus(client, sellerId, "failed", null);
             break;
           }
+          // 429 / 5xx are transient — leave the seller as pending so the
+          // next run picks them up. The internal 60s back-off has already
+          // paused this loop once before throwing.
+          if (e.status === 429 || e.status >= 500) {
+            continue;
+          }
         } else {
           logger.warn("enrich-apollo: unexpected error", {
             sellerId,
             error: (e as Error).message,
           });
         }
+        // Only permanent / unexpected errors mark the seller as failed.
         await markStatus(client, sellerId, "failed", null);
       }
     }

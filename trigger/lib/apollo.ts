@@ -16,8 +16,14 @@
  */
 
 const BASE_URL = "https://api.apollo.io";
-const PER_CALL_SLEEP_MS = 1300;
-const BACKOFF_429_MS = 30_000;
+// Apollo's People endpoints cap at 50 req/min. We sleep 2s between every
+// external call (30 req/min steady-state) to keep comfortably under that
+// and survive Apollo's burst-detection. The previous 1.3s (46 req/min)
+// was tight enough that the per-minute window enforcer flagged us.
+const PER_CALL_SLEEP_MS = 2000;
+// On 429 we wait a full minute — Apollo's per-minute window means anything
+// shorter just hits the same wall.
+const BACKOFF_429_MS = 60_000;
 
 export class ApolloError extends Error {
   status: number;
