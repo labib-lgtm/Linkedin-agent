@@ -185,6 +185,204 @@ export async function getRelations(limit = 200): Promise<string[]> {
   return [...ids];
 }
 
+/** Rich relation record returned by walkAllRelations. Fields are best-effort:
+ *  Unipile does not formally document the relations item shape and multiple
+ *  aliases are known (member_id vs provider_id, name vs full_name, etc.),
+ *  so we normalize here and callers work off the normalized keys. */
+export interface RelationRow {
+  provider_id: string;
+  public_identifier: string | null;
+  full_name: string | null;
+  headline: string | null;
+  /** Raw location string when the relations endpoint returns it inline —
+   *  frequently null; caller falls back to a per-profile lookup. */
+  location: string | null;
+  profile_url: string | null;
+  raw: Record<string, unknown>;
+}
+
+function pickLocation(raw: Record<string, unknown>): string | null {
+  // Direct fields first — Unipile sometimes surfaces a plain string.
+  const direct = pickStr(raw, [
+    "location",
+    "location_name",
+    "geo_location_name",
+    "region",
+    "country",
+  ]);
+  if (direct) return direct;
+  // Nested shapes.
+  for (const key of ["profile", "user", "basic_info", "geo"]) {
+    const nested = raw[key];
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      const v = pickStr(nested as Record<string, unknown>, [
+        "location",
+        "name",
+        "city",
+        "region",
+        "country",
+      ]);
+      if (v) return v;
+    }
+  }
+  return null;
+}
+
+function buildProfileUrl(row: {
+  public_identifier: string | null;
+  provider_id: string;
+  raw: Record<string, unknown>;
+}): string | null {
+  const direct = pickStr(row.raw, [
+    "profile_url",
+    "public_profile_url",
+    "linkedin_url",
+    "url",
+    "public_url",
+  ]);
+  if (direct) return direct;
+  if (row.public_identifier) {
+    return `https://www.linkedin.com/in/${encodeURIComponent(row.public_identifier)}/`;
+  }
+  return null;
+}
+
+/** Walk EVERY relation on the account (no artificial cap), yielding a
+ *  normalized row per connection. Used by the pakistan-cleanup scan task
+ *  and any future full-account audit. Handles cursor-based pagination
+ *  cleanly and exits on the first empty page or missing cursor. */
+export async function walkAllRelations(opts?: {
+  pageSize?: number;
+  hardCap?: number;
+  onPage?: (batch: RelationRow[], pageNum: number) => Promise<void> | void;
+}): Promise<RelationRow[]> {
+  const accountQ = encodeURIComponent(env("UNIPILE_LINKEDIN_ACCOUNT_ID"));
+  const pageSize = Math.min(Math.max(opts?.pageSize ?? 100, 1), 100);
+  const hardCap = opts?.hardCap ?? 50_000;
+  const out: RelationRow[] = [];
+  const seen = new Set<string>();
+  let cursor: string | undefined;
+  let pageNum = 0;
+  // 500 pages @ 100/page = 50k relations, matching hardCap.
+  let safety = 500;
+
+  while (out.length < hardCap && safety-- > 0) {
+    let path = `/api/v1/users/relations?account_id=${accountQ}&limit=${pageSize}`;
+    if (cursor) path += `&cursor=${encodeURIComponent(cursor)}`;
+    const resp = await request<{
+      items?: Array<Record<string, unknown>>;
+      data?: Array<Record<string, unknown>>;
+      relations?: Array<Record<string, unknown>>;
+      cursor?: string;
+      next_cursor?: string;
+      paging?: { cursors?: { after?: string } };
+    }>("GET", path);
+    const items = resp.items ?? resp.data ?? resp.relations ?? [];
+    if (items.length === 0) break;
+
+    const batch: RelationRow[] = [];
+    for (const it of items) {
+      const providerId = pickStr(it, [
+        "member_id",
+        "provider_id",
+        "member_urn",
+        "id",
+        "user_provider_id",
+      ]);
+      if (!providerId || seen.has(providerId)) continue;
+      seen.add(providerId);
+      const public_identifier = pickStr(it, ["public_identifier", "public_id", "vanity_name"]) ?? null;
+      const full_name =
+        pickStr(it, ["full_name", "name", "display_name"]) ??
+        (() => {
+          const first = pickStr(it, ["first_name"]);
+          const last = pickStr(it, ["last_name"]);
+          return first || last ? `${first ?? ""} ${last ?? ""}`.trim() : null;
+        })();
+      const headline = pickStr(it, ["headline", "occupation", "title", "tagline"]) ?? null;
+      const row: RelationRow = {
+        provider_id: providerId,
+        public_identifier,
+        full_name,
+        headline,
+        location: pickLocation(it),
+        profile_url: null,
+        raw: it,
+      };
+      row.profile_url = buildProfileUrl(row);
+      batch.push(row);
+    }
+    out.push(...batch);
+    pageNum += 1;
+    if (opts?.onPage) await opts.onPage(batch, pageNum);
+
+    cursor = resp.cursor ?? resp.next_cursor ?? resp.paging?.cursors?.after;
+    if (!cursor) break;
+  }
+  return out;
+}
+
+/** Profile record we need for location filtering. Fetched only when the
+ *  relations item didn't inline a location. GET /api/v1/users/{id}. */
+export interface UserProfileLite {
+  provider_id: string;
+  public_identifier: string | null;
+  full_name: string | null;
+  headline: string | null;
+  location: string | null;
+  country: string | null;
+  profile_url: string | null;
+  raw: Record<string, unknown>;
+}
+
+export async function getUserProfileLite(
+  handleOrId: string,
+): Promise<UserProfileLite | null> {
+  const trimmed = (handleOrId ?? "").trim();
+  if (!trimmed) return null;
+  const accountQ = encodeURIComponent(env("UNIPILE_LINKEDIN_ACCOUNT_ID"));
+  let raw: Record<string, unknown>;
+  try {
+    raw = await request<Record<string, unknown>>(
+      "GET",
+      `/api/v1/users/${encodeURIComponent(trimmed)}?account_id=${accountQ}&linkedin_sections=*`,
+    );
+  } catch (e) {
+    // 404 means the profile was deleted or is no longer reachable via our
+    // session — treat as null so the scanner can move on.
+    const msg = String((e as Error)?.message ?? e ?? "");
+    if (/404/.test(msg)) return null;
+    throw e;
+  }
+  const provider_id =
+    pickStr(raw, ["provider_id", "member_urn"]) ??
+    (typeof raw.id === "string" && (raw.id as string).startsWith("ACo") ? (raw.id as string) : trimmed);
+  const public_identifier = pickStr(raw, ["public_identifier", "public_id", "vanity_name"]) ?? null;
+  const full_name =
+    pickStr(raw, ["full_name", "name", "display_name"]) ??
+    (() => {
+      const first = pickStr(raw, ["first_name"]);
+      const last = pickStr(raw, ["last_name"]);
+      return first || last ? `${first ?? ""} ${last ?? ""}`.trim() : null;
+    })();
+  const headline = pickStr(raw, ["headline", "occupation", "title", "tagline"]) ?? null;
+  const location = pickLocation(raw);
+  const country = pickStr(raw, ["country", "country_name"]);
+  const profile_url =
+    pickStr(raw, ["public_profile_url", "profile_url", "linkedin_url", "url"]) ??
+    (public_identifier ? `https://www.linkedin.com/in/${encodeURIComponent(public_identifier)}/` : null);
+  return {
+    provider_id,
+    public_identifier,
+    full_name,
+    headline,
+    location,
+    country: country ?? null,
+    profile_url,
+    raw,
+  };
+}
+
 /** Comment on a published post. Shape from live Unipile responses:
  *    { id, post_id, post_urn, date, text,
  *      author: "Display Name",                       // string, NOT object
