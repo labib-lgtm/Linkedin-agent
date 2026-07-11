@@ -1,4 +1,4 @@
-import { logger, task } from "@trigger.dev/sdk/v3";
+import { logger, schedules } from "@trigger.dev/sdk/v3";
 import { getServiceClient } from "./lib/supabase.js";
 import { fetchProfile, fetchAndHashCover, hammingHex, normalizedCharDistance } from "./lib/profile.js";
 
@@ -207,15 +207,11 @@ async function processCompetitor(
   return { ok: true, events };
 }
 
-// TEMP: cron demoted to plain task because we're at Trigger.dev's 10/10
-// schedule cap. Restore the cron (`cron: "0 5 * * *"` under schedules.task)
-// after deleting the 4 stale schedules (daily-analyze-posts,
-// monitor-post-comments, send-outbound-comments, weekly-client-report)
-// from the Trigger.dev dashboard.
-export const dailyProfileSnapshot = task({
+export const dailyProfileSnapshot = schedules.task({
   id: "daily-profile-snapshot",
-  maxDuration: 60 * 30,
-  run: async (_payload: Record<string, never>, { ctx }) => {
+  cron: "0 5 * * *",
+  maxDuration: 60 * 30,  // 30 min ceiling
+  run: async (_payload, { ctx }) => {
     const client = supabase();
 
     const { data: competitors, error } = await client
