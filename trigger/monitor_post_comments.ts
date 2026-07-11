@@ -1,4 +1,4 @@
-import { logger, schedules, tasks } from "@trigger.dev/sdk/v3";
+import { logger, task, tasks } from "@trigger.dev/sdk/v3";
 import { getServiceClient } from "./lib/supabase.js";
 import {
   commenterId,
@@ -102,9 +102,10 @@ interface ActiveAngleRow {
   account_id: string | null;
 }
 
-export const monitorPostComments = schedules.task({
+// Cron disabled — Audience pivot (2026-07). Task remains callable manually
+// but no longer fires on schedule.
+export const monitorPostComments = task({
   id: "monitor-post-comments",
-  cron: "*/5 * * * *",
   // Worst case: 30 angles × 1s Unipile fetch + 250ms pacing + a few
   // trigger.dev fan-outs. Should finish well inside 5 minutes.
   maxDuration: 60 * 4,

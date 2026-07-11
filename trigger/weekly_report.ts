@@ -1,4 +1,4 @@
-import { logger, schedules } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk/v3";
 import { getServiceClient } from "./lib/supabase.js";
 
 /**
@@ -158,9 +158,10 @@ async function buildReportPayload(
   };
 }
 
-export const weeklyClientReport = schedules.task({
+// Cron disabled — Audience pivot (2026-07). Task remains callable manually
+// but no longer fires on schedule.
+export const weeklyClientReport = task({
   id: "weekly-client-report",
-  cron: "0 9 * * 1",   // Monday 9am UTC
   maxDuration: 60 * 15,
   run: async (_payload, { ctx }) => {
     const client = supabase();

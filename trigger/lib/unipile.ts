@@ -322,17 +322,106 @@ export async function walkAllRelations(opts?: {
   return out;
 }
 
-/** Profile record we need for location filtering. Fetched only when the
- *  relations item didn't inline a location. GET /api/v1/users/{id}. */
+/** Profile record we need for audience demographics. Fetched via
+ *  GET /api/v1/users/{id}?linkedin_sections=*. Location + industry +
+ *  employment fields are best-effort — Unipile's payload shape varies by
+ *  profile type, so the extractors walk every known shape and take the
+ *  first hit. Callers that need the untouched shape read `raw`. */
 export interface UserProfileLite {
   provider_id: string;
   public_identifier: string | null;
   full_name: string | null;
   headline: string | null;
   location: string | null;
+  city: string | null;
   country: string | null;
+  industry: string | null;
+  current_company: string | null;
+  current_role: string | null;
   profile_url: string | null;
   raw: Record<string, unknown>;
+}
+
+/** Split a "Karachi, Sindh, Pakistan" location string into (city, country).
+ *  LinkedIn's location strings are comma-separated with the country last,
+ *  1-3 segments deep. We take the first as city and last as country when
+ *  there are at least two segments; single-segment strings usually mean
+ *  the profile only lists a country. */
+function splitLocation(location: string | null): { city: string | null; country: string | null } {
+  if (!location) return { city: null, country: null };
+  const parts = location.split(",").map((s) => s.trim()).filter(Boolean);
+  if (parts.length === 0) return { city: null, country: null };
+  if (parts.length === 1) return { city: null, country: parts[0] };
+  return { city: parts[0], country: parts[parts.length - 1] };
+}
+
+/** Best-effort pluck of the current employer + title from a profile payload.
+ *  Unipile puts current employment under any of these shapes depending on
+ *  which LinkedIn API surface it hits — Sales Nav, Recruiter, or classic
+ *  profile view. We walk every known shape and return the first hit. */
+function pickEmployment(raw: Record<string, unknown>): {
+  company: string | null;
+  role: string | null;
+} {
+  // Shape 1: top-level current_position / current_company (Sales Nav)
+  const cpCompany = pickStr(raw, ["current_company", "current_employer"]);
+  const cpRole = pickStr(raw, ["current_position", "current_title", "occupation"]);
+  if (cpCompany || cpRole) return { company: cpCompany ?? null, role: cpRole ?? null };
+
+  // Shape 2: work_experience[] / experiences[] / positions[] — first entry
+  //          is typically current on Unipile's ordering.
+  for (const key of ["work_experience", "experiences", "positions", "work_experiences"]) {
+    const arr = raw[key];
+    if (Array.isArray(arr) && arr.length > 0) {
+      const first = arr[0];
+      if (first && typeof first === "object") {
+        const row = first as Record<string, unknown>;
+        const company =
+          pickStr(row, ["company", "company_name", "organization", "employer"]) ??
+          (() => {
+            const nested = row.company;
+            if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+              return pickStr(nested as Record<string, unknown>, ["name", "title"]);
+            }
+            return null;
+          })();
+        const role = pickStr(row, ["title", "position", "role", "job_title"]);
+        if (company || role) return { company: company ?? null, role: role ?? null };
+      }
+    }
+  }
+  return { company: null, role: null };
+}
+
+/** Best-effort industry extraction. LinkedIn stores industry both at the
+ *  profile level and under company.industry — try profile-level first. */
+function pickIndustry(raw: Record<string, unknown>): string | null {
+  const direct = pickStr(raw, ["industry", "industry_name"]);
+  if (direct) return direct;
+  // Walk into common nested paths.
+  for (const key of ["profile", "user", "basic_info"]) {
+    const nested = raw[key];
+    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+      const v = pickStr(nested as Record<string, unknown>, ["industry", "industry_name"]);
+      if (v) return v;
+    }
+  }
+  // Fall back to first experience row's company.industry.
+  for (const key of ["work_experience", "experiences", "positions"]) {
+    const arr = raw[key];
+    if (Array.isArray(arr) && arr.length > 0) {
+      const first = arr[0];
+      if (first && typeof first === "object") {
+        const row = first as Record<string, unknown>;
+        const nested = row.company;
+        if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+          const v = pickStr(nested as Record<string, unknown>, ["industry"]);
+          if (v) return v;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 export async function getUserProfileLite(
@@ -367,7 +456,11 @@ export async function getUserProfileLite(
     })();
   const headline = pickStr(raw, ["headline", "occupation", "title", "tagline"]) ?? null;
   const location = pickLocation(raw);
-  const country = pickStr(raw, ["country", "country_name"]);
+  const directCountry = pickStr(raw, ["country", "country_name"]);
+  const split = splitLocation(location);
+  const country = directCountry ?? split.country;
+  const employment = pickEmployment(raw);
+  const industry = pickIndustry(raw);
   const profile_url =
     pickStr(raw, ["public_profile_url", "profile_url", "linkedin_url", "url"]) ??
     (public_identifier ? `https://www.linkedin.com/in/${encodeURIComponent(public_identifier)}/` : null);
@@ -377,10 +470,309 @@ export async function getUserProfileLite(
     full_name,
     headline,
     location,
+    city: split.city,
     country: country ?? null,
+    industry,
+    current_company: employment.company,
+    current_role: employment.role,
     profile_url,
     raw,
   };
+}
+
+// ---- Own account profile fetch -----------------------------------------
+
+/** Fetch our own LinkedIn profile. Two-step:
+ *   1. GET /api/v1/accounts/{id} → walk payload for the ACo... identifier
+ *   2. GET /api/v1/users/{aco} → full profile with follower/connection counts
+ * Used by snapshot-own-account daily task. */
+export interface OwnProfileSnapshot {
+  provider_id: string;
+  public_identifier: string | null;
+  display_name: string | null;
+  headline: string | null;
+  picture_url: string | null;
+  followers_count: number | null;
+  connections_count: number | null;
+  raw: Record<string, unknown>;
+}
+
+function findAcoIdentifier(node: unknown, out: string[]): void {
+  if (!node || typeof node !== "object") return;
+  if (Array.isArray(node)) {
+    for (const item of node) findAcoIdentifier(item, out);
+    return;
+  }
+  for (const [, v] of Object.entries(node as Record<string, unknown>)) {
+    if (typeof v === "string" && v.startsWith("ACo") && v.length > 5) out.push(v);
+    findAcoIdentifier(v, out);
+  }
+}
+
+export async function fetchOwnProfileSnapshot(): Promise<OwnProfileSnapshot> {
+  const accountId = env("UNIPILE_LINKEDIN_ACCOUNT_ID");
+  const account = await request<Record<string, unknown>>(
+    "GET",
+    `/api/v1/accounts/${encodeURIComponent(accountId)}`,
+  );
+  const found: string[] = [];
+  findAcoIdentifier(account, found);
+  const aco = found[0];
+  if (!aco) throw new Error("fetchOwnProfileSnapshot: no ACo... identifier in account payload");
+
+  const accountQ = encodeURIComponent(accountId);
+  const profile = await request<Record<string, unknown>>(
+    "GET",
+    `/api/v1/users/${encodeURIComponent(aco)}?account_id=${accountQ}&linkedin_sections=*`,
+  );
+
+  const pickNum = (obj: Record<string, unknown>, keys: string[]): number | null => {
+    for (const k of keys) {
+      const v = obj[k];
+      if (typeof v === "number" && Number.isFinite(v)) return v;
+      if (typeof v === "string" && /^\d+$/.test(v)) return Number(v);
+    }
+    const nd = obj.network_distance;
+    if (nd && typeof nd === "object" && !Array.isArray(nd)) {
+      for (const k of keys) {
+        const v = (nd as Record<string, unknown>)[k];
+        if (typeof v === "number" && Number.isFinite(v)) return v;
+      }
+    }
+    return null;
+  };
+
+  const public_identifier = pickStr(profile, ["public_identifier", "public_id", "vanity_name"]) ?? null;
+  const display_name =
+    pickStr(profile, ["full_name", "name", "display_name"]) ??
+    (() => {
+      const first = pickStr(profile, ["first_name"]);
+      const last = pickStr(profile, ["last_name"]);
+      return first || last ? `${first ?? ""} ${last ?? ""}`.trim() : null;
+    })();
+  const headline = pickStr(profile, ["headline", "occupation", "title", "tagline"]) ?? null;
+  const picture_url = pickStr(profile, [
+    "profile_picture_url",
+    "profile_picture_url_large",
+    "picture_url",
+    "image_url",
+    "avatar_url",
+  ]) ?? null;
+  const followers_count = pickNum(profile, ["followers_count", "followers", "follower_count"]);
+  const connections_count = pickNum(profile, ["connections_count", "connections", "connection_count"]);
+
+  return {
+    provider_id: aco,
+    public_identifier,
+    display_name,
+    headline,
+    picture_url,
+    followers_count,
+    connections_count,
+    raw: profile,
+  };
+}
+
+// ---- Fetch post reactions (mirror of fetchPostComments) ----------------
+
+export interface UnipileReaction {
+  provider_id: string | null;
+  full_name: string | null;
+  headline: string | null;
+  profile_url: string | null;
+  reaction_type: string | null;
+  raw: Record<string, unknown>;
+}
+
+interface ReactionListResponse {
+  items?: Array<Record<string, unknown>>;
+  data?: Array<Record<string, unknown>>;
+  reactions?: Array<Record<string, unknown>>;
+}
+
+/** Fetch reactions on a post. Same URN-alternate strategy as
+ *  fetchPostComments — Unipile is finicky about which post_id shape it
+ *  accepts and disagreement varies per DSN. */
+export async function fetchPostReactions(postId: string): Promise<UnipileReaction[]> {
+  const accountId = encodeURIComponent(env("UNIPILE_LINKEDIN_ACCOUNT_ID"));
+
+  const isUrn = /^urn:li:[a-zA-Z]+:\d+$/.test(postId);
+  const numericMatch = postId.match(/^\d+$/);
+  const candidates = isUrn
+    ? [postId]
+    : numericMatch
+      ? [
+          `urn:li:activity:${postId}`,
+          `urn:li:share:${postId}`,
+          `urn:li:ugcPost:${postId}`,
+          postId,
+        ]
+      : [postId];
+
+  let lastErr: unknown = null;
+  for (const candidate of candidates) {
+    const encoded = encodeURIComponent(candidate);
+    try {
+      const r = await request<ReactionListResponse>(
+        "GET",
+        `/api/v1/posts/${encoded}/reactions?account_id=${accountId}`,
+      );
+      const items = r.items ?? r.data ?? r.reactions ?? [];
+      return items.map(normalizeReaction);
+    } catch (e) {
+      lastErr = e;
+      const msg = String(e);
+      const isInvalidId =
+        /400/.test(msg) &&
+        /invalid post_id|errors\/malformed_request|errors\/invalid_parameters/.test(msg);
+      if (!isInvalidId) break;
+    }
+  }
+  throw lastErr ?? new Error("fetchPostReactions: all candidates failed");
+}
+
+function normalizeReaction(r: Record<string, unknown>): UnipileReaction {
+  const author =
+    (r.author_details as Record<string, unknown> | undefined) ??
+    (r.commenter as Record<string, unknown> | undefined) ??
+    (r.user as Record<string, unknown> | undefined) ??
+    (typeof r.author === "object" && r.author ? (r.author as Record<string, unknown>) : undefined) ??
+    {};
+  const provider_id =
+    pickStr(author, ["id", "provider_id", "public_identifier"]) ??
+    pickStr(r, ["author_id", "provider_id", "member_id"]);
+  const full_name =
+    (typeof r.author === "string" && r.author.trim()) ||
+    pickStr(author, ["name", "full_name", "display_name"]) ||
+    null;
+  const headline =
+    pickStr(author, ["headline", "occupation", "title"]) ?? pickStr(r, ["headline"]) ?? null;
+  const profile_url =
+    pickStr(author, ["profile_url", "public_profile_url", "linkedin_url"]) ??
+    pickStr(r, ["profile_url"]) ??
+    null;
+  const reaction_type = pickStr(r, ["type", "reaction_type", "value"]) ?? null;
+  return { provider_id: provider_id ?? null, full_name, headline, profile_url, reaction_type, raw: r };
+}
+
+// ---- Cancel a sent invitation ------------------------------------------
+
+/** Withdraw an outbound connection request that hasn't been accepted yet.
+ *  Wraps Unipile's cancel-invite endpoint. Takes the same provider_id we
+ *  used with sendInvitation — Unipile resolves it to the pending
+ *  invitation id server-side. */
+export async function cancelInvitation(providerId: string): Promise<{ ok: boolean; raw: unknown }> {
+  const trimmed = (providerId ?? "").trim();
+  if (!trimmed) throw new Error("cancelInvitation: providerId is required");
+  const accountId = env("UNIPILE_LINKEDIN_ACCOUNT_ID");
+  // Unipile's documented shape uses DELETE /api/v1/users/invite/{provider_id}
+  // with account_id as a query param. The DSN doesn't always accept
+  // path-style, so we also allow the alternate body form via POST /users/invite/cancel.
+  const path = `/api/v1/users/invite/${encodeURIComponent(trimmed)}?account_id=${encodeURIComponent(accountId)}`;
+  try {
+    const raw = await request<unknown>("DELETE", path);
+    return { ok: true, raw };
+  } catch (e) {
+    const msg = String((e as Error).message);
+    // Fall back to the body-shaped alternate if DSN rejects the path form.
+    if (/404|405/.test(msg)) {
+      const raw = await request<unknown>("POST", `/api/v1/users/invite/cancel`, {
+        provider_id: trimmed,
+        account_id: accountId,
+      });
+      return { ok: true, raw };
+    }
+    throw e;
+  }
+}
+
+// ---- List followers via Voyager pass-through (ban-risk-gated) -----------
+
+export interface FollowerRow {
+  provider_id: string;
+  public_identifier: string | null;
+  full_name: string | null;
+  headline: string | null;
+  location: string | null;
+  profile_url: string | null;
+  raw: Record<string, unknown>;
+}
+
+/**
+ * Fetch a page of followers via Unipile's raw-data pass-through to
+ * LinkedIn's internal Voyager endpoint. This is NOT a documented Unipile
+ * capability — we're proxying arbitrary requests through their /linkedin
+ * endpoint. See scripts/pakistan_disconnect.mjs for the same pattern.
+ *
+ * Ban risk is real: bulk enumeration of your followers is not normal user
+ * behavior. Callers must respect the budget cap in scan_followers.ts and
+ * pace at 30s+ per call with jitter.
+ *
+ * Endpoint: GET voyager/api/identity/dash/profileMemberFollowers
+ * The `followedMember` URN parameter needs the caller's own fsd_profile
+ * URN — we let Voyager infer it from the authenticated session by
+ * omitting it and using the `q=followed` variant that defaults to "me".
+ */
+export async function listFollowersViaVoyager(opts: {
+  start: number;
+  count: number;
+}): Promise<{ items: FollowerRow[]; total: number | null }> {
+  const accountId = env("UNIPILE_LINKEDIN_ACCOUNT_ID");
+  const requestUrl =
+    `https://www.linkedin.com/voyager/api/identity/dash/profileMemberFollowers` +
+    `?q=followed&start=${opts.start}&count=${Math.min(Math.max(opts.count, 1), 40)}`;
+  const body = {
+    account_id: accountId,
+    method: "GET",
+    request_url: requestUrl,
+    encoding: false,
+  };
+  const res = await fetch(`${baseUrl()}/api/v1/linkedin`, {
+    method: "POST",
+    headers: {
+      "X-API-KEY": env("UNIPILE_API_KEY"),
+      "content-type": "application/json",
+      accept: "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  const raw = await res.text();
+  if (!res.ok) {
+    throw new Error(`listFollowersViaVoyager -> ${res.status}: ${raw.slice(0, 400)}`);
+  }
+  const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+  // Voyager wraps results under "elements" or "data.*Elements" depending on the API version.
+  const elements =
+    (parsed.elements as Array<Record<string, unknown>> | undefined) ??
+    (() => {
+      const data = parsed.data as Record<string, unknown> | undefined;
+      if (data) {
+        for (const [, v] of Object.entries(data)) {
+          if (Array.isArray(v)) return v as Array<Record<string, unknown>>;
+        }
+      }
+      return [] as Array<Record<string, unknown>>;
+    })();
+  const paging = parsed.paging as { total?: number } | undefined;
+  const items: FollowerRow[] = elements.map((el) => {
+    // Voyager elements are richly nested; the member urn lives under
+    // followerMemberProfile.entityUrn or similar. Defensively walk it.
+    const walk = JSON.stringify(el);
+    const urnMatch = walk.match(/urn:li:(?:fsd_)?profile:([A-Za-z0-9_-]+)/);
+    const provider_id = urnMatch ? urnMatch[1] : "";
+    const public_identifier = pickStr(el, ["publicIdentifier", "public_identifier"]) ?? null;
+    const full_name =
+      pickStr(el, ["firstName"]) && pickStr(el, ["lastName"])
+        ? `${pickStr(el, ["firstName"])} ${pickStr(el, ["lastName"])}`.trim()
+        : pickStr(el, ["name", "displayName"]) ?? null;
+    const headline = pickStr(el, ["headline", "occupation"]) ?? null;
+    const location = pickStr(el, ["geoLocationName", "locationName", "location"]) ?? null;
+    const profile_url = public_identifier
+      ? `https://www.linkedin.com/in/${encodeURIComponent(public_identifier)}/`
+      : null;
+    return { provider_id, public_identifier, full_name, headline, location, profile_url, raw: el };
+  }).filter((r) => r.provider_id);
+  return { items, total: paging?.total ?? null };
 }
 
 /** Comment on a published post. Shape from live Unipile responses:

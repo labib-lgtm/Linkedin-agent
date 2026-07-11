@@ -1,4 +1,4 @@
-import { logger, schedules } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk/v3";
 import { getServiceClient } from "./lib/supabase.js";
 import { postComment } from "./lib/unipile.js";
 
@@ -24,9 +24,10 @@ const SAME_AUTHOR_COOLDOWN_DAYS = 7;
 
 const supabase = getServiceClient;
 
-export const sendOutboundComments = schedules.task({
+// Cron disabled — Audience pivot (2026-07). Task remains callable manually
+// but no longer fires on schedule.
+export const sendOutboundComments = task({
   id: "send-outbound-comments",
-  cron: "*/30 * * * *",
   maxDuration: 60 * 5,
   run: async (_payload, { ctx }) => {
     const client = supabase();

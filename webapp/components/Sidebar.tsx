@@ -4,17 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  BookOpen,
-  KanbanSquare,
   Users,
   Send,
   Building2,
-  Newspaper,
-  BarChart3,
-  Inbox,
-  Calendar,
   Settings as SettingsIcon,
-  PlusCircle,
   Lock,
   Menu,
   ChevronsLeft,
@@ -29,20 +22,15 @@ type NavItem = {
   icon: LucideIcon;
 };
 
+// Audience-pivot nav (2026-07). Content-side routes (Book, Pipeline,
+// Digest, Reports, Recipients, Calendar, /angles/*, /posts/*) still exist
+// but are no longer surfaced. Revert by restoring their entries.
 const NAV: NavItem[] = [
-  { href: "/book", label: "Book", icon: BookOpen },
-  { href: "/", label: "Pipeline", icon: KanbanSquare },
-  { href: "/competitors", label: "Competitors", icon: Users },
+  { href: "/audience", label: "Audience", icon: Users },
   { href: "/outreach", label: "Outreach", icon: Send },
   { href: "/prospects", label: "Prospects", icon: Building2 },
-  { href: "/digest", label: "Digest", icon: Newspaper },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/recipients", label: "Recipients", icon: Inbox },
-  { href: "/calendar", label: "Calendar", icon: Calendar },
   { href: "/settings", label: "Settings", icon: SettingsIcon },
 ];
-
-const NEW_ITEM: NavItem = { href: "/angles/new", label: "+ New angle", icon: PlusCircle };
 
 const COLLAPSED_KEY = "lynx_sidebar_collapsed";
 
@@ -171,9 +159,6 @@ export function Sidebar() {
           {NAV.map((n) => (
             <NavRow key={n.href} item={n} active={isActive(pathname, n.href)} collapsed={collapsed} />
           ))}
-          <div className="pt-2 mt-2 border-t border-border">
-            <NavRow item={NEW_ITEM} active={isActive(pathname, NEW_ITEM.href)} collapsed={collapsed} highlight />
-          </div>
         </nav>
 
         {/* Footer: account switcher + lock */}

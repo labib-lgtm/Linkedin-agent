@@ -1,4 +1,4 @@
-import { logger, schedules } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk/v3";
 import { getServiceClient } from "./lib/supabase.js";
 import { generateJson, generateEmbedding, cosine } from "./lib/openrouter.js";
 
@@ -435,9 +435,10 @@ async function nameUntitledThemes(
   }
 }
 
-export const dailyAnalyzePosts = schedules.task({
+// Cron disabled — Audience pivot (2026-07). Task remains callable manually
+// but no longer fires on schedule.
+export const dailyAnalyzePosts = task({
   id: "daily-analyze-posts",
-  cron: "30 5 * * *",        // 5:30am UTC, 30 min after profile_snapshot
   maxDuration: 60 * 30,       // 30 min ceiling
   run: async (_payload, { ctx }) => {
     const client = supabase();
