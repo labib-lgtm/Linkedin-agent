@@ -1,4 +1,4 @@
-import { logger, schedules } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk/v3";
 import { getServiceClient } from "./lib/supabase.js";
 import { fetchOwnProfileSnapshot } from "./lib/unipile.js";
 
@@ -13,11 +13,14 @@ import { fetchOwnProfileSnapshot } from "./lib/unipile.js";
  * Runs at 04:00 UTC daily (before profile_snapshot's 05:00 competitor run).
  */
 
-export const snapshotOwnAccount = schedules.task({
+// Fires on-demand from the /audience Tab 1 "Rescan" button. Was designed
+// as a daily 04:00 UTC cron; kept as a plain task for now because we're at
+// the Trigger.dev schedule limit. Add cron once the disabled posting-side
+// schedules are removed from the dashboard.
+export const snapshotOwnAccount = task({
   id: "snapshot-own-account",
-  cron: "0 4 * * *",
   maxDuration: 5 * 60,
-  run: async (_payload, { ctx }) => {
+  run: async (_payload: Record<string, never>, { ctx }) => {
     const client = getServiceClient();
 
     // One row per non-archived account — supports future multi-account setups.

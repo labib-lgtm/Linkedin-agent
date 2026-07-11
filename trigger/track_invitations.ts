@@ -1,4 +1,4 @@
-import { logger, schedules } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk/v3";
 import { getServiceClient } from "./lib/supabase.js";
 import { getRelations } from "./lib/unipile.js";
 
@@ -23,11 +23,13 @@ import { getRelations } from "./lib/unipile.js";
 
 const STALE_THRESHOLD_DAYS = 14;
 
-export const trackOutgoingInvitations = schedules.task({
+// Fires on-demand from Tab 2's "Refresh status" button. Was designed as an
+// every-4h cron; kept as plain task while we're at the schedule limit.
+// Restore the cron once dashboard schedules are freed.
+export const trackOutgoingInvitations = task({
   id: "track-outgoing-invitations",
-  cron: "0 */4 * * *",
   maxDuration: 10 * 60,
-  run: async (_payload, { ctx }) => {
+  run: async (_payload: Record<string, never>, { ctx }) => {
     const client = getServiceClient();
 
     const { data: accounts, error: acctErr } = await client

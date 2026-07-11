@@ -1,4 +1,4 @@
-import { logger, schedules } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk/v3";
 import { getServiceClient } from "./lib/supabase.js";
 import {
   fetchPostComments,
@@ -33,11 +33,13 @@ const POSTS_PER_COMPETITOR = 20;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export const mineCompetitorEngagers = schedules.task({
+// Fires on-demand from Tab 4's "Mine engagers now" button. Was designed as
+// a daily 05:30 UTC cron; kept as plain task while we're at the schedule
+// limit. Restore the cron once dashboard schedules are freed.
+export const mineCompetitorEngagers = task({
   id: "mine-competitor-engagers",
-  cron: "30 5 * * *",
   maxDuration: 30 * 60,
-  run: async (_payload, { ctx }) => {
+  run: async (_payload: Record<string, never>, { ctx }) => {
     const client = getServiceClient();
 
     // Only competitors we track for this loop — exclude the "self" flag rows
