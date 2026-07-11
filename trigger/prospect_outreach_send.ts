@@ -41,6 +41,8 @@ const isDryRun = () => process.env.PROSPECT_OUTREACH_DRY_RUN === "1";
 interface ProspectRel {
   linkedin_url: string | null;
   provider_id: string | null;
+  name?: string | null;
+  headline?: string | null;
 }
 
 function relOf(row: { prospect: unknown }): ProspectRel | null {
@@ -92,7 +94,7 @@ export const sendProspectInvites = schedules.task({
 
     const { data: queue, error } = await client
       .from("prospect_outreach")
-      .select("id, prospect_id, provider_id, invite_message, prospect:prospects(linkedin_url, provider_id)")
+      .select("id, account_id, prospect_id, provider_id, invite_message, prospect:prospects(linkedin_url, provider_id, name, headline)")
       .eq("stage", "ready_to_invite")
       .eq("invite_approved", true)
       .eq("paused", false)
@@ -117,14 +119,41 @@ export const sendProspectInvites = schedules.task({
       }
       try {
         await sendInvitation({ providerId, message });
+        const sentAt = new Date().toISOString();
         await client
           .from("prospect_outreach")
           .update({
             stage: "invited",
-            invite_sent_at: new Date().toISOString(),
+            invite_sent_at: sentAt,
             provider_id: providerId,
           })
           .eq("id", row.id as string);
+        // Mirror into outgoing_invitations so the Audience Requests tab
+        // reflects every invite this pipeline sends — not just what Tab 3
+        // enqueues directly.
+        const prospect = relOf(row);
+        await client
+          .from("outgoing_invitations")
+          .insert({
+            account_id: row.account_id as string,
+            provider_id: providerId,
+            full_name: prospect?.name ?? null,
+            headline: prospect?.headline ?? null,
+            note: message || null,
+            status: "sent",
+            sent_at: sentAt,
+            linked_prospect_outreach_id: row.id as string,
+          })
+          .then(({ error: mirrErr }) => {
+            if (mirrErr) {
+              // Non-fatal: the invite still went out, and the audience
+              // table is the mirror layer. Log so we can spot drift.
+              logger.warn("outgoing_invitations mirror insert failed", {
+                prospect_id: row.prospect_id,
+                error: mirrErr.message,
+              });
+            }
+          });
         sent += 1;
         budget -= 1;
         await sleep(SEND_SLEEP_MS);
