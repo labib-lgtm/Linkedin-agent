@@ -19,7 +19,7 @@ type Row = {
   country: string | null;
   industry: string | null;
   current_company: string | null;
-  current_role: string | null;
+  job_title: string | null;
   profile_url: string | null;
 };
 
@@ -318,7 +318,7 @@ export function AudienceTab() {
                       <div className="line-clamp-2">{r.headline ?? "-"}</div>
                     </td>
                     <td className="p-2">{r.current_company ?? "-"}</td>
-                    <td className="p-2">{r.current_role ?? "-"}</td>
+                    <td className="p-2">{r.job_title ?? "-"}</td>
                     <td className="p-2">{r.location ?? "-"}</td>
                     <td className="p-2">{r.industry ?? "-"}</td>
                     <td className="p-2 text-right">

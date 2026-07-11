@@ -32,7 +32,7 @@ create table if not exists public.audience_connections (
   country text,
   industry text,
   current_company text,
-  current_role text,                  -- Job title / occupation
+  job_title text,                  -- Job title / occupation
   profile_url text,
   raw jsonb,                          -- Full Unipile profile response for future re-extraction
   first_seen_at timestamptz not null default now(),
@@ -68,7 +68,7 @@ create table if not exists public.audience_followers (
   country text,
   industry text,
   current_company text,
-  current_role text,
+  job_title text,
   profile_url text,
   raw jsonb,
   discovered_at timestamptz not null default now(),
@@ -222,7 +222,7 @@ create table if not exists public.competitor_engagers (
   country text,
   industry text,
   current_company text,
-  current_role text,
+  job_title text,
   profile_url text,
   signal_type text not null check (signal_type in ('comment', 'reaction', 'both')),
   first_post_id text,                 -- The post that surfaced them first

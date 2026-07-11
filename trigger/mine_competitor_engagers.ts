@@ -22,7 +22,7 @@ import {
  * run — paced at 1s each = 10 min of wall clock. Well within the 30 min
  * maxDuration.
  *
- * Deep enrichment (industry / current_company / current_role via
+ * Deep enrichment (industry / current_company / job_title via
  * getUserProfileLite) is done only for engagers that appear NEW to the
  * table — repeat engagers use their cached row. Keeps a large re-engager
  * event volume cheap.
@@ -191,7 +191,7 @@ async function upsertEngager(
   // Look up existing row to decide whether we need a deep enrichment call.
   const { data: existing } = await client
     .from("competitor_engagers")
-    .select("id, signal_type, industry, current_role, location")
+    .select("id, signal_type, industry, job_title, location")
     .eq("account_id", args.accountId)
     .eq("competitor_id", args.competitorId)
     .eq("provider_id", args.provider_id)
@@ -199,7 +199,7 @@ async function upsertEngager(
 
   // Only fetch full profile if the row is new — repeat engagers keep cached fields.
   let industry: string | null = existing?.industry ?? null;
-  let current_role: string | null = existing?.current_role ?? null;
+  let job_title: string | null = existing?.job_title ?? null;
   let current_company: string | null = null;
   let location: string | null = existing?.location ?? null;
   let city: string | null = null;
@@ -211,7 +211,7 @@ async function upsertEngager(
       const p = await getUserProfileLite(args.provider_id);
       if (p) {
         industry = p.industry;
-        current_role = p.current_role;
+        job_title = p.job_title;
         current_company = p.current_company;
         location = p.location;
         city = p.city;
@@ -233,7 +233,7 @@ async function upsertEngager(
       seg.role_keywords.some((rk) => {
         const rkL = rk.toLowerCase();
         return (
-          (current_role != null && current_role.toLowerCase().includes(rkL)) ||
+          (job_title != null && job_title.toLowerCase().includes(rkL)) ||
           (args.headline != null && args.headline.toLowerCase().includes(rkL))
         );
       });
@@ -265,7 +265,7 @@ async function upsertEngager(
         country,
         industry,
         current_company,
-        current_role,
+        job_title,
         profile_url: args.profile_url,
         signal_type,
         first_post_id: existing ? undefined : args.first_post_id,

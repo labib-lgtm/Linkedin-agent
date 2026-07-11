@@ -337,7 +337,7 @@ export interface UserProfileLite {
   country: string | null;
   industry: string | null;
   current_company: string | null;
-  current_role: string | null;
+  job_title: string | null;
   profile_url: string | null;
   raw: Record<string, unknown>;
 }
@@ -474,7 +474,7 @@ export async function getUserProfileLite(
     country: country ?? null,
     industry,
     current_company: employment.company,
-    current_role: employment.role,
+    job_title: employment.role,
     profile_url,
     raw,
   };

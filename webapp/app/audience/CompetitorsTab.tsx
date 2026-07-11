@@ -24,7 +24,7 @@ type Engager = {
   location: string | null;
   industry: string | null;
   current_company: string | null;
-  current_role: string | null;
+  job_title: string | null;
   profile_url: string | null;
   signal_type: "comment" | "reaction" | "both";
   matched_segment_ids: string[];

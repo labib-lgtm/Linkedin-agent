@@ -21,7 +21,7 @@ export async function GET(
 
   let q = supabase
     .from("competitor_engagers")
-    .select("id, provider_id, full_name, headline, location, industry, current_company, current_role, profile_url, signal_type, matched_segment_ids, first_seen_at, last_seen_at")
+    .select("id, provider_id, full_name, headline, location, industry, current_company, job_title, profile_url, signal_type, matched_segment_ids, first_seen_at, last_seen_at")
     .eq("account_id", accountId)
     .eq("competitor_id", competitorId)
     .order("last_seen_at", { ascending: false })

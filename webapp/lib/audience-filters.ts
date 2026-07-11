@@ -51,7 +51,7 @@ export function applyAudienceFilter<T extends { eq: Function; ilike: Function; o
   if (f.country) q = q.eq("country", f.country);
   if (f.city) q = q.eq("city", f.city);
   if (f.industry) q = q.eq("industry", f.industry);
-  if (f.role_contains) q = q.ilike("current_role", `%${f.role_contains}%`);
+  if (f.role_contains) q = q.ilike("job_title", `%${f.role_contains}%`);
   if (f.company_contains) q = q.ilike("current_company", `%${f.company_contains}%`);
   if (f.search) {
     const s = f.search.replaceAll("%", "").replaceAll(",", "");
@@ -78,11 +78,11 @@ export function applySegmentFilter<T extends { or: Function; gte: Function; lte:
     q = q.or(clauses.join(","));
   }
 
-  // Role keywords: any-of, matched against current_role OR headline
+  // Role keywords: any-of, matched against job_title OR headline
   if (seg.role_keywords.length > 0) {
     const clauses = seg.role_keywords.flatMap((k) => {
       const kSafe = k.replaceAll("%", "").replaceAll(",", "");
-      return [`current_role.ilike.%${kSafe}%`, `headline.ilike.%${kSafe}%`];
+      return [`job_title.ilike.%${kSafe}%`, `headline.ilike.%${kSafe}%`];
     });
     q = q.or(clauses.join(","));
   }

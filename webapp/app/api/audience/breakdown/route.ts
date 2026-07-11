@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 // GET /api/audience/breakdown?source=connections|followers
 // Returns top-10 by country, top-10 by industry, top-8 by seniority.
-// Seniority isn't stored explicitly — bucketed in-app from current_role +
+// Seniority isn't stored explicitly — bucketed in-app from job_title +
 // headline via the seniority keyword mapper.
 export async function GET(req: NextRequest) {
   const accountId = await getActiveAccountId();
@@ -25,13 +25,13 @@ export async function GET(req: NextRequest) {
   // Paginated fetch of just the columns we need for aggregation. The
   // combined connections table isn't huge (thousands, not millions) so a
   // one-shot pull with generous cap is cheaper than a GROUP BY round-trip.
-  const rows: Array<{ country: string | null; industry: string | null; current_role: string | null; headline: string | null }> = [];
+  const rows: Array<{ country: string | null; industry: string | null; job_title: string | null; headline: string | null }> = [];
   const PAGE = 1000;
   let offset = 0;
   while (offset < 20_000) {
     const { data, error } = await supabase
       .from(source)
-      .select("country, industry, current_role, headline")
+      .select("country, industry, job_title, headline")
       .eq("account_id", accountId)
       .range(offset, offset + PAGE - 1);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       rows.push({
         country: (r.country as string | null) ?? null,
         industry: (r.industry as string | null) ?? null,
-        current_role: (r.current_role as string | null) ?? null,
+        job_title: (r.job_title as string | null) ?? null,
         headline: (r.headline as string | null) ?? null,
       });
     }
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
   const industryTally = tally(rows.map((r) => r.industry));
   const seniorityTally = new Map<SeniorityBucket, number>();
   for (const r of rows) {
-    const b = bucketSeniority(r.current_role, r.headline);
+    const b = bucketSeniority(r.job_title, r.headline);
     seniorityTally.set(b, (seniorityTally.get(b) ?? 0) + 1);
   }
 

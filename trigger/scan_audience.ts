@@ -121,7 +121,7 @@ export const scanAudienceConnections = task({
               country: profile.country,
               industry: profile.industry,
               current_company: profile.current_company,
-              current_role: profile.current_role,
+              job_title: profile.job_title,
               profile_url: profile.profile_url ?? rel.profile_url,
               raw: profile.raw,
               last_scanned_at: new Date().toISOString(),

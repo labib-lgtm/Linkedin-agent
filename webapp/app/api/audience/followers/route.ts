@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   let q = supabase
     .from("audience_followers")
-    .select("id, provider_id, public_identifier, full_name, headline, location, city, country, industry, current_company, current_role, profile_url, discovered_at")
+    .select("id, provider_id, public_identifier, full_name, headline, location, city, country, industry, current_company, job_title, profile_url, discovered_at")
     .eq("account_id", accountId)
     .order("discovered_at", { ascending: false })
     .limit(limit);
