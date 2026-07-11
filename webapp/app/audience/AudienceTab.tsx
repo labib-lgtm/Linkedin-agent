@@ -156,6 +156,28 @@ export function AudienceTab() {
     }
   }, [loadScan]);
 
+  // Fires snapshot-own-account to refresh the follower + connection count.
+  // Cheap task (one Unipile GET); we poll snapshots every 2s for 20s so
+  // the card updates without a full page refresh.
+  const [snapshotting, setSnapshotting] = useState(false);
+  const fireOwnSnapshot = useCallback(async () => {
+    setSnapshotting(true);
+    try {
+      const res = await fetch("/api/audience/snapshot", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message ?? json.error);
+      toast.success("Refreshing follower count…");
+      for (let i = 0; i < 10; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        await loadSnapshots();
+      }
+    } catch (e) {
+      toast.error(`Refresh failed: ${(e as Error).message}`);
+    } finally {
+      setSnapshotting(false);
+    }
+  }, [loadSnapshots]);
+
   const latest = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
   const first = snapshots.length > 0 ? snapshots[0] : null;
   const delta =
@@ -197,16 +219,23 @@ export function AudienceTab() {
                 ? `Discovering ${followerScan.matches_upserted ?? 0}…`
                 : followerScan?.finished_at
                 ? `Discovered ${followerScan.matches_upserted ?? 0} profiles`
-                : "No follower scans yet — Phase A canary is 10 profiles"}
+                : latest
+                ? `Count from ${new Date(latest.captured_at).toLocaleDateString()}`
+                : "No count yet — hit Refresh count"}
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={fireFollowerScan}
-              disabled={scanning || followerScan?.status === "running"}
-            >
-              {followerScan?.status === "running" ? "Discovering…" : "Discover 10 (canary)"}
-            </Button>
+            <div className="flex flex-wrap gap-1">
+              <Button size="sm" variant="outline" onClick={fireOwnSnapshot} disabled={snapshotting}>
+                {snapshotting ? "Refreshing…" : "Refresh count"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={fireFollowerScan}
+                disabled={scanning || followerScan?.status === "running"}
+              >
+                {followerScan?.status === "running" ? "Discovering…" : "Discover 10 (canary)"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
         <Card>

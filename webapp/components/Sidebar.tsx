@@ -199,12 +199,10 @@ function NavRow({
   item,
   active,
   collapsed,
-  highlight,
 }: {
   item: NavItem;
   active: boolean;
   collapsed: boolean;
-  highlight?: boolean;
 }) {
   const Icon = item.icon;
   return (
@@ -215,9 +213,7 @@ function NavRow({
         "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
         active
           ? "bg-lynx-green text-lynx-charcoal"
-          : highlight
-            ? "text-lynx-charcoal bg-lynx-green/20 hover:bg-lynx-green/30"
-            : "text-foreground/80 hover:bg-muted hover:text-foreground",
+          : "text-foreground/80 hover:bg-muted hover:text-foreground",
         collapsed ? "justify-center" : "",
       ].join(" ")}
     >

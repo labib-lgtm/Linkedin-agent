@@ -34,6 +34,10 @@ next-env.d.ts
 # Working files (regenerable: drafts, rendered images, scraped data)
 /temp/outputs/
 
+# Local one-off scripts (pakistan_scan.mjs etc). Not part of the deployed
+# webapp/trigger surface; kept local to avoid clutter in the repo.
+/scripts/
+
 # OS
 .DS_Store
 Thumbs.db
