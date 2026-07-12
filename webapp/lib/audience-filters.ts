@@ -112,7 +112,7 @@ export function chunked<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
-export function parseSegmentBody(body: unknown): {
+export interface ParsedSegmentBody {
   name: string;
   industries: string[];
   role_keywords: string[];
@@ -121,7 +121,21 @@ export function parseSegmentBody(body: unknown): {
   company_size_max: number | null;
   notes: string | null;
   weekly_quota: number;
-} | null {
+  // Outbound engine fields (migration 031). All optional on the
+  // wire; null-through when absent so PATCH callers don't have to
+  // resend the whole shape to touch just one field.
+  invite_template: string | null;
+  dm_template: string | null;
+  dm_followup_template: string | null;
+  daily_send_cap: number | null;
+  auto_send: boolean | null;
+}
+
+// LinkedIn's connection-note character cap. Enforce in-app so a bad UI
+// state can't produce a payload the API rejects.
+const INVITE_NOTE_MAX = 200;
+
+export function parseSegmentBody(body: unknown): ParsedSegmentBody | null {
   if (!body || typeof body !== "object") return null;
   const o = body as Record<string, unknown>;
   const name = normStr(o.name);
@@ -135,6 +149,13 @@ export function parseSegmentBody(body: unknown): {
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
   };
+  const boolOrNull = (v: unknown): boolean | null => {
+    if (v === true || v === "true" || v === 1 || v === "1") return true;
+    if (v === false || v === "false" || v === 0 || v === "0") return false;
+    return null;
+  };
+  const invite = normStr(o.invite_template);
+  const dailyCap = num(o.daily_send_cap);
   return {
     name,
     industries: arr(o.industries),
@@ -144,5 +165,10 @@ export function parseSegmentBody(body: unknown): {
     company_size_max: num(o.company_size_max),
     notes: normStr(o.notes),
     weekly_quota: Math.max(1, Math.min(Number(o.weekly_quota) || 20, 100)),
+    invite_template: invite ? invite.slice(0, INVITE_NOTE_MAX) : null,
+    dm_template: normStr(o.dm_template),
+    dm_followup_template: normStr(o.dm_followup_template),
+    daily_send_cap: dailyCap == null ? null : Math.max(1, Math.min(dailyCap, 20)),
+    auto_send: boolOrNull(o.auto_send),
   };
 }

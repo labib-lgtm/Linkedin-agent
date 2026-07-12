@@ -11,7 +11,9 @@ export async function GET() {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("target_segments")
-    .select("id, name, industries, role_keywords, locations, company_size_min, company_size_max, notes, weekly_quota, created_at")
+    .select(
+      "id, name, industries, role_keywords, locations, company_size_min, company_size_max, notes, weekly_quota, invite_template, dm_template, dm_followup_template, daily_send_cap, auto_send, paused_at, pause_reason, created_at",
+    )
     .eq("account_id", accountId)
     .is("archived_at", null)
     .order("created_at", { ascending: false });
@@ -32,12 +34,26 @@ export async function POST(req: NextRequest) {
   const parsed = parseSegmentBody(body);
   if (!parsed) return NextResponse.json({ error: "name required" }, { status: 400 });
 
+  const insert: Record<string, unknown> = {
+    account_id: accountId,
+    name: parsed.name,
+    industries: parsed.industries,
+    role_keywords: parsed.role_keywords,
+    locations: parsed.locations,
+    company_size_min: parsed.company_size_min,
+    company_size_max: parsed.company_size_max,
+    notes: parsed.notes,
+    weekly_quota: parsed.weekly_quota,
+  };
+  if (parsed.invite_template != null) insert.invite_template = parsed.invite_template;
+  if (parsed.dm_template != null) insert.dm_template = parsed.dm_template;
+  if (parsed.dm_followup_template != null) insert.dm_followup_template = parsed.dm_followup_template;
+  if (parsed.daily_send_cap != null) insert.daily_send_cap = parsed.daily_send_cap;
+  if (parsed.auto_send != null) insert.auto_send = parsed.auto_send;
+
   const { data, error } = await supabase
     .from("target_segments")
-    .insert({
-      account_id: accountId,
-      ...parsed,
-    })
+    .insert(insert)
     .select("id")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

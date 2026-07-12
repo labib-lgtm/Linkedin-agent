@@ -27,7 +27,14 @@ import {
  * under. PROSPECT_OUTREACH_DRY_RUN=1 logs without sending.
  */
 
-const MAX_INVITES_PER_DAY = 15;
+// Daily ceiling across BOTH pipelines (Amazon-seller prospect_outreach +
+// audience-sourced rows). Bumped from 15 to 30 when the audience outbound
+// engine went live so the two paths don't crowd each other. LinkedIn's
+// soft weekly-outbound tolerance is ~100 for accounts with prior activity;
+// 30/day * 5d = 150/wk is aggressive but the fail-closed gates on
+// source-audience-candidates catch any acceptance-rate dip before it
+// escalates to a restriction.
+const MAX_INVITES_PER_DAY = 30;
 const MAX_DMS_PER_DAY = 15;
 const PER_RUN_LIMIT = 5;
 const SEND_SLEEP_MS = 1500;

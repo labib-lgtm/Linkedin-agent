@@ -22,12 +22,29 @@ export async function PATCH(
   const parsed = parseSegmentBody(body);
   if (!parsed) return NextResponse.json({ error: "name required" }, { status: 400 });
 
+  // Drop null-valued outbound fields so a PATCH that doesn't touch them
+  // doesn't overwrite whatever the segment already had. Non-null values
+  // (including empty strings for template clears) still land.
+  const update: Record<string, unknown> = {
+    name: parsed.name,
+    industries: parsed.industries,
+    role_keywords: parsed.role_keywords,
+    locations: parsed.locations,
+    company_size_min: parsed.company_size_min,
+    company_size_max: parsed.company_size_max,
+    notes: parsed.notes,
+    weekly_quota: parsed.weekly_quota,
+    updated_at: new Date().toISOString(),
+  };
+  if (parsed.invite_template != null) update.invite_template = parsed.invite_template;
+  if (parsed.dm_template != null) update.dm_template = parsed.dm_template;
+  if (parsed.dm_followup_template != null) update.dm_followup_template = parsed.dm_followup_template;
+  if (parsed.daily_send_cap != null) update.daily_send_cap = parsed.daily_send_cap;
+  if (parsed.auto_send != null) update.auto_send = parsed.auto_send;
+
   const { error } = await supabase
     .from("target_segments")
-    .update({
-      ...parsed,
-      updated_at: new Date().toISOString(),
-    })
+    .update(update)
     .eq("account_id", accountId)
     .eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

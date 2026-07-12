@@ -16,7 +16,19 @@ type Invitation = {
   accepted_at: string | null;
   withdrawn_at: string | null;
   withdraw_reason: string | null;
+  segment_id: string | null;
+  // PostgREST embeds a single-row FK as either the object or an array
+  // depending on how the FK relationship is declared; handle both.
+  segment: { name: string } | { name: string }[] | null;
 };
+
+function segmentName(inv: Invitation): string {
+  if (!inv.segment_id) return "Amazon seller";
+  const s = inv.segment;
+  if (!s) return "Segment";
+  if (Array.isArray(s)) return s[0]?.name ?? "Segment";
+  return s.name ?? "Segment";
+}
 
 type Rollup = {
   total_sent: number;
@@ -135,6 +147,7 @@ export function RequestsTab() {
               <thead className="sticky top-0 bg-background">
                 <tr className="border-b text-left text-xs uppercase text-muted-foreground">
                   <th className="p-2">Name</th>
+                  <th className="p-2">Source</th>
                   <th className="p-2">Note</th>
                   <th className="p-2">Sent</th>
                   <th className="p-2">Age</th>
@@ -145,7 +158,7 @@ export function RequestsTab() {
               <tbody>
                 {rows.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                    <td colSpan={7} className="p-4 text-center text-muted-foreground">
                       No invitations. Once you send some via the Targeting tab they show up here.
                     </td>
                   </tr>
@@ -157,6 +170,7 @@ export function RequestsTab() {
                   return (
                     <tr key={r.id} className={`border-b align-top ${isStale ? "bg-yellow-50 dark:bg-yellow-950/30" : ""}`}>
                       <td className="p-2 font-medium">{r.full_name ?? "(no name)"}</td>
+                      <td className="p-2 text-xs">{segmentName(r)}</td>
                       <td className="p-2 max-w-xs">
                         <div className="line-clamp-2 text-xs text-muted-foreground">{r.note ?? "-"}</div>
                       </td>

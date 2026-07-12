@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   let q = supabase
     .from("outgoing_invitations")
-    .select("id, provider_id, full_name, headline, note, status, sent_at, accepted_at, withdrawn_at, withdraw_reason")
+    .select("id, provider_id, full_name, headline, note, status, sent_at, accepted_at, withdrawn_at, withdraw_reason, segment_id, segment:target_segments(name)")
     .eq("account_id", accountId)
     .order("sent_at", { ascending: false })
     .limit(limit);
